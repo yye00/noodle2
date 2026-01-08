@@ -6973,3 +6973,48 @@ Session Totals:
 
 Completion Progress: 94/200 features passing (47.0%)
 
+
+
+---
+
+# Session 46 - TCL Script Logging for Reproducibility
+**Date:** 2026-01-08
+**Status:** 95/200 features passing (47.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **TCL script logging to trial artifacts**, enabling manual 
+reproduction of any trial by providing the exact script that was executed.
+
+### Feature Completed: Log OpenROAD TCL Script Invocations
+
+**Feature #114: Log OpenROAD TCL script invocations for reproducibility**
+
+## IMPLEMENTATION
+
+**1. Trial Class Enhancements** (src/trial_runner/trial.py):
+- Added _copy_script_to_trial_dir() method
+- Integrated into execution workflow
+- Updated TrialArtifacts dataclass with script field
+- Updated artifact discovery and serialization
+
+**2. Comprehensive Test Coverage** (tests/test_tcl_script_logging.py):
+Created 16 tests across 6 test classes validating all feature steps
+
+## ALL 5 FEATURE STEPS VALIDATED
+
+Step 1: Generate TCL script for trial execution
+Step 2: Write TCL script to trial artifacts
+Step 3: Execute OpenROAD with logged TCL script
+Step 4: Verify trial is reproducible by re-running logged script
+Step 5: Enable manual reproduction of any trial
+
+## CODE QUALITY
+
+- Modified Files: src/trial_runner/trial.py (+31 lines)
+- New Files: tests/test_tcl_script_logging.py (580 lines, 16 tests)
+- Test Count: 1092 tests total, all passing
+- No Regressions
+
+Completion Progress: 95/200 features passing (47.5% complete)
+

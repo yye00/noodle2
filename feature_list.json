@@ -1809,7 +1809,7 @@
       "Step 5: Verify key files (summary, telemetry, reports) are easy to locate",
       "Step 6: Verify README or index file explains directory structure"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

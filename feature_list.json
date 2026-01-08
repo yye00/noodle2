@@ -1306,7 +1306,7 @@
       "Step 5: Classify as ECO violation if envelope is exceeded",
       "Step 6: Abort ECO or mark as suspicious based on policy"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -12733,3 +12733,129 @@ Remaining high-priority features (60 features remaining):
 5. **Custom script bind-mounting** (Feature #191): User-provided ECO scripts
 
 Current completion: **140/200 features (70.0%)**
+
+---
+
+# Session 80 - Comparative Timing Path Analysis
+**Date:** 2026-01-08
+**Status:** 141/200 features passing (70.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **comparative timing path analysis across multiple cases**,
+enabling detailed tracking of how specific timing paths evolve through ECO
+applications and identifying which paths improved or degraded.
+
+### Feature Completed
+
+**Feature #164: Generate comparative timing path analysis across multiple cases** ✅
+
+## IMPLEMENTATION
+
+**1. Path Identification** (src/analysis/path_comparison.py):
+- `PathIdentity`: Uniquely identifies paths by startpoint, endpoint, and path_group
+- `matches()`: Checks if a TimingPath matches an identity
+- Enables tracking same logical path across different cases
+
+**2. Path Slack Evolution Tracking**:
+- `PathSlackEvolution`: Tracks slack values for a path across cases
+- `case_slacks`: Dictionary mapping case_id to slack_ps
+- `get_slack_change()`: Calculates delta between two cases
+- `improved()` / `degraded()`: Classification helpers
+- `to_dict()`: Serialization for external tools
+
+**3. Path Extraction and Filtering**:
+- `extract_top_paths()`: Extracts N most critical paths from each case
+- Sorts paths by slack (most negative first)
+- Respects top_n limit for manageable analysis
+- Handles empty or missing paths gracefully
+
+**4. Common Path Analysis**:
+- `identify_common_paths()`: Finds paths appearing in ALL cases
+- Matches based on startpoint/endpoint/path_group identity
+- Returns PathIdentity objects for stable tracking
+- Requires at least 2 cases for meaningful comparison
+
+**5. Evolution Tracking**:
+- `track_path_slack_evolution()`: Monitors slack changes
+- Creates PathSlackEvolution for each tracked path
+- Collects slack values from all cases where path appears
+- Handles paths that may be missing in some cases
+
+**6. Change Classification**:
+- `classify_path_changes()`: Identifies improved vs degraded paths
+- Compares baseline case to target case
+- Returns tuple of (improved_paths, degraded_paths)
+- Uses PathSlackEvolution.improved() and .degraded() methods
+
+**7. Main Analysis Function**:
+- `compare_timing_paths()`: Complete comparative analysis
+- Takes case_metrics dict and optional baseline case
+- Extracts paths, identifies common paths, tracks evolution
+- Classifies improvements and degradations
+- Returns PathComparisonResult with complete analysis
+
+**8. Report Generation**:
+- `generate_path_comparison_report()`: Human-readable output
+- Summary statistics (common paths, improved, degraded)
+- Detailed path evolution with slack values per case
+- Delta calculations with IMPROVED/DEGRADED labels
+- Limits output to top 20 paths for readability
+
+**9. Result Structure**:
+- `PathComparisonResult`: Complete analysis results
+- Fields: case_ids, path_evolutions, improved_paths, degraded_paths, common_paths
+- `to_dict()`: Full serialization support
+- Compatible with Jupyter, plotting libraries, external tools
+
+## ALL 7 FEATURE STEPS VALIDATED
+
+✅ **Step 1: Execute multiple cases with different ECOs**
+✅ **Step 2: Extract top N critical paths from each case**
+✅ **Step 3: Identify paths that appear across multiple cases**
+✅ **Step 4: Track path slack evolution across ECO sequence**
+✅ **Step 5: Identify paths that improved vs degraded**
+✅ **Step 6: Generate path-level comparison report**
+✅ **Step 7: Visualize path slack trends (data structure support)**
+
+## WHY THIS MATTERS
+
+**Detailed ECO Impact Analysis:**
+- See exactly which paths improved or degraded after ECO
+- Not just aggregate WNS - path-level granularity
+- Identify if ECO fixes one path but breaks another
+
+**ECO Validation:**
+- Verify ECO targets correct paths
+- Catch unintended side effects on other paths
+- Validate that "improvements" don't degrade hold paths
+
+**Debug Guidance:**
+- Identify persistent violating paths across ECOs
+- Find paths that resist optimization
+- Guide next ECO selection based on path behavior
+
+## CODE QUALITY
+
+- **New Files**:
+  - src/analysis/path_comparison.py (397 lines)
+  - src/analysis/__init__.py (exports for package)
+  - tests/test_path_comparison.py (595 lines, 24 tests)
+- **Type Safety**: Full type hints on all functions
+- **Documentation**: Comprehensive docstrings with examples
+- **Test Coverage**: 24 tests covering all functionality
+- **No Regressions**: All existing tests pass
+
+## TESTING SUMMARY
+
+All 24 new tests passing covering:
+- Multi-case execution and path extraction
+- Top N path limits and sorting
+- Common path identification across cases
+- Slack evolution tracking and delta calculation
+- Improvement/degradation classification
+- Report generation with visualization data
+- Serialization and external tool compatibility
+- Edge cases (empty paths, missing paths, single case)
+
+Current completion: **141/200 features (70.5%)**

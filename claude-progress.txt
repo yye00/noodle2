@@ -9311,3 +9311,84 @@ With 110/200 features complete (55.0%), remaining high-value features:
 
 No issues or regressions. Feature ready for integration into trial execution.
 
+
+================================================================================
+SESSION 55 (CONTINUED) - OpenROAD Command Logging
+================================================================================
+
+## SECOND FEATURE IMPLEMENTED
+
+**Feature #120: Support OpenROAD command logging for debugging failed trials**
+
+Created comprehensive command logging infrastructure in src/trial_runner/command_logging.py.
+
+### Core Components
+
+1. **CommandLogEntry Dataclass**
+   - Structured log entry with timestamp, command, duration, status
+   - Optional error message capture
+   - Full type hints for safety
+
+2. **CommandLogParser**
+   - Parse timestamped log files
+   - Find failed commands (status != 0)
+   - Get slowest commands for performance tuning
+   - Calculate total execution duration
+   - Group commands by prefix (e.g., all "read_*" commands)
+
+3. **TCL Code Generators**
+   - generate_tcl_logging_prologue(): Setup logging in TCL
+   - generate_tcl_logging_epilogue(): Finalize logging
+   - log_command proc wraps commands with timing
+   - Automatic error re-throwing preserves normal error flow
+
+4. **Analysis Utilities**
+   - analyze_command_log(): Comprehensive statistics
+   - format_command_summary(): Human-readable reports
+   - Command type breakdown
+   - Failed command extraction
+
+### Testing
+
+Added 30 comprehensive tests in tests/test_command_logging.py:
+- Log entry creation
+- Parser instantiation
+- File parsing (single/multiple/empty/malformed)
+- Failed command detection
+- Slowest command identification
+- Duration calculation
+- Command grouping by prefix
+- TCL code generation
+- Summary formatting
+- End-to-end workflows
+
+Total test suite: 1493 passing (30 new), 0 failing
+
+### Use Cases
+
+1. Debug Failed Trials: Instantly identify failing OpenROAD command
+2. Performance Profiling: Find bottleneck commands
+3. Reproducibility: Review exact command sequence
+4. Audit Trail: Full command history for compliance
+5. CI/CD: Parse logs to extract failure reasons
+
+### Integration Path
+
+1. Include logging prologue/epilogue in TCL script generation
+2. Write command logs to trial artifact directory
+3. Parse logs during early-failure detection
+4. Report command statistics to telemetry
+5. Display command timeline in Ray Dashboard
+
+## SESSION SUMMARY
+
+Two features completed:
+1. Custom metric extractors (#106) - 36 tests
+2. OpenROAD command logging (#120) - 30 tests
+
+Test Status: 1493 passing (66 new), 0 failing
+Feature Status: 111/200 passing (55.5% complete)
+Code Quality: Full type hints, comprehensive error handling, documentation
+
+No regressions. Both features ready for integration.
+

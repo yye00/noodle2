@@ -1,9 +1,11 @@
-SESSION 55 SUMMARY - Custom Metric Extractors
-==============================================
+SESSION 55 SUMMARY - Custom Metrics & Command Logging
+======================================================
 
 Date: 2026-01-08
-Status: ✅ Complete
-Feature: #106 - Support custom metric extractors for project-specific KPIs
+Status: ✅ Complete - Two Features
+Features:
+  #106 - Support custom metric extractors for project-specific KPIs
+  #120 - Support OpenROAD command logging for debugging failed trials
 
 IMPLEMENTATION
 --------------
@@ -35,15 +37,43 @@ Added 36 comprehensive tests in tests/test_custom_metrics.py:
 ✅ Built-in extractors (CellCount, Wirelength)
 ✅ End-to-end workflows
 
-Total test suite: 1463 passing (36 new), 0 failing
+FEATURE #120 - OpenROAD Command Logging
+---------------------------------------
+Created command logging infrastructure in src/trial_runner/command_logging.py:
+
+Core Components:
+• CommandLogEntry dataclass for structured log entries
+• CommandLogParser for parsing and analyzing logs
+• TCL code generators (prologue/epilogue)
+• Analysis utilities (failed commands, slowest commands, summaries)
+
+Added 30 comprehensive tests in tests/test_command_logging.py:
+✅ Log entry creation and validation
+✅ Log file parsing (single/multiple/empty/malformed)
+✅ Failed command detection
+✅ Slowest command identification
+✅ Duration calculation and grouping
+✅ TCL code generation
+✅ Summary formatting
+✅ End-to-end workflows
+
+Total test suite: 1493 passing (66 new), 0 failing
 
 USE CASES
 ---------
+Custom Metrics:
 1. Power Analysis: Extract power metrics from reports
 2. Area Metrics: Parse design area and utilization
 3. Custom KPIs: Project-specific quality indicators
 4. Multi-Tool Support: Extract from non-OpenROAD tools
 5. Policy Integration: Use in ECO ranking decisions
+
+Command Logging:
+1. Debug Failed Trials: Instantly identify failing OpenROAD command
+2. Performance Profiling: Find bottleneck commands
+3. Reproducibility: Review exact command sequence
+4. Audit Trail: Full command history for compliance
+5. CI/CD: Parse logs to extract failure reasons
 
 EXAMPLE
 -------
@@ -60,16 +90,22 @@ metrics = registry.extract_all(trial_artifact_dir)
 
 PROGRESS
 --------
-Features: 110/200 passing (55.0% complete)
-Tests: 1463 passing
-Files Modified: 4 (1 new module, 1 updated init, 1 new test file, 1 feature list)
+Features: 111/200 passing (55.5% complete)
+Tests: 1493 passing (66 new)
+Files Modified: 8 total
+  - 2 new modules (custom_metrics.py, command_logging.py)
+  - 2 updated inits (parsers, trial_runner)
+  - 2 new test files
+  - 1 feature list update
+  - 1 progress update
 
 NEXT PRIORITIES
 --------------
-1. Timing violation classification (setup vs hold)
-2. Snapshot structural validation
-3. TCL script logging for reproducibility
-4. PDK version detection/mismatch reporting
-5. ECO effectiveness leaderboard
+1. Snapshot structural validation
+2. PDK version detection/mismatch reporting
+3. ECO effectiveness leaderboard
+4. Graceful shutdown with checkpoint saving
+5. Ray dashboard-compatible task metadata
 
 Session completed successfully with no regressions.
+Two production-ready features delivered.

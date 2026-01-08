@@ -872,7 +872,7 @@
       "Step 5: Verify Study completes or aborts without human input",
       "Step 6: Review telemetry to confirm full automation"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

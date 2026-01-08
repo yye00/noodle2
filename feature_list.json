@@ -2015,5 +2015,707 @@
       "Step 6: Display report in human-readable format"
     ],
     "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Complete Nangate45 Study from snapshot to final winner selection",
+    "steps": [
+      "Step 1: Create Nangate45 Study configuration with 3 stages",
+      "Step 2: Load base case snapshot",
+      "Step 3: Verify base case structural runnability (Gate 0)",
+      "Step 4: Generate Run Legality Report and verify legality",
+      "Step 5: Execute Stage 0: STA-only with 15 trials, select 5 survivors",
+      "Step 6: Verify all 15 trials complete and artifacts are generated",
+      "Step 7: Rank trials by WNS improvement",
+      "Step 8: Select top 5 survivors and verify lineage tracking",
+      "Step 9: Execute Stage 1: STA+congestion with 10 trials from survivors",
+      "Step 10: Verify congestion metrics are computed correctly",
+      "Step 11: Rank trials by multi-objective score (WNS + congestion)",
+      "Step 12: Select top 3 survivors",
+      "Step 13: Execute Stage 2: Final refinement with 5 trials",
+      "Step 14: Select final winning Case",
+      "Step 15: Generate complete Study summary with lineage graph",
+      "Step 16: Verify all telemetry is complete and accessible",
+      "Step 17: Verify Ray dashboard shows all tasks completed",
+      "Step 18: Export Study results for analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: ASAP7 Study with workarounds and timing-first staging",
+    "steps": [
+      "Step 1: Create ASAP7 Study configuration with timing-first approach",
+      "Step 2: Load ASAP7 base case snapshot",
+      "Step 3: Apply required ASAP7 workarounds (routing layers, site, pins)",
+      "Step 4: Verify base case runs with explicit constraints",
+      "Step 5: Execute Stage 0: STA-only baseline with low utilization (0.55)",
+      "Step 6: Verify timing reports parse correctly",
+      "Step 7: Apply timing-improvement ECOs only in Stage 1",
+      "Step 8: Verify WNS improvements without routing explosion",
+      "Step 9: Enable congestion analysis in Stage 2 only after stable timing",
+      "Step 10: Verify routing converges with explicit metal layer constraints",
+      "Step 11: Generate heatmaps for successful cases",
+      "Step 12: Verify ASAP7-specific failure modes are detected correctly",
+      "Step 13: Complete Study and generate final report",
+      "Step 14: Confirm reproducibility by re-running Study"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Sky130 Study with OpenLane integration validation",
+    "steps": [
+      "Step 1: Create Sky130 Study configuration using sky130A PDK",
+      "Step 2: Verify Sky130 PDK paths are accessible in container",
+      "Step 3: Load sky130_base case snapshot",
+      "Step 4: Execute base case with no-op ECO",
+      "Step 5: Verify rc==0 and reports are produced",
+      "Step 6: Parse timing reports and extract metrics",
+      "Step 7: Execute multi-stage Study with ECO exploration",
+      "Step 8: Verify Sky130-specific constraints are handled",
+      "Step 9: Generate congestion reports successfully",
+      "Step 10: Complete Study with winner selection",
+      "Step 11: Verify cross-target parity with Nangate45 (same telemetry schema)",
+      "Step 12: Generate comparative report across all three PDKs"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Failure injection and recovery testing across all failure modes",
+    "steps": [
+      "Step 1: Create test Study with intentional failure triggers",
+      "Step 2: Test early failure: tool crash (exit code != 0)",
+      "Step 3: Verify tool_crash classification and containment",
+      "Step 4: Test early failure: missing output files",
+      "Step 5: Verify missing_artifacts classification",
+      "Step 6: Test early failure: parse error on malformed report",
+      "Step 7: Verify parse_error classification",
+      "Step 8: Test early failure: timeout expiration",
+      "Step 9: Verify timeout classification and process termination",
+      "Step 10: Test failure containment at ECO level",
+      "Step 11: Test failure containment at ECO class level",
+      "Step 12: Test failure containment at stage level",
+      "Step 13: Test catastrophic failure triggering Study abort",
+      "Step 14: Verify all failure modes produce clear diagnostics",
+      "Step 15: Verify failure telemetry is complete for all modes",
+      "Step 16: Test recovery after transient failure with retry logic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Multi-objective optimization with Pareto frontier analysis",
+    "steps": [
+      "Step 1: Create Study with multi-objective ranking policy",
+      "Step 2: Define objectives: WNS, area, power, congestion",
+      "Step 3: Execute trials producing metrics for all objectives",
+      "Step 4: Compute Pareto frontier of non-dominated solutions",
+      "Step 5: Visualize Pareto frontier in 2D scatter plots",
+      "Step 6: Visualize 3D Pareto surface for 3-objective case",
+      "Step 7: Identify Pareto-optimal Cases for survivor selection",
+      "Step 8: Allow user to select from Pareto frontier based on preferences",
+      "Step 9: Generate trade-off analysis report",
+      "Step 10: Export Pareto data for external analysis",
+      "Step 11: Verify multi-objective ranking is deterministic",
+      "Step 12: Compare Pareto approach vs weighted-sum ranking"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: ECO effectiveness study with leaderboard and sensitivity analysis",
+    "steps": [
+      "Step 1: Create comparative Study testing 10 different ECO types",
+      "Step 2: Execute each ECO type across 20 different base cases",
+      "Step 3: Track effectiveness metrics for each ECO instance",
+      "Step 4: Aggregate effectiveness by ECO class",
+      "Step 5: Generate ECO effectiveness leaderboard",
+      "Step 6: Identify top 3 most effective ECO classes",
+      "Step 7: Identify bottom 3 least effective or harmful ECOs",
+      "Step 8: Perform parameter sensitivity analysis for tunable ECOs",
+      "Step 9: Generate effectiveness heatmap (ECO type × base case)",
+      "Step 10: Identify which ECOs work best for which problem types",
+      "Step 11: Export ECO priors for future Study initialization",
+      "Step 12: Generate ECO recommendation report for similar designs"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Safety domain enforcement across all three domains",
+    "steps": [
+      "Step 1: Create identical Study in 'sandbox' safety domain",
+      "Step 2: Verify all ECO classes are permitted in sandbox",
+      "Step 3: Verify abort sensitivity is relaxed in sandbox",
+      "Step 4: Execute Study with aggressive ECO exploration",
+      "Step 5: Create same Study in 'guarded' safety domain",
+      "Step 6: Verify global_disruptive ECOs are restricted",
+      "Step 7: Verify abort criteria are standard",
+      "Step 8: Execute Study with balanced exploration",
+      "Step 9: Create same Study in 'locked' safety domain",
+      "Step 10: Verify only regression-safe ECOs are permitted",
+      "Step 11: Verify abort criteria are strict",
+      "Step 12: Execute Study with conservative changes only",
+      "Step 13: Compare outcomes across all three domains",
+      "Step 14: Verify safety domain compliance in all cases",
+      "Step 15: Generate safety domain comparison report"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Ray Dashboard observability and artifact navigation",
+    "steps": [
+      "Step 1: Start Ray cluster with dashboard enabled",
+      "Step 2: Access dashboard at http://localhost:8265",
+      "Step 3: Launch multi-stage Study with 50+ trials",
+      "Step 4: Monitor cluster health in real-time via dashboard",
+      "Step 5: View running trial tasks with metadata",
+      "Step 6: Verify case name, stage, ECO visible for each task",
+      "Step 7: Track stage progression in dashboard",
+      "Step 8: View completed trial task details",
+      "Step 9: Access trial logs from dashboard",
+      "Step 10: Locate artifact path in trial logs",
+      "Step 11: Navigate to artifact bundle using path",
+      "Step 12: View artifact index JSON",
+      "Step 13: Access timing reports from artifacts",
+      "Step 14: Access heatmap visualizations from artifacts",
+      "Step 15: Monitor resource utilization across Ray cluster",
+      "Step 16: Verify dashboard provides complete observability"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Heatmap generation and spatial analysis workflow",
+    "steps": [
+      "Step 1: Configure Study stage to enable heatmap exports",
+      "Step 2: Execute trial with GUI mode enabled (X11 passthrough)",
+      "Step 3: Load design in OpenROAD GUI mode",
+      "Step 4: Export placement density heatmap CSV",
+      "Step 5: Export RUDY congestion heatmap CSV",
+      "Step 6: Export routing congestion heatmap CSV",
+      "Step 7: Verify all three CSV files are created in artifacts",
+      "Step 8: Parse CSV data and validate format",
+      "Step 9: Generate PNG preview for placement density",
+      "Step 10: Generate PNG preview for RUDY",
+      "Step 11: Generate PNG preview for routing congestion",
+      "Step 12: Apply ECO and generate post-ECO heatmaps",
+      "Step 13: Compute spatial diff heatmaps (before/after)",
+      "Step 14: Index all heatmaps in artifact_index.json",
+      "Step 15: Generate heatmap comparison report",
+      "Step 16: Identify spatial regions of improvement/degradation"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Case lineage tracking and DAG visualization across complex Study",
+    "steps": [
+      "Step 1: Create Study with branching case derivations",
+      "Step 2: Start with single base case",
+      "Step 3: Apply 5 different ECOs creating 5 derived cases in Stage 0",
+      "Step 4: Select top 3 survivors",
+      "Step 5: Apply 3 different ECOs to each survivor (9 cases in Stage 1)",
+      "Step 6: Track parent-child relationships for all cases",
+      "Step 7: Verify deterministic case naming at each stage",
+      "Step 8: Build complete case lineage DAG",
+      "Step 9: Export DAG in Graphviz DOT format",
+      "Step 10: Render DAG as PNG visualization",
+      "Step 11: Verify DAG shows all derivation paths",
+      "Step 12: Annotate DAG nodes with metrics (WNS, congestion)",
+      "Step 13: Identify winning path through DAG",
+      "Step 14: Generate lineage report with ECO sequence for winner"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Unattended long-running Study with checkpoint and resume",
+    "steps": [
+      "Step 1: Create large Study with 5 stages and 100+ total trials",
+      "Step 2: Launch Study in unattended mode",
+      "Step 3: Monitor Study progress through Stage 0 completion",
+      "Step 4: Verify Stage 0 telemetry is written",
+      "Step 5: Save checkpoint after Stage 0",
+      "Step 6: Simulate interruption (stop execution)",
+      "Step 7: Reload Study state from checkpoint",
+      "Step 8: Resume execution starting at Stage 1",
+      "Step 9: Verify Stage 0 is not re-executed",
+      "Step 10: Continue through Stages 1-2",
+      "Step 11: Save checkpoint after Stage 2",
+      "Step 12: Resume and complete Stages 3-4",
+      "Step 13: Verify final Study is complete and consistent",
+      "Step 14: Verify checkpoint mechanism is reliable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: CI integration with regression safety checks",
+    "steps": [
+      "Step 1: Create regression Study with 'locked' safety domain",
+      "Step 2: Define regression baseline cases with known-good metrics",
+      "Step 3: Configure CI pipeline to run regression Study",
+      "Step 4: Execute Study in CI environment",
+      "Step 5: Verify Study completes successfully for valid changes",
+      "Step 6: Introduce regression (WNS degradation beyond threshold)",
+      "Step 7: Verify Study detects regression and aborts",
+      "Step 8: Verify CI build fails with clear regression report",
+      "Step 9: Fix regression and re-run CI",
+      "Step 10: Verify Study passes and CI build succeeds",
+      "Step 11: Generate regression test report",
+      "Step 12: Archive regression artifacts for investigation"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Distributed execution on simulated multi-node cluster",
+    "steps": [
+      "Step 1: Start Ray head node with dashboard",
+      "Step 2: Start 2 Ray worker nodes (local processes)",
+      "Step 3: Verify all nodes appear in Ray dashboard",
+      "Step 4: Create Study with resource requirements",
+      "Step 5: Submit 30 trials across cluster",
+      "Step 6: Verify trials distribute across all nodes",
+      "Step 7: Monitor execution via Ray dashboard",
+      "Step 8: Verify artifacts are written to shared filesystem",
+      "Step 9: Simulate worker node failure",
+      "Step 10: Verify Ray reschedules failed trials",
+      "Step 11: Complete Study successfully despite failures",
+      "Step 12: Verify all telemetry is collected correctly",
+      "Step 13: Generate cluster utilization report"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Custom metric extraction and policy evaluation",
+    "steps": [
+      "Step 1: Define custom metric extractor for project-specific KPI",
+      "Step 2: Register extractor with Noodle 2 metric system",
+      "Step 3: Execute trials and invoke custom extractor",
+      "Step 4: Verify custom metrics appear in telemetry",
+      "Step 5: Define custom policy rule using custom metric",
+      "Step 6: Register policy rule with safety system",
+      "Step 7: Execute Study with custom policy active",
+      "Step 8: Verify custom policy rules are evaluated correctly",
+      "Step 9: Log all policy evaluations for audit",
+      "Step 10: Generate custom metric leaderboard",
+      "Step 11: Use custom metric in survivor ranking",
+      "Step 12: Export custom metrics for external analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Provenance tracking and reproducibility validation",
+    "steps": [
+      "Step 1: Execute Study with full provenance tracking enabled",
+      "Step 2: Record snapshot hash for base case",
+      "Step 3: Record container image digest",
+      "Step 4: Record OpenROAD version from container",
+      "Step 5: Record exact command-line invocations",
+      "Step 6: Record ECO sequence for each derived case",
+      "Step 7: Record all policy states and configurations",
+      "Step 8: Generate provenance chain for final winner",
+      "Step 9: Export provenance document (JSON)",
+      "Step 10: Reproduce winning trial on different machine",
+      "Step 11: Verify identical results using provenance data",
+      "Step 12: Validate cryptographic integrity of provenance chain",
+      "Step 13: Generate audit-ready provenance report"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: ECO parameter sweep and optimization",
+    "steps": [
+      "Step 1: Define ECO with tunable parameter (buffer insertion threshold)",
+      "Step 2: Configure parameter sweep: 10 values from 0.1 to 1.0",
+      "Step 3: Generate 10 trials systematically varying parameter",
+      "Step 4: Execute all parameter sweep trials",
+      "Step 5: Track WNS vs parameter value",
+      "Step 6: Plot WNS improvement curve",
+      "Step 7: Identify optimal parameter value",
+      "Step 8: Analyze parameter sensitivity (WNS gradient)",
+      "Step 9: Test robustness across different base cases",
+      "Step 10: Generate parameter recommendation report",
+      "Step 11: Export optimal parameter for future Studies"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Comprehensive telemetry validation and schema evolution",
+    "steps": [
+      "Step 1: Execute Study generating complete telemetry",
+      "Step 2: Validate Study-level telemetry schema",
+      "Step 3: Validate Stage-level telemetry schema",
+      "Step 4: Validate Case-level telemetry schema",
+      "Step 5: Validate Trial-level telemetry schema",
+      "Step 6: Verify all required fields are present",
+      "Step 7: Verify timestamps are in ISO 8601 format",
+      "Step 8: Verify metrics are numeric and bounded",
+      "Step 9: Simulate schema version upgrade",
+      "Step 10: Add new optional fields to schema v2",
+      "Step 11: Parse v1 telemetry with v2 parser",
+      "Step 12: Verify backward compatibility",
+      "Step 13: Generate v2 telemetry with new fields",
+      "Step 14: Verify additive evolution is enforced"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "End-to-end: Artifact indexing and deep linking verification",
+    "steps": [
+      "Step 1: Execute Study producing diverse artifacts",
+      "Step 2: Generate artifact_index.json for each trial",
+      "Step 3: Verify index contains paths to all key files",
+      "Step 4: Verify index includes content-type hints",
+      "Step 5: Verify index includes high-level labels",
+      "Step 6: Generate stage-level artifact index aggregating trials",
+      "Step 7: Generate Study-level artifact index",
+      "Step 8: Emit artifact URLs in Ray task logs",
+      "Step 9: Test deep linking from dashboard to artifacts",
+      "Step 10: Verify all artifact links are valid and accessible",
+      "Step 11: Test artifact search by content-type",
+      "Step 12: Test artifact filtering by stage/case"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Complete UI/UX validation: Ray Dashboard provides excellent operator experience",
+    "steps": [
+      "Step 1: Launch Ray dashboard and verify clean, modern interface",
+      "Step 2: Navigate to cluster overview and verify clear status indicators",
+      "Step 3: View running tasks and verify metadata is easily readable",
+      "Step 4: Filter tasks by stage/case and verify filtering works smoothly",
+      "Step 5: Access task logs and verify artifact paths are prominent",
+      "Step 6: Verify dashboard is responsive and updates in real-time",
+      "Step 7: Test dashboard on different browsers (Chrome, Firefox)",
+      "Step 8: Verify dashboard remains usable with 100+ concurrent tasks",
+      "Step 9: Take screenshots documenting excellent UX",
+      "Step 10: Gather user feedback on dashboard usability"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Complete UI/UX validation: All reports are well-formatted and professional",
+    "steps": [
+      "Step 1: Generate all report types (Study summary, legality, safety trace, etc)",
+      "Step 2: Review each report for formatting consistency",
+      "Step 3: Verify reports use clear section headers and hierarchy",
+      "Step 4: Verify reports use tables where appropriate",
+      "Step 5: Verify reports highlight key information effectively",
+      "Step 6: Verify reports use color coding for pass/fail status",
+      "Step 7: Verify reports are print-friendly",
+      "Step 8: Verify reports include timestamps and metadata",
+      "Step 9: Test reports render correctly in terminal and browser",
+      "Step 10: Gather stakeholder feedback on report quality"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Complete UI/UX validation: Heatmap visualizations are publication-quality",
+    "steps": [
+      "Step 1: Generate heatmaps for all supported types",
+      "Step 2: Verify heatmaps use appropriate colormaps (hot for congestion, etc)",
+      "Step 3: Verify heatmaps include clear legends and scales",
+      "Step 4: Verify heatmaps have descriptive titles and axis labels",
+      "Step 5: Verify heatmaps render at high resolution (300+ DPI)",
+      "Step 6: Verify diff heatmaps use diverging colormap (red/blue)",
+      "Step 7: Test heatmaps are legible when printed in grayscale",
+      "Step 8: Verify heatmaps include design metadata (case name, stage)",
+      "Step 9: Compare heatmap quality to publication examples",
+      "Step 10: Gather feedback from domain experts on visualization quality"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Complete UI/UX validation: Error messages and diagnostics are exemplary",
+    "steps": [
+      "Step 1: Trigger all error types systematically",
+      "Step 2: Collect all error messages",
+      "Step 3: Verify each error includes clear description of problem",
+      "Step 4: Verify each error suggests corrective action",
+      "Step 5: Verify each error includes unique error code",
+      "Step 6: Verify error codes are documented",
+      "Step 7: Verify errors include relevant context (file paths, values)",
+      "Step 8: Verify errors are formatted consistently",
+      "Step 9: Test that errors are helpful to novice users",
+      "Step 10: Gather user feedback on error message clarity"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Complete UI/UX validation: Command-line interface is intuitive and well-documented",
+    "steps": [
+      "Step 1: Review all CLI commands and subcommands",
+      "Step 2: Verify --help output is comprehensive and clear",
+      "Step 3: Verify command names are intuitive and follow conventions",
+      "Step 4: Verify required vs optional arguments are clearly marked",
+      "Step 5: Verify examples are provided for common workflows",
+      "Step 6: Verify CLI supports tab completion",
+      "Step 7: Verify CLI provides helpful feedback during execution",
+      "Step 8: Verify CLI error messages guide user to correct usage",
+      "Step 9: Test CLI with novice users and gather feedback",
+      "Step 10: Compare CLI quality to industry-standard tools"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Extreme scenario: Severe timing violations (WNS < -1000ps) handled gracefully",
+    "steps": [
+      "Step 1: Create base case with severe timing violations",
+      "Step 2: Attempt Study execution",
+      "Step 3: Verify base case executes (doesn't crash on bad timing)",
+      "Step 4: Classify severity of violations",
+      "Step 5: Apply aggressive timing-recovery ECOs",
+      "Step 6: Track WNS improvement trajectory",
+      "Step 7: Verify Study handles extreme metrics without overflow",
+      "Step 8: Verify telemetry captures extreme values correctly",
+      "Step 9: Generate diagnostic report for extreme case"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Extreme scenario: High routing congestion (>90% hot bins) handled without crash",
+    "steps": [
+      "Step 1: Create base case with extreme routing congestion",
+      "Step 2: Execute global routing",
+      "Step 3: Verify routing completes (doesn't hang or crash)",
+      "Step 4: Parse congestion report with extreme values",
+      "Step 5: Classify as extreme congestion scenario",
+      "Step 6: Apply congestion-relief ECOs",
+      "Step 7: Track congestion reduction",
+      "Step 8: Verify system handles 100% hot bin case",
+      "Step 9: Generate extreme congestion diagnostic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Extreme scenario: 1000+ trial large-scale parameter sweep",
+    "steps": [
+      "Step 1: Create Study with 1000 trial budget",
+      "Step 2: Generate trials systematically",
+      "Step 3: Submit all trials to Ray cluster",
+      "Step 4: Monitor cluster resource utilization",
+      "Step 5: Verify Ray handles large task queue",
+      "Step 6: Track completion of all 1000 trials",
+      "Step 7: Verify telemetry system scales to 1000 trials",
+      "Step 8: Generate summary from 1000 trial dataset",
+      "Step 9: Verify performance remains acceptable at scale",
+      "Step 10: Identify any bottlenecks or scaling issues"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Extreme scenario: Pathological ECO causing segfault handled safely",
+    "steps": [
+      "Step 1: Create ECO that triggers OpenROAD segfault",
+      "Step 2: Execute trial with pathological ECO",
+      "Step 3: Detect segfault via exit code or signal",
+      "Step 4: Classify as catastrophic failure",
+      "Step 5: Mark ECO class as catastrophically failed",
+      "Step 6: Prevent future use of ECO class in Study",
+      "Step 7: Continue Study with other ECOs",
+      "Step 8: Verify Study doesn't crash due to ECO segfault",
+      "Step 9: Generate incident report for pathological ECO"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Extreme scenario: Zero-improvement plateau across all ECOs handled intelligently",
+    "steps": [
+      "Step 1: Create base case at local optimum",
+      "Step 2: Execute stage with 20 different ECOs",
+      "Step 3: Detect that all ECOs produce zero or negative improvement",
+      "Step 4: Classify as optimization plateau",
+      "Step 5: Trigger early stage termination (no survivors found)",
+      "Step 6: Mark Study as completed at plateau",
+      "Step 7: Generate plateau analysis report",
+      "Step 8: Suggest alternative approaches (different ECO classes, etc)",
+      "Step 9: Verify system handles zero-progress case gracefully"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate all 200+ features can be tested programmatically",
+    "steps": [
+      "Step 1: Load complete feature_list.json",
+      "Step 2: Parse all 200+ features",
+      "Step 3: For each feature, verify test steps are executable",
+      "Step 4: Create test harness that can run all features",
+      "Step 5: Execute sample of features from each category",
+      "Step 6: Verify test results can be captured",
+      "Step 7: Verify features can be marked as passing programmatically",
+      "Step 8: Generate test coverage report",
+      "Step 9: Identify any untestable features",
+      "Step 10: Ensure 100% of features are testable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate feature list integrity and requirements compliance",
+    "steps": [
+      "Step 1: Load feature_list.json",
+      "Step 2: Verify minimum 200 features present",
+      "Step 3: Verify at least 25 features have 10+ steps",
+      "Step 4: Verify all features have required fields",
+      "Step 5: Verify all features start with passes=false",
+      "Step 6: Verify features are ordered by priority",
+      "Step 7: Verify both functional and style categories are represented",
+      "Step 8: Verify no duplicate feature descriptions",
+      "Step 9: Verify all step numbering is sequential",
+      "Step 10: Generate feature list validation report"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support bind-mounting custom scripts for ECO execution",
+    "steps": [
+      "Step 1: Create custom ECO script directory",
+      "Step 2: Declare bind mount in Study configuration",
+      "Step 3: Launch container with volume mount to ECO scripts",
+      "Step 4: Verify scripts are accessible in container",
+      "Step 5: Execute ECO using custom script",
+      "Step 6: Document script location in provenance"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support environment variable configuration for trial execution",
+    "steps": [
+      "Step 1: Define environment variables in Study config",
+      "Step 2: Pass environment vars to Docker container",
+      "Step 3: Verify vars are accessible in trial execution",
+      "Step 4: Use env vars in OpenROAD scripts",
+      "Step 5: Document env vars in telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Handle out-of-memory (OOM) failures gracefully",
+    "steps": [
+      "Step 1: Execute trial with insufficient memory limits",
+      "Step 2: Detect OOM condition via exit code or cgroup",
+      "Step 3: Classify as early failure 'out_of_memory'",
+      "Step 4: Record peak memory usage in failure telemetry",
+      "Step 5: Suggest memory increase in failure rationale",
+      "Step 6: Continue Study with other trials"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support trial execution time limits with soft and hard timeouts",
+    "steps": [
+      "Step 1: Configure soft timeout (warning) and hard timeout (kill)",
+      "Step 2: Execute long-running trial",
+      "Step 3: Detect soft timeout expiration and log warning",
+      "Step 4: Allow trial to continue briefly after soft timeout",
+      "Step 5: Detect hard timeout and forcefully terminate",
+      "Step 6: Classify as timeout failure with both thresholds logged"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate comparative timing path analysis across multiple cases",
+    "steps": [
+      "Step 1: Execute multiple cases with different ECOs",
+      "Step 2: Extract top N critical paths from each case",
+      "Step 3: Identify paths that appear across multiple cases",
+      "Step 4: Track path slack evolution across ECO sequence",
+      "Step 5: Identify paths that improved vs degraded",
+      "Step 6: Generate path-level comparison report",
+      "Step 7: Visualize path slack trends"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support Study templates for rapid configuration",
+    "steps": [
+      "Step 1: Create Study template with parameterized values",
+      "Step 2: Instantiate Study from template with specific parameters",
+      "Step 3: Verify template parameters are substituted correctly",
+      "Step 4: Validate instantiated Study configuration",
+      "Step 5: Execute Study from template",
+      "Step 6: Save successful Studies as new templates"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support exporting Study results to CSV for spreadsheet analysis",
+    "steps": [
+      "Step 1: Execute Study to completion",
+      "Step 2: Export case metrics to CSV",
+      "Step 3: Include columns: case_name, stage, ECO, WNS, TNS, congestion",
+      "Step 4: Verify CSV is well-formed and parseable",
+      "Step 5: Import CSV into Excel/Google Sheets",
+      "Step 6: Verify data is usable for manual analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support notification hooks for Study completion and failures",
+    "steps": [
+      "Step 1: Configure notification webhook URL in Study",
+      "Step 2: Execute Study",
+      "Step 3: Trigger notification on Study completion",
+      "Step 4: Verify webhook receives Study summary payload",
+      "Step 5: Trigger notification on Study failure",
+      "Step 6: Verify webhook receives failure details"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Study artifacts directory is organized and clearly labeled",
+    "steps": [
+      "Step 1: Execute complete Study",
+      "Step 2: Browse artifact directory tree",
+      "Step 3: Verify directory names follow clear conventions",
+      "Step 4: Verify key files are easy to locate",
+      "Step 5: Verify README or index file explains structure",
+      "Step 6: Test that new users can navigate artifacts easily"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Telemetry JSON files use consistent naming and formatting conventions",
+    "steps": [
+      "Step 1: Generate all telemetry types",
+      "Step 2: Verify filenames follow convention (study.json, stage_N.json, etc)",
+      "Step 3: Verify JSON is pretty-printed",
+      "Step 4: Verify field names use snake_case consistently",
+      "Step 5: Verify timestamps use ISO 8601 format",
+      "Step 6: Verify all telemetry is easily machine-parseable"
+    ],
+    "passes": false
   }
 ]

@@ -1886,7 +1886,7 @@
       "Step 4: Verify subcommands are listed with descriptions",
       "Step 5: Verify examples are provided for common workflows"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

@@ -1154,7 +1154,7 @@
       "Step 4: Detect any attempted writes outside working directory",
       "Step 5: Abort trial if isolation is violated"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

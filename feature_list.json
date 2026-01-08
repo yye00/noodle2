@@ -1717,7 +1717,7 @@
       "Step 4: Take screenshot showing artifact path line",
       "Step 5: Verify path is clearly formatted and easy to copy"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

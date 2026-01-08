@@ -35,6 +35,9 @@ class TrialExecutionResult:
     success: bool
     container_id: str = ""
     timed_out: bool = False  # True if trial exceeded timeout limit
+    # Resource utilization metrics
+    cpu_time_seconds: float | None = None  # Total CPU time consumed
+    peak_memory_mb: float | None = None  # Peak memory usage in MB
 
 
 class DockerTrialRunner:
@@ -181,6 +184,9 @@ class DockerTrialRunner:
             # Calculate runtime
             runtime_seconds = time.time() - start_time
 
+            # Get resource utilization stats (best-effort)
+            cpu_time_seconds, peak_memory_mb = self._get_container_resource_stats(container)
+
             # Cleanup container
             container.remove(force=True)
 
@@ -192,6 +198,8 @@ class DockerTrialRunner:
                 success=(return_code == 0),
                 container_id=container.id[:12],
                 timed_out=timed_out,
+                cpu_time_seconds=cpu_time_seconds,
+                peak_memory_mb=peak_memory_mb,
             )
 
         except docker.errors.ContainerError as e:
@@ -283,3 +291,41 @@ class DockerTrialRunner:
             return False
 
         return True
+
+    def _get_container_resource_stats(self, container: Container) -> tuple[float | None, float | None]:
+        """
+        Extract resource utilization from container stats.
+
+        Args:
+            container: Docker container object
+
+        Returns:
+            Tuple of (cpu_time_seconds, peak_memory_mb), or (None, None) if unavailable
+        """
+        try:
+            # Get container stats (non-streaming)
+            stats = container.stats(stream=False)
+
+            # Extract CPU time (total CPU usage in nanoseconds)
+            cpu_time_seconds = None
+            cpu_stats = stats.get("cpu_stats", {})
+            cpu_usage = cpu_stats.get("cpu_usage", {})
+            if "total_usage" in cpu_usage:
+                # Convert nanoseconds to seconds
+                cpu_time_seconds = cpu_usage["total_usage"] / 1_000_000_000.0
+
+            # Extract peak memory usage
+            peak_memory_mb = None
+            memory_stats = stats.get("memory_stats", {})
+            if "max_usage" in memory_stats:
+                # Convert bytes to MB
+                peak_memory_mb = memory_stats["max_usage"] / (1024 * 1024)
+            elif "usage" in memory_stats:
+                # Fall back to current usage if max_usage not available
+                peak_memory_mb = memory_stats["usage"] / (1024 * 1024)
+
+            return cpu_time_seconds, peak_memory_mb
+
+        except Exception:
+            # Resource stats are best-effort; don't fail trial if unavailable
+            return None, None

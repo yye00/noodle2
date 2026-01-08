@@ -80,6 +80,9 @@ class TrialResult:
     end_time: str = ""  # ISO 8601 format timestamp
     # Timeout tracking for runaway execution detection
     timed_out: bool = False  # True if trial exceeded timeout limit
+    # Resource utilization metrics
+    cpu_time_seconds: float | None = None  # Total CPU time consumed by OpenROAD process
+    peak_memory_mb: float | None = None  # Peak memory usage during trial execution
 
     def calculate_duration_seconds(self) -> float | None:
         """
@@ -119,6 +122,12 @@ class TrialResult:
             "container_id": self.container_id,
             "metadata": self.config.metadata,
         }
+
+        # Add resource utilization metrics if available
+        if self.cpu_time_seconds is not None:
+            result["cpu_time_seconds"] = self.cpu_time_seconds
+        if self.peak_memory_mb is not None:
+            result["peak_memory_mb"] = self.peak_memory_mb
 
         # Add failure classification if present
         if self.failure:
@@ -307,6 +316,8 @@ class Trial:
             start_time=start_time,
             end_time=end_time,
             timed_out=exec_result.timed_out,
+            cpu_time_seconds=exec_result.cpu_time_seconds,
+            peak_memory_mb=exec_result.peak_memory_mb,
         )
 
         # Write trial summary

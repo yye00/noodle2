@@ -1129,7 +1129,7 @@
       "Step 4: Record resource metrics in trial telemetry",
       "Step 5: Use metrics for resource budget planning"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

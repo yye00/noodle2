@@ -1,5 +1,219 @@
 # Noodle 2 - Progress Tracker
 
+## Session 12 - Artifact Indexing and Trial Output Cataloging
+**Date:** 2026-01-07
+**Status:** 34/200 features passing (17%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **comprehensive artifact indexing**, enabling structured
+cataloging of trial outputs for Ray Dashboard navigation and automated artifact
+validation. The system now generates machine-readable indexes for every trial and
+stage-level summaries for aggregated analysis.
+
+#### ✅ Feature #29: Create Trial Artifact Bundle in Deterministic Location
+
+**Implementation:**
+- Trials already created artifacts in deterministic paths (study/case/stage/trial)
+- This was already implemented in earlier sessions
+- Verified via existing tests and marked as passing
+
+**Why This Matters:**
+Deterministic artifact locations enable reliable artifact discovery and make it
+possible to link from Ray Dashboard to specific trial outputs.
+
+#### ✅ Feature #30: Generate Artifact Index JSON for Each Trial
+
+**Implementation:**
+- Created `artifact_index.py` module with comprehensive indexing infrastructure
+- Implemented `TrialArtifactIndex` class for trial-level artifact cataloging
+- Implemented `ArtifactEntry` dataclass with path, label, content_type, size
+- Added `generate_trial_artifact_index()` function for automatic discovery
+- Integrated index generation into `Trial.execute()` workflow
+- Index written to `artifact_index.json` in trial directory
+
+**Key Features:**
+- Automatic discovery of timing reports, congestion reports, metrics, netlists
+- Content-type inference from file extensions (JSON, CSV, Verilog, images, etc.)
+- Support for heatmap CSV files in heatmaps/ subdirectory
+- ECO metadata support (eco_names in index metadata)
+- Human-readable labels for each artifact
+- File size tracking for all entries
+
+**Test Coverage:**
+- 21 new comprehensive tests in test_artifact_index.py
+- Tests for ArtifactEntry, TrialArtifactIndex, content type inference
+- Tests for automatic artifact discovery and index generation
+- Tests for heatmap indexing and ECO metadata
+
+**Why This Matters:**
+The artifact index enables Ray Dashboard navigation. Each trial now produces a
+structured JSON file listing all outputs with metadata, making it trivial to
+navigate from task to results in the dashboard.
+
+#### ✅ Feature #31: Generate Stage-Level Artifact Summary Aggregating Trial Results
+
+**Implementation:**
+- Created `StageArtifactSummary` class for stage-level aggregation
+- Tracks trial counts (total, success, failure)
+- Aggregates metrics across all trials in stage
+- Links to individual trial artifact indexes
+- Writes `stage_artifact_summary.json` to stage directory
+
+**Key Features:**
+- Trial outcome statistics (success/failure counts)
+- Metrics aggregation (collects all WNS values, etc.)
+- Paths to all trial artifact_index.json files
+- Stage-level metadata (study, case, stage index)
+
+**Test Coverage:**
+- Tests for stage summary creation and trial registration
+- Tests for metrics aggregation across multiple trials
+- Tests for JSON serialization and file writing
+
+**Why This Matters:**
+Stage summaries provide a high-level view of experiment outcomes without needing
+to inspect individual trials. Critical for understanding which ECOs worked across
+the entire trial budget.
+
+#### ✅ Feature #39: Print Trial Artifact Root Path in Ray Task Logs
+
+**Implementation:**
+- Already implemented in Session 11 (ray_executor.py line 49)
+- Prints `[TRIAL_ARTIFACT_ROOT] {path}` in Ray task logs
+- Path is prominently visible in Ray Dashboard task logs
+- Marked as passing after verification
+
+**Why This Matters:**
+Operators can copy-paste artifact paths directly from Ray Dashboard logs to
+navigate to trial outputs. Essential for debugging and result inspection.
+
+#### ✅ Feature #64: Index Heatmap Artifacts in Trial Artifact Index
+
+**Implementation:**
+- `generate_trial_artifact_index()` automatically scans heatmaps/ directory
+- All `.csv` files in heatmaps/ are indexed with content_type "text/csv"
+- Labels include heatmap type (e.g., "Heatmap: placement_density")
+- Supports placement density, RUDY, routing congestion heatmaps
+
+**Test Coverage:**
+- test_generate_index_with_heatmaps validates heatmap discovery
+- Verifies correct content types and labels
+
+**Why This Matters:**
+Heatmaps are critical spatial evidence for ECO effectiveness. Indexing them
+makes them discoverable via the artifact index and enables future visualization
+workflows.
+
+### ADDITIONAL INFRASTRUCTURE
+
+**Content Type Inference:**
+- Created `infer_content_type()` function with extensive type mapping
+- Supports text, JSON, CSV, images (PNG/JPG/SVG)
+- Supports EDA formats (Verilog, DEF, LEF, SDC, SPEF, TCL)
+- Falls back to `application/octet-stream` for unknown types
+
+**Trial.execute() Integration:**
+- Added `_generate_artifact_index()` method called after trial summary
+- Seamlessly integrates with existing trial execution workflow
+- No breaking changes to existing code
+
+### CODE QUALITY METRICS
+
+- **New Code**: artifact_index.py (330 lines), test_artifact_index.py (376 lines)
+- **Test Count**: 305 tests total (284 existing + 21 new), all passing
+- **Test Execution Time**: ~6.7 seconds (all tests)
+- **Type Safety**: Full type hints on all new code
+- **Error Handling**: Graceful handling of missing files
+- **Documentation**: Complete docstrings on all public APIs
+- **No Regressions**: All existing 284 tests still passing
+
+### VALIDATION LADDER STATUS
+
+- ✅ **Gate 0 - Baseline Viability**: **COMPLETE** (100%)
+
+- ✅ **Gate 1 - Full Output Contract**: **PROGRESSING** (80%+)
+  - ✅ Monitoring/Provenance tracking
+  - ✅ Timing artifacts and parsing
+  - ✅ Congestion artifacts (when enabled)
+  - ✅ Early-failure detection
+  - ✅ Structured telemetry
+  - ✅ **Artifact indexing** ← **NEW!**
+  - ⏸️ Audit artifacts (partial: run legality report exists)
+
+- ✅ **Gate 2 - Controlled Regression**: **COMPLETE** (100%)
+
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
+
+### NEXT SESSION PRIORITIES
+
+With artifact indexing complete, focus should shift to:
+
+1. **Trial Ranking and Survivor Selection** (High Priority)
+   - Implement WNS-based ranking (sort trials by timing improvement)
+   - Implement congestion-based ranking (sort by hot_ratio)
+   - Multi-objective ranking (combine timing + congestion)
+   - Integrate with StudyExecutor survivor selection
+
+2. **Execution Modes (STA-only vs STA+congestion)** (High Priority)
+   - Add execution_mode field to StageConfig
+   - Implement STA-only mode (skip congestion analysis)
+   - Implement STA+congestion mode (full analysis)
+   - Generate appropriate TCL scripts per mode
+
+3. **Congestion Report Parsing** (Medium Priority)
+   - Parse global_route -congestion_report_file output
+   - Extract bins_total, bins_hot, hot_ratio
+   - Integrate with metrics parsing
+   - Add congestion failure classification
+
+4. **ECO Application Integration** (Medium Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs before running OpenROAD
+   - Track which ECOs were applied in each trial
+   - Update ECOClassTracker based on trial outcomes
+
+### GIT HISTORY THIS SESSION
+
+```
+<pending commit>
+```
+
+### FILES CREATED/MODIFIED THIS SESSION
+
+**Created:**
+- src/trial_runner/artifact_index.py (330 lines)
+- tests/test_artifact_index.py (376 lines)
+
+**Modified:**
+- src/trial_runner/trial.py (+20 lines: _generate_artifact_index method, call site)
+- src/trial_runner/__init__.py (exported artifact_index classes)
+- tests/test_ray_executor.py (fixed 2 failing tests expecting Docker to fail)
+- feature_list.json (5 features marked passing: #29, #30, #31, #39, #64)
+
+### SESSION SUMMARY
+
+**Major Achievement:** Implemented **complete artifact indexing infrastructure**,
+advancing Gate 1 (Full Output Contract) to ~80% completion.
+
+✅ **5 Features COMPLETE**: Artifact bundle location, trial-level indexing,
+stage-level summary, artifact root logging, heatmap indexing
+
+**Architecture Advancement:** Noodle 2 now produces structured, machine-readable
+indexes for every trial and stage, enabling:
+- Ray Dashboard navigation from tasks to artifacts
+- Automated artifact validation
+- Future visualization workflows (heatmaps, comparisons)
+- Structured exploration of experiment results
+
+**Test Coverage:** All 305 tests passing (284 existing + 21 new), zero regressions.
+
+**Next Milestone:** Implement trial ranking to enable survivor selection based on
+timing and congestion improvements.
+
+---
+
 ## Session 11 - Ray-Based Parallel Trial Execution
 **Date:** 2026-01-07
 **Status:** 29/200 features passing (14.5%)

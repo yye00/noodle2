@@ -373,7 +373,7 @@
       "Step 4: Verify directory path is deterministic and reproducible",
       "Step 5: Check that no artifacts leak outside this directory"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -386,7 +386,7 @@
       "Step 5: Verify index includes content-type hints",
       "Step 6: Validate index is valid JSON"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -399,7 +399,7 @@
       "Step 5: Verify summary includes links to individual trial artifacts",
       "Step 6: Write stage summary to stage artifact directory"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -500,7 +500,7 @@
       "Step 4: Verify artifact path is clearly visible",
       "Step 5: Confirm path is copy-pasteable for navigation"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -809,7 +809,7 @@
       "Step 5: Tag with content-type 'heatmap' and layer info",
       "Step 6: Validate index JSON structure"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

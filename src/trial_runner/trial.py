@@ -248,6 +248,9 @@ class Trial:
         # Write trial summary
         self._write_trial_summary(result)
 
+        # Generate artifact index for Ray Dashboard navigation
+        self._generate_artifact_index()
+
         return result
 
     def _discover_artifacts(self) -> TrialArtifacts:
@@ -371,3 +374,22 @@ class Trial:
                 "trial_index": self.config.trial_index,
             },
         }
+
+    def _generate_artifact_index(self) -> None:
+        """
+        Generate and write artifact index JSON file.
+
+        This creates artifact_index.json in the trial directory,
+        enabling Ray Dashboard navigation and artifact discovery.
+        """
+        from src.trial_runner.artifact_index import generate_trial_artifact_index
+
+        index = generate_trial_artifact_index(
+            trial_root=self.trial_dir,
+            study_name=self.config.study_name,
+            case_name=self.config.case_name,
+            stage_index=self.config.stage_index,
+            trial_index=self.config.trial_index,
+        )
+
+        index.write_to_file()

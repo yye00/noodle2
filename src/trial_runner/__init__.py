@@ -2,6 +2,12 @@
 Trial runner module - OpenROAD execution in Docker containers.
 """
 
+from src.trial_runner.artifact_index import (
+    ArtifactEntry,
+    StageArtifactSummary,
+    TrialArtifactIndex,
+    generate_trial_artifact_index,
+)
 from src.trial_runner.docker_runner import (
     DockerRunConfig,
     DockerTrialRunner,
@@ -20,4 +26,8 @@ __all__ = [
     "TrialArtifacts",
     "RayTrialExecutor",
     "execute_trial_remote",
+    "TrialArtifactIndex",
+    "ArtifactEntry",
+    "StageArtifactSummary",
+    "generate_trial_artifact_index",
 ]

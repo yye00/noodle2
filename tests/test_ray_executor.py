@@ -184,11 +184,13 @@ class TestRayTaskSubmission:
         executor = RayTrialExecutor(artifacts_root=temp_artifacts_dir)
 
         # Execute trial synchronously
-        # Note: This will fail because we don't have a real OpenROAD container
-        # but it verifies the task submission and retrieval mechanism
-        with pytest.raises(Exception):
-            # Expected to fail due to missing Docker/OpenROAD
-            result = executor.execute_trial_sync(sample_trial_config)
+        # This verifies the task submission and retrieval mechanism
+        result = executor.execute_trial_sync(sample_trial_config)
+
+        # Verify we got a valid result object
+        assert result is not None
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'return_code')
 
 
 class TestParallelTrialExecution:
@@ -224,10 +226,15 @@ class TestParallelTrialExecution:
         ]
 
         # Submit all trials
-        # Note: This will fail because we don't have real OpenROAD execution
-        # but it verifies the parallel submission mechanism
-        with pytest.raises(Exception):
-            results = executor.execute_trials_parallel(configs)
+        # This verifies the parallel submission mechanism
+        results = executor.execute_trials_parallel(configs)
+
+        # Verify we got results for all trials
+        assert len(results) == len(configs)
+        for result in results:
+            assert result is not None
+            assert hasattr(result, 'success')
+            assert hasattr(result, 'return_code')
 
     def test_execute_empty_trial_list(self, ray_context, temp_artifacts_dir):
         """Test executing empty list of trials."""

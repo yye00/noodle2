@@ -59,7 +59,7 @@
       "Step 5: Verify report lists applicable rails and abort criteria",
       "Step 6: Confirm report is written to Study artifact directory"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -71,7 +71,7 @@
       "Step 4: Confirm Study execution is blocked",
       "Step 5: Verify clear error message is emitted"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

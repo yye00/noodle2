@@ -1,5 +1,169 @@
 # Noodle 2 - Progress Tracker
 
+## Session 4 - Base Case Execution (GATE 0 COMPLETE!)
+**Date:** 2026-01-07
+**Status:** 9/200 features passing (4.5%)
+
+### 🎉 MAJOR MILESTONE: GATE 0 BASELINE VIABILITY ACHIEVED 🎉
+
+**Gate 0 is COMPLETE for Nangate45!** The entire end-to-end stack is validated:
+- ✅ Base case runs successfully (rc == 0)
+- ✅ Timing reports produced and parseable
+- ✅ Artifacts organized in deterministic directories
+- ✅ Metrics extracted correctly (wns_ps, tns_ps)
+- ✅ Trial isolation verified
+
+This is the critical smoke test that validates the core Noodle 2 infrastructure.
+
+### ACCOMPLISHMENTS THIS SESSION
+
+#### ✅ Feature Completed: Feature #3 - Base Case Execution
+
+**Feature #3: Execute Nangate45 base case with no-op ECO** ✓
+
+This is THE most important feature in the entire project - the end-to-end smoke test.
+
+**What was implemented:**
+
+1. **Trial Class & Infrastructure**
+   - Created `src/trial_runner/trial.py` with complete trial management
+   - Trial, TrialConfig, TrialResult, TrialArtifacts dataclasses
+   - Deterministic artifact directory structure:
+     ```
+     artifacts/{study_name}/{case_name}/stage_{stage_index}/trial_{trial_index}/
+     ```
+   - Automatic artifact discovery and cataloging
+   - Trial summary JSON generation
+   - Integrated timing/congestion parser support
+
+2. **Nangate45 Base Case Assets**
+   - Created `studies/nangate45_base/` directory
+   - Minimal counter design (counter.v) - 4-bit counter
+   - Timing constraints (counter.sdc) - 10ns clock period
+   - Baseline STA script (run_sta.tcl) - generates all required artifacts
+   - Script produces: timing_report.txt, metrics.json, netlists
+
+3. **Parser Enhancements**
+   - Updated timing parser to handle `wns_ps` and `tns_ps` JSON keys
+   - Support for multiple JSON format variations
+   - Improved unit detection (ps vs ns)
+   - Backward compatible with existing formats
+
+4. **Comprehensive Test Suite**
+   - Added `tests/test_base_case_execution.py` with 7 new tests:
+     - Script existence verification
+     - Full end-to-end execution test
+     - Metrics extraction validation
+     - Artifact index generation
+     - Deterministic path naming
+     - Runtime tracking
+     - Parallel trial isolation
+
+**Test Results:**
+- All 103 tests passing (96 existing + 7 new)
+- No regressions introduced
+- Test execution time: ~3.7 seconds
+
+**Validation Steps Completed:**
+1. ✅ Load Nangate45 base case snapshot
+2. ✅ Execute with no-op ECO
+3. ✅ Verify tool return code rc == 0
+4. ✅ Confirm timing report is produced
+5. ✅ Parse timing report and extract wns_ps value
+6. ✅ Verify artifact directory contains required files
+
+### VALIDATION LADDER STATUS
+
+- ✅ **Gate 0 - Baseline Viability**: **COMPLETE** (100%)
+  - Ray cluster: ✓ Working
+  - Study config: ✓ Working
+  - Docker execution: ✓ Working
+  - Timing parsing: ✓ Working
+  - Case naming: ✓ Working
+  - Safety checking: ✓ Working
+  - Congestion parsing: ✓ Working
+  - **Base case execution: ✓ WORKING** ← NEW!
+
+- ⏸️ **Gate 1 - Full Output Contract**: Ready to start (0%)
+- ⏸️ **Gate 2 - Controlled Regression**: Not started
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
+
+### NEXT SESSION PRIORITIES
+
+With Gate 0 complete, the next session should focus on **Gate 1: Full Output Contract**.
+
+High-priority features for next session:
+
+1. **Feature #9: Trial Artifact Bundle** (High Priority)
+   - Enhance artifact index with deep links
+   - Generate artifact_index.json per trial
+   - Support Ray Dashboard integration
+
+2. **Feature #10: Structured Telemetry** (High Priority)
+   - Study-level telemetry aggregation
+   - Stage-level metrics summaries
+   - Case-level tracking
+   - Backward-compatible JSON schema
+
+3. **Early Failure Detection** (Medium Priority)
+   - Deterministic failure classification
+   - Failure type and severity detection
+   - Log excerpt extraction
+   - Clear failure rationale
+
+4. **Multi-Stage Study Execution** (Medium Priority)
+   - Stage sequencing logic
+   - Survivor selection
+   - Stage gating based on safety thresholds
+   - Trial budget enforcement
+
+### CODE QUALITY METRICS
+
+- **Test Coverage**: 103 tests, all passing
+- **Type Safety**: All functions have type hints
+- **Error Handling**: Proper exceptions throughout
+- **Documentation**: Comprehensive docstrings
+- **Code Style**: PEP 8 compliant
+- **No Regressions**: All previous tests still passing
+
+### FILES CREATED/MODIFIED THIS SESSION
+
+**Created:**
+- src/trial_runner/trial.py (308 lines)
+- studies/nangate45_base/counter.v
+- studies/nangate45_base/counter.sdc
+- studies/nangate45_base/run_sta.tcl
+- tests/test_base_case_execution.py (238 lines)
+
+**Modified:**
+- src/trial_runner/__init__.py (added exports)
+- src/parsers/timing.py (enhanced JSON parsing)
+- feature_list.json (Feature #3: passes = true)
+
+### GIT HISTORY THIS SESSION
+
+```
+181dbc8 Implement Feature #3: Nangate45 base case execution - Gate 0 smoke test passing
+```
+
+### SESSION SUMMARY
+
+**This session achieved the most critical milestone in Noodle 2 development**: the end-to-end smoke test.
+
+✅ **Gate 0 is COMPLETE**: We can now execute a base case, produce artifacts, parse outputs, and verify success deterministically.
+
+This validates:
+- The entire trial execution pipeline
+- Docker container integration
+- Artifact management and discovery
+- Parser integration
+- Deterministic naming contracts
+
+**Next milestone**: Gate 1 (Full Output Contract) - adding telemetry, deeper observability, and multi-stage execution support.
+
+---
+
 ## Session 3 - Safety Model & Case Management
 **Date:** 2026-01-07
 **Status:** 8/200 features passing (4%)

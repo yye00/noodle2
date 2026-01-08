@@ -1597,7 +1597,7 @@
       "Step 4: Ensure exact image version is used across all trials",
       "Step 5: Document image digest in provenance metadata"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

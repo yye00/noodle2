@@ -1,0 +1,127 @@
+# Session 43 Summary - Timing Violation Classification
+
+**Date:** 2026-01-08
+**Session Goal:** Implement timing violation detection and classification (setup vs hold)
+**Status:** ✅ Complete
+
+## Accomplishments
+
+### Feature Implemented
+**Feature #107: Detect and classify timing violations (setup, hold)** - PASSING ✅
+
+All 6 feature steps validated:
+1. ✅ Execute STA producing report_checks output
+2. ✅ Parse timing paths and identify violation types
+3. ✅ Classify setup violations (negative WNS on max paths)
+4. ✅ Classify hold violations (negative slack on min paths)
+5. ✅ Emit violation breakdown to telemetry
+6. ✅ Use violation classification for ECO targeting
+
+### Implementation Summary
+
+**New Data Structure:**
+- `TimingViolationBreakdown` dataclass in `src/controller/types.py`
+  - Tracks setup_violations, hold_violations, total_violations
+  - Records worst_setup_slack_ps and worst_hold_slack_ps
+  - Integrated into TimingMetrics
+
+**Classification Logic:**
+- New `classify_timing_violations()` function in `src/parsers/timing.py`
+  - Classifies by path_type: "max" → setup, "min" → hold
+  - Defaults to setup if path_type unspecified
+  - Case-insensitive path type matching
+  - Tracks worst slack per violation type
+
+**Automatic Integration:**
+- Violation breakdown computed automatically when paths are extracted
+- No API changes or configuration required
+- Fully backward compatible
+
+**Test Coverage:**
+- 16 comprehensive tests in `tests/test_timing_violations.py`
+- Tests cover all feature steps plus edge cases
+- ECO targeting use cases validated
+
+## Statistics
+
+**Tests:**
+- Added: 16 new tests
+- Total: 1012 passing, 1 skipped
+- All tests pass ✅
+
+**Features:**
+- Completed this session: 1
+- Total passing: 90/200 (45.0%)
+- Remaining: 110
+
+**Code Changes:**
+- Modified: 3 files (types.py, timing.py, feature_list.json)
+- New: 1 file (test_timing_violations.py, 617 lines)
+- Total additions: ~688 lines
+
+## Why This Matters
+
+**Targeted ECO Strategies:**
+- Setup violations require different ECO approaches than hold violations
+- Enables timing optimization for setup vs delay insertion for hold
+- Prevents ECOs that fix one violation type while worsening the other
+
+**Improved Diagnostics:**
+- Operators see violation breakdown at a glance
+- Identify whether design is setup-dominated or hold-dominated
+- Track violation trends across trials
+
+**Production-Ready:**
+- Flows through existing telemetry automatically
+- No breaking changes to existing code
+- Type-safe with comprehensive error handling
+
+## Commits Made
+
+1. `8dd73b2` - Implement timing violation classification (setup/hold) - Feature #107 passing
+2. `26c3d43` - Add Session 43 progress notes - Timing violation classification complete
+
+## Verification
+
+✅ All existing tests pass (996 → 1012 passing)
+✅ Feature #107 marked as passing in feature_list.json
+✅ No regressions introduced
+✅ Git working tree clean
+✅ Progress notes updated
+
+## Next Session Recommendations
+
+Based on the current codebase and feature list, suggested next implementations:
+
+**High Priority (Direct ECO Impact):**
+1. **Feature #16: Generate diff report comparing Case metrics vs baseline**
+   - Builds on existing timing/congestion metrics
+   - Enables quantitative ECO effectiveness measurement
+   - Foundation for leaderboard features
+
+2. **Feature #22: Generate per-stage performance summary**
+   - Track trials/sec, total compute time per stage
+   - Builds on resource utilization tracking (Session 42)
+   - Operational visibility for long-running Studies
+
+**Medium Priority (Analysis & Targeting):**
+3. **Feature #12: Generate ECO effectiveness leaderboard**
+   - Aggregate ECO performance across trials
+   - Requires diff report (Feature #16) for best results
+
+4. **Feature #20 (Alternative): Detect and classify timing violations**
+   - Already completed! ✅
+
+**Lower Priority (Advanced Features):**
+5. **Feature #19: Support custom metric extractors**
+   - Extensibility for project-specific KPIs
+   - Requires stable metric pipeline first
+
+All timing analysis infrastructure is now in place (parsing, paths, violations),
+making ECO analysis and targeting features the natural next step.
+
+---
+
+**Session Duration:** ~1 hour
+**Focus:** Production-quality timing analysis infrastructure
+**Result:** Feature complete, all tests passing, ready for ECO-driven features

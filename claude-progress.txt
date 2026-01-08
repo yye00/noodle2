@@ -1,233 +1,186 @@
-# Noodle 2 - Session 1 Progress Summary
+# Noodle 2 - Progress Tracker
 
-## Date: 2026-01-07
-## Agent: Initializer (Session 1)
+## Session 2 - Core Foundation Implementation
+**Date:** 2026-01-07
+**Status:** 4/200 features passing (2%)
 
----
+### ACCOMPLISHMENTS THIS SESSION
 
-## ACCOMPLISHMENTS
+#### ✅ Features Completed (4 total)
 
-### ✅ Core Foundation Established
+1. **Feature #1: Ray Cluster Initialization** ✓
+   - Implemented tests for Ray head node startup
+   - Verified dashboard accessibility on port 8265
+   - Validated cluster resources and node status
+   - Tests: test_ray_cluster.py (2 tests passing)
 
-1. **Feature List Created (feature_list.json)**
-   - 205 comprehensive test cases documented
-   - 175 functional features covering all system capabilities
-   - 30 style features for UI/UX and observability
-   - Each feature has 2-12 detailed testing steps
-   - Features ordered by priority (fundamental → advanced)
-   - All features start with passes: false (ready for tracking)
+2. **Feature #2: Study Configuration** ✓
+   - Created comprehensive type system (SafetyDomain, ECOClass, ExecutionMode, etc.)
+   - Implemented StudyConfig and StageConfig dataclasses
+   - Built YAML configuration loader with validation
+   - Added programmatic config creation API
+   - Supports multi-stage Study definitions
+   - Tests: test_study_config.py (6 tests passing)
 
-2. **Environment Setup Script (init.sh)**
-   - Automated Python virtual environment creation
-   - Dependency installation (Ray, PyYAML, Docker client, matplotlib, etc.)
-   - Docker image pulling (efabless/openlane:ci2504-dev-amd64)
-   - Single-node Ray cluster startup with dashboard
-   - Verification and helpful output
-   - Ready for immediate use
+3. **Feature #4: Timing Report Parser** ✓
+   - Parser for OpenROAD report_checks output
+   - Extracts WNS (Worst Negative Slack) and TNS (Total Negative Slack)
+   - Supports multiple format variations (wns/slack keywords)
+   - Automatic unit conversion (ns → ps)
+   - JSON metrics format support
+   - Comprehensive error handling
+   - Tests: test_timing_parser.py (11 tests passing)
 
-3. **Comprehensive Documentation (README.md)**
-   - Project overview and key features
-   - Quick start guide with prerequisites
-   - Development workflow and feature tracking guidelines
-   - Core concepts (Study, Case, Stage, ECO)
-   - Safety model documentation
-   - Technology stack details
-   - ASAP7-specific workarounds
-   - Common tasks and commands
+4. **Feature #8: Docker Trial Runner** ✓
+   - Container execution with efabless/openlane:ci2504-dev-amd64
+   - Isolated working directories for each trial
+   - Volume mounting for scripts and snapshots
+   - Resource limits (memory, CPU, timeout)
+   - OpenROAD availability verification
+   - Full stdout/stderr capture
+   - Tests: test_docker_runner.py (8 tests passing)
 
-4. **Project Structure**
-   - src/controller: Study orchestration (empty, ready for implementation)
-   - src/trial_runner: OpenROAD execution wrapper
-   - src/parsers: Report parsing logic
-   - src/policy: Safety gates and ranking
-   - src/telemetry: Structured logging
-   - src/visualization: Heatmap and graph generation
-   - artifacts/ and studies/ directories created
+#### 📦 Infrastructure Completed
 
-5. **Git Repository Initialized**
-   - Initial commit with all foundation files
-   - Proper .gitignore configured
-   - Clean working tree (ready for next session)
+- **pyproject.toml**: Complete project configuration
+  - Dependencies: Ray, PyYAML, Docker, matplotlib, numpy, requests
+  - Dev dependencies: pytest, pytest-cov, mypy, ruff
+  - Proper tool configuration (pytest, mypy, ruff)
 
----
+- **Test Suite**: 27 tests, all passing
+  - Organized test files by component
+  - Comprehensive edge case coverage
+  - Fast execution (< 2 seconds total)
 
-## FEATURE IMPLEMENTATION STATUS
+- **Source Structure**:
+  ```
+  src/
+  ├── controller/
+  │   ├── types.py      # Core type definitions
+  │   └── study.py      # Study configuration loader
+  ├── parsers/
+  │   └── timing.py     # Timing report parser
+  └── trial_runner/
+      └── docker_runner.py  # Docker execution wrapper
+  ```
 
-### Features Completed: 0/205 (0%)
-- All features documented and ready for implementation
-- None implemented yet (this is expected for Session 1 - initialization only)
+### CODE QUALITY METRICS
 
-### Next Priority Features (Top 10 to implement):
+- **Test Coverage**: Core components have comprehensive tests
+- **Type Safety**: All functions have type hints
+- **Error Handling**: Proper exceptions with clear messages
+- **Documentation**: Docstrings on all public functions
+- **Code Style**: Follows PEP 8 conventions
 
-1. **Feature #1**: Initialize Ray cluster in single-node mode and verify dashboard starts on port 8265
-2. **Feature #2**: Create a minimal Study definition with Nangate45 base case
-3. **Feature #3**: Execute Nangate45 base case with no-op ECO and verify structural runnability
-4. **Feature #4**: Parse OpenROAD report_checks output and extract WNS correctly
-5. **Feature #5**: Generate Run Legality Report before Study execution
-6. **Feature #6**: Reject illegal Study configuration before consuming compute
-7. **Feature #7**: Create deterministic case naming following contract
-8. **Feature #8**: Verify Docker container execution with efabless/openlane:ci2504-dev-amd64
-9. **Feature #9**: Execute trial in isolated working directory with immutable snapshot
-10. **Feature #10**: Emit structured telemetry with Study, Stage, and Case axes
+### VALIDATION LADDER STATUS
 
-These align with **Gate 0: Baseline viability** from the validation ladder.
+- ✅ **Gate 0 - Baseline Viability**: IN PROGRESS
+  - Ray cluster: ✓ Working
+  - Study config: ✓ Working
+  - Docker execution: ✓ Working
+  - Timing parsing: ✓ Working
+  - Remaining: Base case execution, congestion parsing, legality checking
 
----
+- ⏸️ **Gate 1 - Full Output Contract**: Not started
+- ⏸️ **Gate 2 - Controlled Regression**: Not started
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
 
-## ARCHITECTURE DECISIONS
+### NEXT SESSION PRIORITIES
 
-1. **Language**: Python 3.10+ (as specified)
-2. **Orchestration**: Ray for distributed execution
-3. **Containerization**: Docker with efabless/openlane:ci2504-dev-amd64
-4. **Development Mode**: Single-node Ray cluster (multi-node deferred)
-5. **Feature Tracking**: feature_list.json as single source of truth
-6. **Safety Model**: Three domains (sandbox/guarded/locked) + four ECO classes
+The next session should focus on completing **Gate 0** by implementing:
 
----
+1. **Feature #7: Case Naming Contract** (High Priority)
+   - Implement CaseIdentifier usage
+   - Test deterministic naming: `<case_name>_<stage_index>_<derived_index>`
+   - Add case lineage tracking
 
-## TESTING APPROACH
+2. **Feature #5 & #6: Run Legality Report** (High Priority)
+   - Implement safety domain vs ECO class validation
+   - Generate human-readable legality report
+   - Block illegal Study configurations
+   - Add clear error messages
 
-The project uses a **feature-driven testing** methodology:
+3. **Feature #3: Base Case Execution** (Critical Path)
+   - End-to-end test with real Nangate45 snapshot
+   - Execute no-op ECO
+   - Verify all artifacts are produced
+   - This is the **SMOKE TEST** - must pass before advancing
 
-- feature_list.json defines 205 end-to-end test cases
-- Each feature has explicit testing steps
-- Features marked as "passes": true when verified
-- NEVER remove or edit features (only mark as passing)
-- Progress tracked by counting passing features
+4. **Congestion Parser** (for STA+Congestion modes)
+   - Parse `global_route -congestion_report_file` output
+   - Extract hot bin metrics
+   - Support per-layer tallies
 
----
+5. **Telemetry Framework** (Feature #10)
+   - Structured JSON emission at Study/Stage/Case levels
+   - Backward-compatible schema
+   - Artifact indexing
 
-## NEXT SESSION PRIORITIES
+### TECHNICAL DECISIONS
 
-### Immediate Next Steps (Session 2):
+1. **Python 3.10+ as baseline**: Using modern type hints and match/case
+2. **Ray for orchestration**: Single-node dev mode is primary workflow
+3. **Docker as execution boundary**: All trials run in isolated containers
+4. **Picoseconds for timing**: Standardized on ps for all WNS/TNS values
+5. **YAML for Study configs**: Human-readable, version-controllable
 
-1. **Implement Ray Integration (Features #1, #8)**
-   - Create Ray cluster management utilities
-   - Verify dashboard connectivity
-   - Test single-node execution
+### KNOWN LIMITATIONS / DEFERRED
 
-2. **Implement Study Configuration (Feature #2)**
-   - Define Study YAML/JSON schema
-   - Create Study dataclass/model
-   - Implement configuration parser
-   - Add validation logic
+1. **Multi-node Ray**: Deferred - single-node is sufficient for dev
+2. **Headless GUI (Xvfb)**: Deferred - use interactive X11 mode for heatmaps
+3. **ASAP7/Sky130 snapshots**: Not yet available - focusing on Nangate45
+4. **PDK verification**: Basic checks only - full validation deferred
 
-3. **Implement Docker Trial Runner (Features #3, #9)**
-   - Create DockerTrialRunner class
-   - Implement isolated working directory setup
-   - Add OpenROAD command execution
-   - Capture stdout/stderr
-   - Return exit codes
+### FILES CHANGED THIS SESSION
 
-4. **Implement Timing Parser (Feature #4)**
-   - Parse report_checks output
-   - Extract WNS (worst negative slack)
-   - Extract TNS (total negative slack)
-   - Return structured metrics
+**Created:**
+- pyproject.toml
+- src/controller/types.py
+- src/controller/study.py
+- src/parsers/timing.py
+- src/trial_runner/docker_runner.py
+- tests/__init__.py
+- tests/conftest.py
+- tests/test_ray_cluster.py
+- tests/test_study_config.py
+- tests/test_timing_parser.py
+- tests/test_docker_runner.py
 
-5. **Implement Run Legality Report (Features #5, #6)**
-   - Create legality checker
-   - Validate safety domain vs ECO class compatibility
-   - Generate human-readable report
-   - Block illegal Studies
+**Modified:**
+- feature_list.json (4 features marked as passing)
 
-### Suggested Work Breakdown:
+### SESSION SUMMARY
 
-**High Priority (Gate 0 - Baseline Viability):**
-- Timing report parser (critical path)
-- Docker trial runner (critical path)
-- Basic Study configuration
-- Ray cluster integration
+This session established the **foundational layer** for Noodle 2:
 
-**Medium Priority (Gate 1 - Full Output Contract):**
-- Telemetry emission
-- Artifact indexing
-- Congestion report parser
-- Stage progression logic
+✅ **Control Plane**: Study configuration and validation
+✅ **Execution Engine**: Docker-based trial runner
+✅ **Observability**: Timing report parsing
+✅ **Orchestration**: Ray cluster integration
 
-**Lower Priority (Gates 2-4):**
-- Advanced failure classification
-- Multi-objective ranking
-- Heatmap visualization
-- Cross-target validation
+The system now has the basic building blocks needed to execute trials.
 
----
+**Next critical milestone**: End-to-end base case execution (Feature #3) - this will be the first real OpenROAD workload and will validate the entire stack.
 
-## ENVIRONMENT STATE
-
-- Git repository: Clean, ready for commits
-- Working directory: All foundation files in place
-- Dependencies: Not yet installed (run init.sh when ready)
-- Ray cluster: Not yet started (run init.sh when ready)
-- Docker images: Not yet pulled (run init.sh when ready)
-
----
-
-## IMPORTANT NOTES FOR NEXT AGENT
-
-1. **Run init.sh first** to set up the environment before coding
-2. **Read feature_list.json** to understand all requirements
-3. **Follow the validation ladder**: Gate 0 → Gate 1 → Gate 2 → Gate 3 → Gate 4
-4. **Start with Nangate45**: It's the fastest target for bring-up
-5. **NEVER remove features**: Only mark as passes: true when verified
-6. **Commit frequently**: Use descriptive messages and reference feature numbers
-7. **Test thoroughly**: Each feature must pass all its steps before marking true
-8. **Focus on quality**: Production-ready is the goal, not speed
+**Recommended approach for next session:**
+1. Start with Feature #7 (case naming) - quick win
+2. Implement Features #5 & #6 (legality checking) - important safety feature
+3. Tackle Feature #3 (base case execution) - the big integration test
+4. Only if Feature #3 passes, proceed to congestion parsing and telemetry
 
 ---
 
-## FILE MANIFEST
+## Session 1 - Initialization (Previous)
+**Date:** 2026-01-07
+**Status:** 0/200 features passing (0%)
 
-### Core Files:
-- `feature_list.json` (205 features, 78KB)
-- `init.sh` (environment setup, executable)
-- `README.md` (comprehensive documentation)
-- `app_spec.txt` (complete product specification)
-- `.gitignore` (configured for Python/Ray/Docker)
-
-### Source Structure:
-- `src/__init__.py`
-- `src/controller/__init__.py`
-- `src/trial_runner/__init__.py`
-- `src/parsers/__init__.py`
-- `src/policy/__init__.py`
-- `src/telemetry/__init__.py`
-- `src/visualization/__init__.py`
-
-### Directories:
-- `artifacts/` (trial outputs)
-- `studies/` (study definitions)
+- Created feature_list.json with 200+ features
+- Set up init.sh automation script
+- Created project structure
+- Initialized git repository
 
 ---
 
-## VALIDATION LADDER STATUS
-
-- ✅ Gate 0 Ready: Foundation established, features defined
-- ⏸️ Gate 0 Baseline Viability: Not started (next priority)
-- ⏸️ Gate 1 Full Output Contract: Not started
-- ⏸️ Gate 2 Controlled Regression: Not started
-- ⏸️ Gate 3 Cross-Target Parity: Not started
-- ⏸️ Gate 4 Extreme Scenarios: Not started
-
----
-
-## SESSION SUMMARY
-
-This session successfully established the complete foundation for Noodle 2 development:
-- All 205 features documented with detailed test steps
-- Environment automation ready (init.sh)
-- Project structure created
-- Documentation complete
-- Git repository initialized
-
-**The project is ready for core implementation to begin.**
-
-Next agent should start with Gate 0 features (#1-10) focusing on:
-1. Ray cluster management
-2. Docker trial execution
-3. Basic report parsing
-4. Study configuration
-
----
-
-End of Session 1 Progress Summary
+**Overall Progress: 4/200 features (2%)**
+**Next Session Goal: Complete Gate 0 (reach ~10 features passing)**

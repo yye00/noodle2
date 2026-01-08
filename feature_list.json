@@ -1508,7 +1508,7 @@
       "Step 4: On failure, review command log to identify failing command",
       "Step 5: Use command log for debugging and reproduction"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

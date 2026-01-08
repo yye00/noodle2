@@ -23,6 +23,14 @@ from src.trial_runner.tcl_generator import (
     generate_trial_script,
     write_trial_script,
 )
+from src.trial_runner.command_logging import (
+    CommandLogEntry,
+    CommandLogParser,
+    analyze_command_log,
+    format_command_summary,
+    generate_tcl_logging_epilogue,
+    generate_tcl_logging_prologue,
+)
 from src.trial_runner.trial import Trial, TrialArtifacts, TrialConfig, TrialResult
 
 __all__ = [
@@ -44,4 +52,10 @@ __all__ = [
     "ToolProvenance",
     "create_provenance",
     "query_openroad_version",
+    "CommandLogEntry",
+    "CommandLogParser",
+    "generate_tcl_logging_prologue",
+    "generate_tcl_logging_epilogue",
+    "format_command_summary",
+    "analyze_command_log",
 ]

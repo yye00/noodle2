@@ -1,0 +1,75 @@
+SESSION 55 SUMMARY - Custom Metric Extractors
+==============================================
+
+Date: 2026-01-08
+Status: ✅ Complete
+Feature: #106 - Support custom metric extractors for project-specific KPIs
+
+IMPLEMENTATION
+--------------
+Created comprehensive custom metric extractor framework in src/parsers/custom_metrics.py:
+
+Core Components:
+• MetricExtractor abstract base class with validation
+• MetricExtractorRegistry for managing multiple extractors
+• CellCountExtractor (built-in example)
+• WirelengthExtractor (built-in example)
+• create_default_registry() factory function
+
+Features:
+• Extensible: Easy to add custom extractors
+• Resilient: Errors don't block other extractors
+• Flexible: Nested or flat output modes
+• Validated: JSON-serializable metrics
+• Type-safe: Full type hints throughout
+
+TESTING
+-------
+Added 36 comprehensive tests in tests/test_custom_metrics.py:
+✅ Base class abstraction
+✅ Registry management
+✅ Multiple extractor execution
+✅ Error handling and containment
+✅ Metrics validation
+✅ Key collision resolution
+✅ Built-in extractors (CellCount, Wirelength)
+✅ End-to-end workflows
+
+Total test suite: 1463 passing (36 new), 0 failing
+
+USE CASES
+---------
+1. Power Analysis: Extract power metrics from reports
+2. Area Metrics: Parse design area and utilization
+3. Custom KPIs: Project-specific quality indicators
+4. Multi-Tool Support: Extract from non-OpenROAD tools
+5. Policy Integration: Use in ECO ranking decisions
+
+EXAMPLE
+-------
+```python
+class PowerExtractor(MetricExtractor):
+    def extract(self, artifact_dir: Path) -> dict[str, Any]:
+        # Parse power report
+        return {"total_power_mw": 125.3}
+
+registry = MetricExtractorRegistry()
+registry.register("power", PowerExtractor())
+metrics = registry.extract_all(trial_artifact_dir)
+```
+
+PROGRESS
+--------
+Features: 110/200 passing (55.0% complete)
+Tests: 1463 passing
+Files Modified: 4 (1 new module, 1 updated init, 1 new test file, 1 feature list)
+
+NEXT PRIORITIES
+--------------
+1. Timing violation classification (setup vs hold)
+2. Snapshot structural validation
+3. TCL script logging for reproducibility
+4. PDK version detection/mismatch reporting
+5. ECO effectiveness leaderboard
+
+Session completed successfully with no regressions.

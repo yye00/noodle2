@@ -9123,3 +9123,191 @@ Remaining high-priority features (91 features remaining):
 
 Current completion: **109/200 features (54.5%)**
 
+
+================================================================================
+SESSION 55 - Custom Metric Extractors (2026-01-08)
+================================================================================
+
+## OBJECTIVE
+
+Implement custom metric extractor framework to support project-specific KPIs
+beyond standard timing and congestion metrics.
+
+## VERIFICATION TEST
+
+✅ All tests passing before starting new work:
+- 1427 tests collected
+- Resumption tests (24 tests) all passing
+- Base case and parser tests all passing
+- No regressions detected
+
+## FEATURE IMPLEMENTED
+
+**Feature #106: Support custom metric extractors for project-specific KPIs**
+
+Created comprehensive framework in `src/parsers/custom_metrics.py`:
+
+### Core Components
+
+1. **MetricExtractor Base Class**
+   - Abstract base class with `extract()` method
+   - Built-in validation for JSON-serializable metrics
+   - Override `validate_metrics()` for custom validation
+   - Graceful error handling (return {} for missing artifacts)
+
+2. **MetricExtractorRegistry**
+   - Register multiple extractors with unique names
+   - Execute extractors in registration order
+   - Two output modes:
+     * `extract_all()`: Nested dict per extractor
+     * `extract_flat()`: Flattened single dict
+   - Automatic key collision resolution
+   - Error containment (failed extractors don't block others)
+
+3. **Built-in Example Extractors**
+   - `CellCountExtractor`: Parse cell/instance statistics
+     * Supports "cells" and "instances" terminology
+     * Extracts combinational and sequential cell counts
+   - `WirelengthExtractor`: Parse total wirelength
+     * Supports multiple units (um, microns)
+     * Works with various report formats
+   - `create_default_registry()`: Pre-configured registry factory
+
+### Design Principles
+
+- **Extensibility**: Easy to add new extractors by subclassing
+- **Resilience**: Extractor errors don't fail entire pipeline
+- **Flexibility**: Support various report formats and tools
+- **Type Safety**: Full type hints on all functions
+- **Documentation**: Comprehensive docstrings with examples
+
+## IMPLEMENTATION DETAILS
+
+**File Structure**:
+- `src/parsers/custom_metrics.py` (308 lines)
+  * MetricExtractor abstract base class
+  * MetricExtractorRegistry with registration/execution
+  * Built-in CellCount and Wirelength extractors
+  * Factory function for default registry
+
+- `src/parsers/__init__.py` (updated)
+  * Export public API from custom_metrics module
+
+- `tests/test_custom_metrics.py` (36 tests, 523 lines)
+  * Base class abstraction tests
+  * Registry management tests
+  * Extraction and validation tests
+  * Built-in extractor tests
+  * Error handling tests
+  * Integration tests
+
+## TESTING RESULTS
+
+**36 new tests, all passing**:
+- ✅ Abstract base class behavior (cannot instantiate directly)
+- ✅ Registry registration/unregistration
+- ✅ Duplicate name detection
+- ✅ Invalid type rejection
+- ✅ Multiple extractor execution
+- ✅ Execution order preservation
+- ✅ Error containment and reporting
+- ✅ Metrics validation (JSON-serializable)
+- ✅ Flat extraction with/without prefixes
+- ✅ Key collision handling
+- ✅ CellCountExtractor parsing
+- ✅ WirelengthExtractor parsing
+- ✅ Default registry creation
+- ✅ End-to-end workflow
+- ✅ Custom validation override
+
+**Full test suite**: 1463 tests passing (no regressions)
+
+## USE CASES ENABLED
+
+1. **Power Metrics**: Extract power consumption from tool reports
+   ```python
+   class PowerExtractor(MetricExtractor):
+       def extract(self, artifact_dir: Path) -> dict[str, Any]:
+           # Parse power.rpt and return {"total_power_mw": value}
+   ```
+
+2. **Area Metrics**: Parse design area and utilization
+3. **DRC Violations**: Extract design rule check counts
+4. **Custom KPIs**: Project-specific quality indicators
+5. **Multi-Tool Support**: Extract from non-OpenROAD tools
+6. **Policy Integration**: Use custom metrics in ECO ranking
+
+## EXAMPLE USAGE
+
+```python
+from pathlib import Path
+from src.parsers import MetricExtractor, MetricExtractorRegistry
+
+# Define custom power extractor
+class PowerExtractor(MetricExtractor):
+    def extract(self, artifact_dir: Path) -> dict[str, Any]:
+        power_report = artifact_dir / "power.rpt"
+        if not power_report.exists():
+            return {}
+        
+        content = power_report.read_text()
+        # Parse power report...
+        return {"total_power_mw": 125.3, "leakage_power_mw": 12.1}
+
+# Create registry and register extractors
+registry = MetricExtractorRegistry()
+registry.register("power", PowerExtractor())
+registry.register("cell_count", CellCountExtractor())
+
+# Extract all metrics
+metrics = registry.extract_all(trial_artifact_dir)
+# Result:
+# {
+#   "power": {"total_power_mw": 125.3, "leakage_power_mw": 12.1},
+#   "cell_count": {"cell_count": 2000, "combinational_cells": 1200}
+# }
+
+# Or get flattened metrics
+flat_metrics = registry.extract_flat(trial_artifact_dir)
+# Result: {"total_power_mw": 125.3, "cell_count": 2000, ...}
+```
+
+## INTEGRATION NOTES
+
+The custom metric framework is designed to integrate seamlessly with:
+
+1. **Trial Execution**: Call `registry.extract_all()` after trial completion
+2. **Telemetry System**: Emit custom metrics to telemetry pipeline
+3. **Policy Engine**: Use custom metrics in ECO ranking decisions
+4. **Artifact Validation**: Validate custom metric artifacts exist
+
+Integration points:
+- Add registry parameter to trial execution functions
+- Merge custom metrics with standard TimingMetrics and CongestionMetrics
+- Include custom metrics in stage summaries and Study exports
+
+## NEXT PRIORITIES
+
+With 110/200 features complete (55.0%), remaining high-value features:
+
+1. **Timing Violation Classification** (#117) - Detect setup vs hold violations
+2. **Snapshot Validation** (#119) - Validate structural integrity before execution
+3. **TCL Script Logging** (#120) - Log invocations for reproducibility
+4. **PDK Version Detection** (#101) - Detect/report version mismatches
+5. **ECO Effectiveness Leaderboard** (#103) - Rank ECOs by impact
+
+## SESSION SUMMARY
+
+✅ **Completed**: Custom metric extractor framework (#106)
+- Full framework with base class and registry
+- Two built-in example extractors
+- 36 comprehensive tests
+- Complete documentation
+- Clean integration path
+
+**Test Status**: 1463 passing (36 new), 0 failing
+**Feature Status**: 110/200 passing (55.0% complete)
+**Code Quality**: Full type hints, comprehensive docstrings, error handling
+
+No issues or regressions. Feature ready for integration into trial execution.
+

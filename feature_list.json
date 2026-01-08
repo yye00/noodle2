@@ -859,7 +859,7 @@
       "Step 5: Include pass/fail status and rationale for each gate",
       "Step 6: Write safety trace to Study artifacts"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

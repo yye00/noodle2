@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
 from src.controller.safety import check_study_legality, generate_legality_report
+from src.controller.safety_trace import SafetyTrace
 from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
 from src.controller.study import StudyConfig
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
@@ -123,6 +124,12 @@ class StudyExecutor:
         self.telemetry_emitter = TelemetryEmitter(
             study_name=config.name,
             telemetry_root=telemetry_root,
+        )
+
+        # Initialize safety trace
+        self.safety_trace = SafetyTrace(
+            study_name=config.name,
+            safety_domain=config.safety_domain,
         )
 
         # Create base case
@@ -294,20 +301,27 @@ class StudyExecutor:
         print("\n=== Safety Domain Enforcement ===")
         print(f"Safety domain: {self.config.safety_domain.value}")
 
+        # Create report directory (used for all artifacts including safety trace)
+        report_dir = self.artifacts_root / self.config.name
+        report_dir.mkdir(parents=True, exist_ok=True)
+
         try:
             # This will raise ValueError if Study is illegal
             legality_result = check_study_legality(self.config)
             print("✓ Study configuration is LEGAL")
+
+            # Record legality check in safety trace
+            self.safety_trace.record_legality_check(
+                is_legal=True,
+                violations=[],
+                warnings=legality_result.warnings,
+            )
 
             # Generate and save legality report
             legality_report = generate_legality_report(
                 self.config,
                 timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
             )
-
-            # Save legality report to artifacts
-            report_dir = self.artifacts_root / self.config.name
-            report_dir.mkdir(parents=True, exist_ok=True)
             report_path = report_dir / "run_legality_report.txt"
             with open(report_path, "w") as f:
                 f.write(str(legality_report))
@@ -316,6 +330,20 @@ class StudyExecutor:
         except ValueError as e:
             # Study is illegal - block execution
             print(f"\n🚫 STUDY BLOCKED: {str(e)}")
+
+            # Record legality check failure in safety trace
+            # Extract violations from the error message (simplified approach)
+            self.safety_trace.record_legality_check(
+                is_legal=False,
+                violations=[{"reason": str(e)}],
+                warnings=[],
+            )
+
+            # Save safety trace before exiting
+            trace_path = report_dir / "safety_trace.json"
+            self.safety_trace.save_to_file(trace_path)
+            trace_txt_path = report_dir / "safety_trace.txt"
+            self.safety_trace.save_to_file(trace_txt_path)
 
             # Finalize and emit study telemetry for blocked study
             study_telemetry.finalize(
@@ -342,9 +370,19 @@ class StudyExecutor:
         # SAFETY GATE 2: Verify base case before ECO experimentation
         if not self.skip_base_case_verification:
             is_valid, failure_message = self.verify_base_case()
+
+            # Record base case verification in safety trace
+            self.safety_trace.record_base_case_verification(is_valid, failure_message)
+
             if not is_valid:
                 print("\n🚫 STUDY BLOCKED: Base case failed structural runnability")
                 print("No ECO experimentation will be allowed.")
+
+                # Save safety trace before exiting
+                trace_path = report_dir / "safety_trace.json"
+                self.safety_trace.save_to_file(trace_path)
+                trace_txt_path = report_dir / "safety_trace.txt"
+                self.safety_trace.save_to_file(trace_txt_path)
 
                 # Finalize and emit study telemetry for blocked study
                 study_telemetry.finalize(
@@ -389,6 +427,16 @@ class StudyExecutor:
             # Emit stage telemetry
             self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
 
+            # Record stage abort check in safety trace
+            if stage_result.abort_decision:
+                self.safety_trace.record_stage_abort_check(
+                    stage_index=stage_index,
+                    stage_name=stage_config.name,
+                    should_abort=stage_result.abort_decision.should_abort,
+                    abort_reason=stage_result.abort_decision.reason.value if stage_result.abort_decision.reason else None,
+                    details=stage_result.abort_decision.details,
+                )
+
             # Check for stage abort conditions using comprehensive abort logic
             if stage_result.abort_decision and stage_result.abort_decision.should_abort:
                 abort_reason_str = (
@@ -404,6 +452,12 @@ class StudyExecutor:
                         print(f"  - {trial_id}")
                     if len(stage_result.abort_decision.violating_trials) > 5:
                         print(f"  ... and {len(stage_result.abort_decision.violating_trials) - 5} more")
+
+                # Save safety trace before exiting
+                trace_path = report_dir / "safety_trace.json"
+                self.safety_trace.save_to_file(trace_path)
+                trace_txt_path = report_dir / "safety_trace.txt"
+                self.safety_trace.save_to_file(trace_txt_path)
 
                 # Finalize and emit study telemetry for aborted study
                 study_telemetry.finalize(
@@ -456,6 +510,15 @@ class StudyExecutor:
         study_telemetry.finalize(final_survivors=final_survivors, aborted=False)
         self.telemetry_emitter.emit_study_telemetry(study_telemetry)
         self.telemetry_emitter.flush_all_case_telemetry()
+
+        # Save safety trace to artifacts
+        trace_path = report_dir / "safety_trace.json"
+        self.safety_trace.save_to_file(trace_path)
+        trace_txt_path = report_dir / "safety_trace.txt"
+        self.safety_trace.save_to_file(trace_txt_path)
+        print(f"\nSafety Trace saved to:")
+        print(f"  JSON: {trace_path}")
+        print(f"  TXT: {trace_txt_path}")
 
         return StudyResult(
             study_name=self.config.name,

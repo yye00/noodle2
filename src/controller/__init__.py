@@ -54,6 +54,12 @@ from src.controller.telemetry import (
     StudyTelemetry,
     TelemetryEmitter,
 )
+from src.controller.safety_trace import (
+    SafetyGateEvaluation,
+    SafetyGateStatus,
+    SafetyGateType,
+    SafetyTrace,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -97,4 +103,8 @@ __all__ = [
     "check_catastrophic_failure_rate",
     "check_no_survivors",
     "evaluate_stage_abort",
+    "SafetyTrace",
+    "SafetyGateEvaluation",
+    "SafetyGateType",
+    "SafetyGateStatus",
 ]

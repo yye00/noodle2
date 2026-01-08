@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
 from src.controller.safety import check_study_legality, generate_legality_report
+from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
 from src.controller.study import StudyConfig
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
 from src.controller.types import ECOClass, ExecutionMode, StageConfig
@@ -24,6 +25,7 @@ class StageResult:
     total_runtime_seconds: float
     trial_results: list[TrialResult] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
+    abort_decision: StageAbortDecision | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
@@ -35,6 +37,7 @@ class StageResult:
             "total_runtime_seconds": self.total_runtime_seconds,
             "trial_results": [trial.to_dict() for trial in self.trial_results],
             "metadata": self.metadata,
+            "abort_decision": self.abort_decision.to_dict() if self.abort_decision else None,
         }
 
 
@@ -115,6 +118,9 @@ class StudyExecutor:
             metadata={"pdk": config.pdk},
         )
         self.case_graph.add_case(self.base_case)
+
+        # Store baseline WNS for abort threshold checks
+        self.baseline_wns_ps: int | None = None
 
     def verify_base_case(self) -> tuple[bool, str]:
         """
@@ -205,11 +211,16 @@ class StudyExecutor:
                         tns = timing.tns_ps if hasattr(timing, "tns_ps") else None
                     if wns is not None:
                         print(f"  WNS: {wns} ps")
+                        # Store baseline WNS for abort threshold checks
+                        self.baseline_wns_ps = wns
                     if tns is not None:
                         print(f"  TNS: {tns} ps")
             else:
                 # Object with attributes
-                print(f"  WNS: {result.metrics.timing.wns_ps} ps")
+                wns = result.metrics.timing.wns_ps
+                print(f"  WNS: {wns} ps")
+                # Store baseline WNS for abort threshold checks
+                self.baseline_wns_ps = wns
                 if result.metrics.timing.tns_ps is not None:
                     print(f"  TNS: {result.metrics.timing.tns_ps} ps")
         print(f"  Return code: {result.return_code}")
@@ -358,15 +369,27 @@ class StudyExecutor:
             # Emit stage telemetry
             self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
 
-            # Check for stage abort conditions
-            if len(stage_result.survivors) == 0:
-                print(f"ABORT: Stage {stage_index} produced no survivors")
+            # Check for stage abort conditions using comprehensive abort logic
+            if stage_result.abort_decision and stage_result.abort_decision.should_abort:
+                abort_reason_str = (
+                    f"Stage {stage_index} aborted: {stage_result.abort_decision.reason.value if stage_result.abort_decision.reason else 'unknown'}\n"
+                    f"Details: {stage_result.abort_decision.details}"
+                )
+                print(f"\n🚫 STAGE ABORT: {abort_reason_str}")
+
+                # Print violating trials if any
+                if stage_result.abort_decision.violating_trials:
+                    print(f"Violating trials ({len(stage_result.abort_decision.violating_trials)}):")
+                    for trial_id in stage_result.abort_decision.violating_trials[:5]:  # Show first 5
+                        print(f"  - {trial_id}")
+                    if len(stage_result.abort_decision.violating_trials) > 5:
+                        print(f"  ... and {len(stage_result.abort_decision.violating_trials) - 5} more")
 
                 # Finalize and emit study telemetry for aborted study
                 study_telemetry.finalize(
                     final_survivors=[],
                     aborted=True,
-                    abort_reason=f"Stage {stage_index} produced no survivors",
+                    abort_reason=abort_reason_str,
                 )
                 self.telemetry_emitter.emit_study_telemetry(study_telemetry)
                 self.telemetry_emitter.flush_all_case_telemetry()
@@ -379,7 +402,7 @@ class StudyExecutor:
                     stage_results=stage_results,
                     final_survivors=[],
                     aborted=True,
-                    abort_reason=f"Stage {stage_index} produced no survivors",
+                    abort_reason=abort_reason_str,
                 )
 
             # Prepare cases for next stage
@@ -504,6 +527,14 @@ class StudyExecutor:
             survivor_count=stage_config.survivor_count,
         )
 
+        # Evaluate stage abort conditions
+        abort_decision = evaluate_stage_abort(
+            stage_config=stage_config,
+            trial_results=trial_results,
+            survivors=survivors,
+            baseline_wns_ps=self.baseline_wns_ps,
+        )
+
         stage_runtime = time.time() - stage_start
 
         return StageResult(
@@ -517,6 +548,7 @@ class StudyExecutor:
                 "execution_mode": stage_config.execution_mode.value,
                 "trial_budget": stage_config.trial_budget,
             },
+            abort_decision=abort_decision,
         )
 
     def _select_survivors(

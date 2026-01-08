@@ -99,11 +99,22 @@ def check_wns_threshold_violation(
         if trial.metrics is None:
             continue
 
-        timing = trial.metrics.timing
-        if timing is None:
-            continue
+        # Handle both dict and object formats for metrics
+        if isinstance(trial.metrics, dict):
+            if "timing" not in trial.metrics:
+                continue
+            timing = trial.metrics["timing"]
+            if isinstance(timing, dict):
+                wns_ps = timing.get("wns_ps")
+            else:
+                wns_ps = timing.wns_ps
+        else:
+            # Object format
+            timing = trial.metrics.timing
+            if timing is None:
+                continue
+            wns_ps = timing.wns_ps
 
-        wns_ps = timing.wns_ps
         if wns_ps is None:
             continue
 

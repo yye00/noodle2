@@ -5823,3 +5823,60 @@ With Gate 0 complete, the next focus areas are:
    - Configure LOCKED safety domain for regression testing
    - Feature #64 in feature_list.json
 
+
+================================================================================
+SESSION 36: Gate 1 - Full Output Contract Validation
+Date: 2026-01-08
+Status: COMPLETE
+================================================================================
+
+GOAL: Implement and validate Gate 1 of the staged validation ladder, ensuring
+that executing base cases with minimal/default configuration populates ALL required
+monitoring, provenance, and telemetry fields correctly.
+
+WORK COMPLETED:
+
+1. Enhanced Provenance Tracking:
+   - Added pdk_name field to ToolProvenance dataclass
+   - Updated provenance creation to capture PDK information
+   - Threaded PDK metadata from StudyConfig to TrialConfig to Provenance
+   - Modified files: src/trial_runner/provenance.py, src/trial_runner/trial.py, src/controller/executor.py
+
+2. Comprehensive Gate 1 Test Suite:
+   - Created tests/test_gate1_full_output_contract.py (749 lines)
+   - 9 new tests across 4 test classes
+
+3. Validation Coverage:
+   - Monitoring fields: success, return_code, runtime_seconds, container_id, timestamps
+   - Provenance fields: container_image, pdk_name, command, working_directory
+   - Timing artifacts: wns_ps, tns_ps, timing report files
+   - Congestion handling: Verified not present in STA_ONLY mode
+   - Failure classification: failure_type, failure_reason on failures
+   - Telemetry schemas: Study/Stage/Case telemetry completeness
+
+FEATURE COMPLETED:
+
+Feature #74: Support staged validation ladder: Gate 1 full output contract on basic config
+
+TESTING RESULTS:
+
+- Total tests: 897 (888 existing + 9 new Gate 1 tests)
+- All tests passing
+- Zero regressions
+- Test execution time: ~17 seconds
+
+COMPLETION PROGRESS:
+
+- Features passing: 83/200 (41.5% complete)
+- Previous session: 82/200 (41.0%)
+- Progress this session: +1 feature
+
+NEXT PRIORITIES:
+
+1. Gate 2: Controlled Regression/Failure Injection (Feature #75)
+2. Gate 3: Cross-Target Parity (Feature #76)
+3. Gate 4: Extreme Scenarios Demo-Grade (Feature #77)
+
+GIT HISTORY:
+a00fc72 Implement Gate 1: Full Output Contract validation - Feature #74 passing
+

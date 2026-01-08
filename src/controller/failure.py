@@ -264,7 +264,86 @@ class FailureClassifier:
                     recoverable=True,
                 )
 
-            # Placement failure
+            # ASAP7-specific configuration errors (check before generic placement/routing failures)
+            # These require specific workarounds in the TCL script
+            if any(
+                pattern in combined_output
+                for pattern in [
+                    "routing track",
+                    "routing layer",
+                    "infer routing",
+                    "routing track information",
+                    "routing track spacing",
+                    "routing track configuration",
+                ]
+            ) and any(
+                marker in combined_output
+                for marker in ["infer", "inference", "cannot determine", "missing", "not specified"]
+            ):
+                return FailureClassification(
+                    failure_type=FailureType.CONFIGURATION_ERROR,
+                    severity=FailureSeverity.HIGH,
+                    reason=(
+                        "ASAP7 routing track inference failed. "
+                        "This PDK requires explicit routing layer specification. "
+                        "Add set_routing_layers command with metal2-metal9 (signal) and metal6-metal9 (clock) "
+                        "to the TCL script before routing."
+                    ),
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=False,
+                )
+
+            # ASAP7 site specification errors
+            if any(
+                pattern in combined_output
+                for pattern in [
+                    "floorplan site",
+                    "site specification",
+                    "site dimensions",
+                    "determine site",
+                    "infer site",
+                ]
+            ) and any(
+                marker in combined_output
+                for marker in ["cannot", "missing", "not specified", "unable to infer"]
+            ):
+                return FailureClassification(
+                    failure_type=FailureType.CONFIGURATION_ERROR,
+                    severity=FailureSeverity.HIGH,
+                    reason=(
+                        "ASAP7 site specification failed. "
+                        "This PDK requires explicit site specification for floorplanning. "
+                        "Add site specification (asap7sc7p5t_28_R_24_NP_162NW_34O) "
+                        "to the floorplan commands in the TCL script."
+                    ),
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=False,
+                )
+
+            # ASAP7 pin placement/access errors
+            if "pin" in combined_output and any(
+                pattern in combined_output
+                for pattern in [
+                    "cannot access pins",
+                    "pin access failed",
+                    "pin placement failed",
+                    "pin layer",
+                ]
+            ) and "asap7" in combined_output:
+                return FailureClassification(
+                    failure_type=FailureType.CONFIGURATION_ERROR,
+                    severity=FailureSeverity.HIGH,
+                    reason=(
+                        "ASAP7 pin placement/access failed. "
+                        "This PDK requires specific pin layer constraints. "
+                        "Add pin placement constraints specifying metal4/metal5 layers "
+                        "to the TCL script."
+                    ),
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=False,
+                )
+
+            # Generic placement failure (after ASAP7-specific checks)
             if "placement" in combined_output and any(
                 marker in combined_output for marker in ["failed", "error", "cannot"]
             ):
@@ -276,7 +355,7 @@ class FailureClassifier:
                     recoverable=False,
                 )
 
-            # Routing failure
+            # Generic routing failure (after ASAP7-specific checks)
             if "routing" in combined_output and any(
                 marker in combined_output for marker in ["failed", "error", "cannot"]
             ):

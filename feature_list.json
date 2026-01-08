@@ -983,7 +983,7 @@
       "Step 4: Emit clear diagnostic with required fix",
       "Step 5: Verify failure is deterministic and reproducible"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

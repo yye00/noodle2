@@ -2637,7 +2637,7 @@
       "Step 5: Detect hard timeout and forcefully terminate",
       "Step 6: Classify as timeout failure with both thresholds logged"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -2677,7 +2677,7 @@
       "Step 5: Import CSV into Excel/Google Sheets",
       "Step 6: Verify data is usable for manual analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

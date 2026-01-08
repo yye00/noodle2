@@ -35,7 +35,8 @@ class TrialExecutionResult:
     runtime_seconds: float
     success: bool
     container_id: str = ""
-    timed_out: bool = False  # True if trial exceeded timeout limit
+    timed_out: bool = False  # True if trial exceeded hard timeout limit
+    soft_timed_out: bool = False  # True if trial exceeded soft timeout threshold
     # Resource utilization metrics
     cpu_time_seconds: float | None = None  # Total CPU time consumed
     peak_memory_mb: float | None = None  # Peak memory usage in MB
@@ -81,6 +82,7 @@ class DockerTrialRunner:
         working_dir: str | Path,
         snapshot_dir: str | Path | None = None,
         timeout_seconds: int | None = None,
+        soft_timeout_seconds: int | None = None,
     ) -> TrialExecutionResult:
         """
         Execute a trial script inside a Docker container.
@@ -90,7 +92,8 @@ class DockerTrialRunner:
             working_dir: Host directory for trial outputs (mounted at /work)
             snapshot_dir: Optional snapshot directory (mounted at /snapshot).
                          Mount mode controlled by config.readonly_snapshot (default: read-only)
-            timeout_seconds: Optional timeout override
+            timeout_seconds: Optional hard timeout override (kills container)
+            soft_timeout_seconds: Optional soft timeout (logs warning, continues execution)
 
         Returns:
             TrialExecutionResult with execution details
@@ -162,29 +165,67 @@ class DockerTrialRunner:
                 remove=False,  # Keep container for log retrieval
             )
 
-            # Wait for completion with timeout
+            # Wait for completion with timeout monitoring
             timed_out = False
-            try:
-                result = container.wait(timeout=timeout)
-                return_code = result["StatusCode"]
-            except requests.exceptions.ReadTimeout:
-                # Timeout exceeded - kill container
-                timed_out = True
-                container.kill()
-                return_code = 124  # Standard timeout exit code
-            except Exception:
-                # Other error - kill container
-                container.kill()
-                return_code = -1
+            soft_timed_out = False
+            soft_timeout_logged = False
+
+            # If soft timeout is configured, use polling approach
+            if soft_timeout_seconds is not None:
+                poll_interval = 5  # Check every 5 seconds
+                elapsed = 0.0
+
+                while elapsed < timeout:
+                    # Sleep for poll interval or remaining time
+                    sleep_time = min(poll_interval, timeout - elapsed)
+                    time.sleep(sleep_time)
+                    elapsed = time.time() - start_time
+
+                    # Check soft timeout
+                    if not soft_timeout_logged and elapsed >= soft_timeout_seconds:
+                        soft_timed_out = True
+                        soft_timeout_logged = True
+                        print(f"[SOFT_TIMEOUT_WARNING] Trial exceeded soft timeout of {soft_timeout_seconds}s at {elapsed:.1f}s, allowing to continue...")
+
+                    # Check if container has finished
+                    container.reload()
+                    if container.status != 'running':
+                        result = container.wait(timeout=1)
+                        return_code = result["StatusCode"]
+                        break
+                else:
+                    # Hard timeout exceeded
+                    timed_out = True
+                    container.kill()
+                    return_code = 124  # Standard timeout exit code
+            else:
+                # No soft timeout - use simple wait with hard timeout
+                try:
+                    result = container.wait(timeout=timeout)
+                    return_code = result["StatusCode"]
+                except requests.exceptions.ReadTimeout:
+                    # Timeout exceeded - kill container
+                    timed_out = True
+                    container.kill()
+                    return_code = 124  # Standard timeout exit code
+                except Exception:
+                    # Other error - kill container
+                    container.kill()
+                    return_code = -1
 
             # Get logs
             stdout = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace")
             stderr = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace")
 
-            # Add timeout message to stderr if timed out
+            # Add timeout messages to stderr
             if timed_out:
-                timeout_msg = f"\n[TIMEOUT] Trial exceeded timeout limit of {timeout} seconds\n"
+                timeout_msg = f"\n[HARD_TIMEOUT] Trial exceeded hard timeout limit of {timeout} seconds\n"
+                if soft_timed_out:
+                    timeout_msg = f"\n[SOFT_TIMEOUT] Trial exceeded soft timeout of {soft_timeout_seconds}s\n" + timeout_msg
                 stderr = timeout_msg + stderr
+            elif soft_timed_out:
+                soft_msg = f"\n[SOFT_TIMEOUT] Trial exceeded soft timeout of {soft_timeout_seconds}s but completed before hard timeout\n"
+                stderr = soft_msg + stderr
 
             # Calculate runtime
             runtime_seconds = time.time() - start_time
@@ -203,6 +244,7 @@ class DockerTrialRunner:
                 success=(return_code == 0),
                 container_id=container.id[:12],
                 timed_out=timed_out,
+                soft_timed_out=soft_timed_out,
                 cpu_time_seconds=cpu_time_seconds,
                 peak_memory_mb=peak_memory_mb,
             )

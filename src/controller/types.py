@@ -62,7 +62,16 @@ class StageConfig:
     allowed_eco_classes: list[ECOClass]
     abort_threshold_wns_ps: int | None = None  # If WNS worse than this, abort
     visualization_enabled: bool = False
-    timeout_seconds: int = 3600  # 1 hour default
+    timeout_seconds: int = 3600  # 1 hour default (hard timeout)
+    soft_timeout_seconds: int | None = None  # Optional warning threshold
+
+    def __post_init__(self) -> None:
+        """Validate timeout configuration."""
+        if self.soft_timeout_seconds is not None:
+            if self.soft_timeout_seconds <= 0:
+                raise ValueError("soft_timeout_seconds must be positive")
+            if self.soft_timeout_seconds >= self.timeout_seconds:
+                raise ValueError("soft_timeout_seconds must be less than timeout_seconds (hard timeout)")
 
 
 @dataclass

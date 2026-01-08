@@ -103,6 +103,9 @@ def validate_feature_list(features: list[FeatureDefinition]) -> dict[str, Any]:
     - At least 25 features have 10+ steps
     - All features have required fields
     - Categories are valid (functional or style)
+    - No duplicate feature descriptions
+    - Step numbering is sequential
+    - Both functional and style categories represented
 
     Args:
         features: List of FeatureDefinition objects
@@ -128,6 +131,12 @@ def validate_feature_list(features: list[FeatureDefinition]) -> dict[str, Any]:
     functional_count = sum(1 for f in features if f.category == "functional")
     style_count = sum(1 for f in features if f.category == "style")
 
+    # Verify both categories are represented
+    if functional_count == 0:
+        errors.append("No functional features found")
+    if style_count == 0:
+        errors.append("No style features found")
+
     # Check for invalid categories
     for i, f in enumerate(features):
         if f.category not in ["functional", "style"]:
@@ -151,6 +160,46 @@ def validate_feature_list(features: list[FeatureDefinition]) -> dict[str, Any]:
     if empty_descriptions:
         errors.append(f"{len(empty_descriptions)} features have empty descriptions")
 
+    # Check for duplicate descriptions
+    descriptions = [f.description for f in features]
+    seen_descriptions: set[str] = set()
+    duplicates = []
+    for i, desc in enumerate(descriptions):
+        if desc in seen_descriptions:
+            duplicates.append((i, desc))
+        seen_descriptions.add(desc)
+    if duplicates:
+        errors.append(
+            f"Found {len(duplicates)} duplicate feature descriptions: "
+            f"{duplicates[:3]}..."  # Show first 3 duplicates
+        )
+
+    # Validate step numbering is sequential
+    for i, feature in enumerate(features):
+        for step_idx, step in enumerate(feature.steps):
+            expected_prefix = f"Step {step_idx + 1}:"
+            if not step.startswith(expected_prefix):
+                errors.append(
+                    f"Feature {i} ('{feature.description[:50]}...') step {step_idx} "
+                    f"has incorrect numbering: expected '{expected_prefix}', "
+                    f"got '{step[:20]}...'"
+                )
+                break  # Only report first numbering error per feature
+
+    # Check if features are priority-ordered (passing features before failing)
+    # This is informational, not an error
+    first_failing_idx = next((i for i, f in enumerate(features) if not f.passes), None)
+    last_passing_idx = next((i for i in range(len(features) - 1, -1, -1) if features[i].passes), None)
+
+    priority_ordered = True
+    if first_failing_idx is not None and last_passing_idx is not None:
+        if first_failing_idx < last_passing_idx:
+            priority_ordered = False
+            warnings.append(
+                "Features appear to be mixed order (passing and failing interleaved). "
+                "Consider organizing with passing features first for clarity."
+            )
+
     # Calculate statistics
     stats = {
         "total_features": total_count,
@@ -162,6 +211,8 @@ def validate_feature_list(features: list[FeatureDefinition]) -> dict[str, Any]:
         "avg_steps_per_feature": sum(len(f.steps) for f in features) / total_count if total_count > 0 else 0,
         "max_steps_in_feature": max((len(f.steps) for f in features), default=0),
         "min_steps_in_feature": min((len(f.steps) for f in features), default=0),
+        "duplicate_descriptions": len(duplicates),
+        "priority_ordered": priority_ordered,
     }
 
     return {

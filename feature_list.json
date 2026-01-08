@@ -1743,7 +1743,7 @@
       "Step 5: Verify colormap clearly shows hotspots (e.g., hot colors for congestion)",
       "Step 6: Verify scale/legend is included and readable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

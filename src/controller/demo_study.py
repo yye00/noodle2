@@ -202,6 +202,126 @@ def get_demo_study_expected_metrics() -> dict[str, int]:
     }
 
 
+def create_asap7_demo_study(
+    snapshot_path: str | None = None,
+    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+) -> StudyConfig:
+    """Create a reproducible demo Study for ASAP7 with STA-first staging.
+
+    ASAP7 requires STA-first staging for stable results. This creates a
+    3-stage Study that:
+    - Stage 1: STA-only timing baseline (most stable)
+    - Stage 2+: Optionally enable congestion analysis after timing is stable
+    - Uses lower utilization (0.55) to prevent routing explosion
+    - Includes all ASAP7-specific workarounds
+
+    This configuration follows ASAP7 best practices:
+    - STA-first (not congestion-first) for stability
+    - Low utilization (0.50-0.55) for routing headroom
+    - Explicit routing layer constraints
+    - Proper site and pin placement constraints
+
+    Args:
+        snapshot_path: Path to ASAP7 design snapshot.
+                      If None, uses default 'studies/asap7_base'
+        safety_domain: Safety domain for the Study (default: GUARDED)
+
+    Returns:
+        StudyConfig: ASAP7 demo Study with STA-first staging
+
+    Example:
+        >>> demo = create_asap7_demo_study()
+        >>> demo.validate()  # Ensure configuration is valid
+        >>> # Stage 1 is STA-only (most stable for ASAP7)
+        >>> assert demo.stages[0].execution_mode == ExecutionMode.STA_ONLY
+    """
+    if snapshot_path is None:
+        # Default to studies/asap7_base relative to project root
+        snapshot_path = str(Path("studies") / "asap7_base")
+
+    # Stage 0: STA-only baseline (REQUIRED for ASAP7 stability)
+    # This is the most stable execution mode for ASAP7 and should always be first
+    stage_0 = StageConfig(
+        name="sta_baseline",
+        execution_mode=ExecutionMode.STA_ONLY,  # STA-first for ASAP7
+        trial_budget=8,
+        survivor_count=3,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+        ],
+        abort_threshold_wns_ps=-100000,  # -100ns - permissive for exploration
+        visualization_enabled=True,
+        timeout_seconds=600,  # 10 minutes per trial
+    )
+
+    # Stage 1: STA-only refinement (continue with stable mode)
+    stage_1 = StageConfig(
+        name="sta_refinement",
+        execution_mode=ExecutionMode.STA_ONLY,  # Keep STA-only for stability
+        trial_budget=5,
+        survivor_count=2,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+        ],
+        abort_threshold_wns_ps=-150000,  # -150ns
+        visualization_enabled=True,
+        timeout_seconds=900,  # 15 minutes per trial
+    )
+
+    # Stage 2: Optional congestion analysis (only after timing is stable)
+    # For ASAP7, defer congestion analysis until later stages
+    stage_2 = StageConfig(
+        name="congestion_closure",
+        execution_mode=ExecutionMode.STA_CONGESTION,  # Add congestion in final stage
+        trial_budget=3,
+        survivor_count=2,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+        ],
+        abort_threshold_wns_ps=None,  # No abort in final stage
+        visualization_enabled=True,
+        timeout_seconds=1200,  # 20 minutes per trial
+    )
+
+    # Create the complete Study configuration
+    study = StudyConfig(
+        name="asap7_demo",
+        safety_domain=safety_domain,
+        base_case_name="asap7_base",
+        pdk="ASAP7",  # Will trigger ASAP7-specific workarounds
+        stages=[stage_0, stage_1, stage_2],
+        snapshot_path=snapshot_path,
+        metadata={
+            "purpose": "Reproducible demo Study for ASAP7 PDK with STA-first staging",
+            "design": "Counter or other ASAP7-compatible design",
+            "expected_behavior": "Stable timing-first approach for ASAP7",
+            "version": "1.0.0",
+            "asap7_workarounds": [
+                "routing_layer_constraints",
+                "site_specification",
+                "pin_placement_constraints",
+                "low_utilization_0.55",
+            ],
+        },
+        author="Noodle2 Team",
+        description=(
+            "Reproducible 3-stage demo Study for ASAP7 PDK following STA-first "
+            "best practices. Stage 1-2 use STA-only mode for stability, while "
+            "Stage 3 optionally adds congestion analysis after timing is stable. "
+            "Uses low utilization (0.55) and ASAP7-specific workarounds to prevent "
+            "routing explosion and ensure reproducible results."
+        ),
+        tags=["demo", "asap7", "sta-first", "reproducible"],
+    )
+
+    # Validate configuration before returning
+    study.validate()
+
+    return study
+
+
 def save_demo_study_config(output_path: Path) -> None:
     """Save demo Study configuration to JSON file.
 

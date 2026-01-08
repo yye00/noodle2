@@ -249,7 +249,7 @@
       "Step 4: Verify 'topology_neutral' ECOs are always allowed",
       "Step 5: Attempt to use prohibited ECO and verify rejection"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -261,7 +261,7 @@
       "Step 4: Execute aggressive ECO experimentation",
       "Step 5: Confirm results are clearly marked as sandbox-origin"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -273,7 +273,7 @@
       "Step 4: Attempt exploratory ECO and verify rejection",
       "Step 5: Confirm only proven, conservative changes are permitted"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

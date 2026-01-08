@@ -6,9 +6,10 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
+from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.study import StudyConfig
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
-from src.controller.types import StageConfig
+from src.controller.types import ECOClass, StageConfig
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
 
@@ -211,11 +212,41 @@ class StudyExecutor:
 
         return True, ""
 
+    def is_eco_class_allowed(self, eco_class: ECOClass, stage_index: int) -> bool:
+        """
+        Check if an ECO class is allowed in the current safety domain and stage.
+
+        Args:
+            eco_class: ECO class to validate
+            stage_index: Stage index (0-based)
+
+        Returns:
+            True if ECO class is allowed, False otherwise
+        """
+        from src.controller.safety import SAFETY_POLICY
+
+        # Get allowed ECO classes for this safety domain
+        allowed_classes = SAFETY_POLICY.get(self.config.safety_domain, [])
+
+        # Check if ECO class is allowed globally
+        if eco_class not in allowed_classes:
+            return False
+
+        # Check if ECO class is allowed in this specific stage
+        if stage_index < len(self.config.stages):
+            stage_config = self.config.stages[stage_index]
+            if eco_class not in stage_config.allowed_eco_classes:
+                return False
+
+        return True
+
     def execute(self) -> StudyResult:
         """
         Execute the entire Study with all stages sequentially.
 
-        SAFETY GATE: Verifies base case before any ECO experimentation.
+        SAFETY GATES:
+        1. Safety domain enforcement (ECO class legality)
+        2. Base case verification (structural runnability)
 
         Returns:
             StudyResult containing complete execution results
@@ -230,7 +261,53 @@ class StudyExecutor:
             total_stages=len(self.config.stages),
         )
 
-        # CRITICAL SAFETY CHECK: Verify base case before ECO experimentation
+        # SAFETY GATE 1: Check Study legality (safety domain enforcement)
+        print("\n=== Safety Domain Enforcement ===")
+        print(f"Safety domain: {self.config.safety_domain.value}")
+
+        try:
+            # This will raise ValueError if Study is illegal
+            legality_result = check_study_legality(self.config)
+            print("✓ Study configuration is LEGAL")
+
+            # Generate and save legality report
+            legality_report = generate_legality_report(
+                self.config,
+                timestamp=time.strftime("%Y-%m-%d %H:%M:%S"),
+            )
+
+            # Save legality report to artifacts
+            report_dir = self.artifacts_root / self.config.name
+            report_dir.mkdir(parents=True, exist_ok=True)
+            report_path = report_dir / "run_legality_report.txt"
+            with open(report_path, "w") as f:
+                f.write(str(legality_report))
+            print(f"Run Legality Report saved to: {report_path}")
+
+        except ValueError as e:
+            # Study is illegal - block execution
+            print(f"\n🚫 STUDY BLOCKED: {str(e)}")
+
+            # Finalize and emit study telemetry for blocked study
+            study_telemetry.finalize(
+                final_survivors=[],
+                aborted=True,
+                abort_reason=f"Study configuration is ILLEGAL: {str(e)}",
+            )
+            self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+
+            return StudyResult(
+                study_name=self.config.name,
+                total_stages=len(self.config.stages),
+                stages_completed=0,
+                total_runtime_seconds=time.time() - study_start,
+                stage_results=[],
+                final_survivors=[],
+                aborted=True,
+                abort_reason=f"Study configuration is ILLEGAL: {str(e)}",
+            )
+
+        # SAFETY GATE 2: Verify base case before ECO experimentation
         if not self.skip_base_case_verification:
             is_valid, failure_message = self.verify_base_case()
             if not is_valid:

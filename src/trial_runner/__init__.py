@@ -7,6 +7,7 @@ from src.trial_runner.docker_runner import (
     DockerTrialRunner,
     TrialExecutionResult,
 )
+from src.trial_runner.ray_executor import RayTrialExecutor, execute_trial_remote
 from src.trial_runner.trial import Trial, TrialArtifacts, TrialConfig, TrialResult
 
 __all__ = [
@@ -17,4 +18,6 @@ __all__ = [
     "TrialConfig",
     "TrialResult",
     "TrialArtifacts",
+    "RayTrialExecutor",
+    "execute_trial_remote",
 ]

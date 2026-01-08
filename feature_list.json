@@ -310,7 +310,7 @@
       "Step 4: Monitor task execution in Ray dashboard",
       "Step 5: Confirm task completes with expected resources"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -323,7 +323,7 @@
       "Step 5: Confirm all trials complete",
       "Step 6: Verify parallelism improves stage execution time"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -335,7 +335,7 @@
       "Step 4: Retrieve metadata from object store",
       "Step 5: Verify heavy files remain on filesystem"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

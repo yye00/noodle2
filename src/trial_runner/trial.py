@@ -23,6 +23,10 @@ class TrialConfig:
     snapshot_dir: str | Path | None = None
     timeout_seconds: int = 3600
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Ray resource requirements
+    num_cpus: float = 1.0
+    num_gpus: float = 0.0
+    memory_mb: float = 2048.0
 
 
 @dataclass

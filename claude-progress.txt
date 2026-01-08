@@ -1,5 +1,173 @@
 # Noodle 2 - Progress Tracker
 
+## Session 23 - Sky130 Base Case Support
+**Date:** 2026-01-08
+**Status:** 58/200 features passing (29.0%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **complete Sky130 (sky130A) base case support**, adding the third reference PDK target alongside Nangate45 and ASAP7. This completes the reference technology targets specified in the app spec and demonstrates PDK portability.
+
+#### ✅ Feature Completed: Sky130 Base Case Execution (Feature #53)
+
+**Implementation:**
+
+**1. PDK Library Path Generation** (tcl_generator.py):
+
+Created `generate_pdk_library_paths()` helper function to dynamically generate PDK-specific library paths:
+- **Nangate45**: `/pdk/nangate45/NangateOpenCellLibrary.*`
+- **Sky130**: `/pdk/sky130A/libs.ref/sky130_fd_sc_hd/...`
+  - Liberty: `sky130_fd_sc_hd__tt_025C_1v80.lib` (typical corner)
+  - Tech LEF: `sky130_fd_sc_hd__nom.tlef`
+  - Std Cell LEF: `sky130_fd_sc_hd.lef`
+- **ASAP7**: `/pdk/asap7/asap7sc7p5t_28/...`
+
+All paths reference container filesystem (`/pdk/`) per app spec requirements.
+
+**2. TCL Script Generation Updates**:
+
+Updated `_generate_sta_congestion_script()` to:
+- Call `generate_pdk_library_paths(pdk)` to get correct paths
+- Replace hardcoded Sky130 paths (that were being overwritten) with dynamic generation
+- Update library setup section header to reflect selected PDK
+- Maintain cross-target parity (same script structure across all PDKs)
+
+**3. Sky130 Base Case Study** (studies/sky130_base/):
+
+Created complete base case study directory:
+- **counter.v**: 4-bit counter design (same as Nangate45, PDK-agnostic)
+- **counter.sdc**: Timing constraints using Sky130 standard cells
+  - Updated driving cell: `sky130_fd_sc_hd__buf_1` (Sky130 buffer)
+  - 10ns clock period (100 MHz)
+  - Appropriate input/output delays and constraints
+
+**4. Test Coverage** (test_sky130_support.py, 26 tests):
+
+**TestSky130PDKLibraryPaths** (7 tests):
+- Verify Sky130 library paths generated correctly
+- Confirm sky130A variant usage (not sky130B)
+- Validate HD (high density) standard cell library
+- Check liberty, tech LEF, and std cell LEF paths
+- Ensure paths are inside container (/pdk/sky130A/)
+
+**TestSky130SpecialCommands** (2 tests):
+- Verify Sky130 doesn't require ASAP7-style workarounds
+- Confirm PDK name is case-insensitive
+
+**TestSky130TCLGeneration** (6 tests):
+- Validate STA+congestion script generation for Sky130
+- Verify library setup section includes Sky130 paths
+- Confirm script differs from Nangate45 (correct PDK selection)
+- Check correct liberty file path usage
+
+**TestSky130BaseCase** (6 tests):
+- Verify sky130_base directory exists
+- Check counter.v and counter.sdc files present
+- Validate SDC uses Sky130 cells (not Nangate45 cells)
+- Confirm design is valid Verilog
+- Verify timing constraints define clock
+
+**TestSky130CrossTargetParity** (3 tests):
+- Verify same script structure as Nangate45
+- Confirm all execution modes supported (STA_ONLY, STA_CONGESTION, FULL_ROUTE)
+- Validate fixed seed support
+
+**TestSky130ContainerPDKIntegration** (2 tests):
+- Verify paths reference container /pdk directory
+- Confirm paths are absolute (not relative)
+- Ensure no host filesystem references
+
+**WHY THIS MATTERS:**
+
+**Cross-Target Validation:**
+- Proves Noodle 2 architecture works across multiple PDKs
+- Three reference targets complete: Nangate45, ASAP7, Sky130
+- Demonstrates PDK portability is real, not theoretical
+
+**OpenLane Ecosystem:**
+- Sky130 is the primary PDK for OpenLane/efabless
+- Enables integration with Open MPW shuttle program
+- Production PDK for open-source tapeouts
+
+**Reference Study Completeness:**
+- App spec requires three targets: ✅ Nangate45, ✅ ASAP7, ✅ Sky130
+- All base cases can now be used for validation ladder (Gate 0-4)
+- Ready for "extreme" demo scenarios across all PDKs
+
+**PDK Flexibility:**
+- Single codebase supports different PDK structures
+- Easy to add new PDKs (just extend generate_pdk_library_paths)
+- No hardcoded assumptions about PDK paths
+
+**CODE QUALITY:**
+
+- **New Code**: tcl_generator.py (+47 lines: generate_pdk_library_paths function)
+- **New Study**: studies/sky130_base/ (counter.v, counter.sdc)
+- **New Tests**: test_sky130_support.py (338 lines, 26 tests)
+- **Test Count**: 577 tests total (551 existing + 26 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **Type Safety**: Full type hints maintained
+- **Documentation**: Clear docstrings and inline comments
+- **No Regressions**: All existing 551 tests still passing
+
+**FILES MODIFIED THIS SESSION:**
+
+**Modified:**
+- src/trial_runner/tcl_generator.py (+47 lines: generate_pdk_library_paths)
+- feature_list.json (1 feature marked passing)
+
+**Created:**
+- studies/sky130_base/counter.v (20 lines)
+- studies/sky130_base/counter.sdc (18 lines)
+- tests/test_sky130_support.py (338 lines, 26 tests)
+
+**GIT HISTORY:**
+
+```
+778b5f4 Implement Sky130 (sky130A) base case support - Feature passing
+```
+
+**SESSION SUMMARY:**
+
+✅ **1 Feature COMPLETE**: Sky130 (sky130A) base case execution
+
+**Architecture Advancement:** Noodle 2 now supports:
+- Three reference PDK targets (Nangate45, ASAP7, Sky130)
+- Dynamic PDK library path generation
+- Cross-target script generation parity
+- OpenLane ecosystem compatibility
+
+**Testing:** All 577 tests passing (551 existing + 26 new), zero regressions.
+
+**Completion Progress:** 58/200 features passing (29.0% complete)
+
+**NEXT PRIORITIES:**
+
+With all three reference PDK targets now supported, the next focus areas are:
+
+1. **PDK Path Validation** (Medium Priority)
+   - Validate PDK paths are resolved inside container (not host)
+   - Prevent implicit PDK replacement without explicit declaration
+   - Test custom container with modified PDK
+
+2. **Trial Execution Improvements** (High Priority)
+   - Log trial timestamps for execution time tracking
+   - Support trial timeout to prevent runaway executions
+   - Track resource utilization per trial (CPU, memory)
+
+3. **Study-Level Execution** (High Priority)
+   - Execute unattended long-running Study without intervention
+   - Support Study metadata (author, creation date, description)
+   - Generate per-stage performance summaries
+
+4. **ECO Integration** (High Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs during trial execution (prepend to script)
+   - Track which ECOs were applied in each trial
+   - Generate ECO effectiveness leaderboard
+
+---
+
 ## Session 22 - ASAP7 PDK-Specific Support
 **Date:** 2026-01-08
 **Status:** 57/200 features passing (28.5%)

@@ -1,0 +1,95 @@
+# Session 38 - Gate 2: Controlled Regression/Failure Injection
+**Date:** 2026-01-08
+**Status:** 85/200 features passing (42.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **Gate 2 of the staged validation ladder**, which ensures
+that Noodle 2 can correctly detect, classify, and contain progressively harder
+conditions by introducing controlled stressors.
+
+### Feature Completed: Gate 2 Controlled Regression/Failure Injection
+
+**Feature #75: Support staged validation ladder: Gate 2 controlled regression/failure injection** ✅
+
+## IMPLEMENTATION
+
+**1. Test ECO Classes** (src/controller/eco.py):
+- **TimingDegradationECO**: Intentionally degrades timing with configurable severity
+  - Supports mild, moderate, severe degradation levels
+  - Generates Tcl to modify clock constraints for creating violations
+  - Tagged with "gate2" and "test" for clear identification
+- **CongestionStressorECO**: Intentionally increases congestion with configurable intensity
+  - Supports low (0.75), moderate (0.85), high (0.95) intensity levels
+  - Increases placement density to stress routing
+  - Tagged for Gate 2 testing
+- **ToolErrorECO**: Intentionally triggers tool errors for validation
+  - Supports invalid_command, missing_file, syntax_error types
+  - Validates deterministic early-failure classification
+  - Tagged for Gate 2 testing
+- All ECOs registered in ECO_REGISTRY for factory creation
+
+**2. Comprehensive Test Suite** (tests/test_gate2_controlled_regression.py):
+- 13 new tests across 4 test classes
+- TestGate2TimingRegression: 3 tests for timing degradation
+- TestGate2CongestionStressor: 3 tests for congestion infrastructure
+- TestGate2ToolErrorDetection: 4 tests for tool error handling
+- TestGate2ComprehensiveValidation: 3 tests for end-to-end validation
+
+**3. Validation Coverage**:
+- ECO creation and parameter validation
+- Tcl generation for all controlled stressors
+- Study execution with test ECOs
+- Telemetry emission for regression events
+- Safety trace integration
+- Event stream validation
+
+## ALL 5 GATE 2 STEPS VALIDATED
+
+✅ Step 1: Introduce controlled stressor (worsening slack) on Nangate45
+✅ Step 2: Verify Noodle 2 detects and classifies the regression
+✅ Step 3: Confirm failure is contained appropriately
+✅ Step 4: Repeat with congestion stressor
+✅ Step 5: Verify all failure modes are handled deterministically
+
+## WHY THIS MATTERS
+
+**Validation Ladder Progress:**
+- Gate 0: ✅ Baseline viability (Feature #73)
+- Gate 1: ✅ Full output contract (Feature #74)
+- Gate 2: ✅ Controlled regression/failure injection (Feature #75)
+- Gate 3: ❌ Cross-target parity (next priority)
+- Gate 4: ❌ Extreme scenarios (future work)
+
+**Production Confidence:**
+- System handles controlled failures correctly
+- Regression detection mechanisms validated
+- Failure containment logic tested
+- ECO effectiveness tracking under stress
+
+**Test Infrastructure:**
+- Reusable test ECOs for future validation
+- Clear pattern for introducing controlled failures
+- Foundation for Gates 3 and 4
+
+## CODE QUALITY
+
+- **New Files**:
+  - tests/test_gate2_controlled_regression.py (476 lines, 13 tests)
+- **Modified Files**:
+  - src/controller/eco.py (187 lines: 3 test ECO classes)
+  - feature_list.json (1 feature marked passing)
+- **Test Count**: 939 tests total (926 existing + 13 new), all passing
+- **Test Execution Time**: ~2.2 seconds (Gate 2 tests only)
+- **No Regressions**: All existing tests still passing
+
+## COMPLETION PROGRESS
+
+85/200 features passing (42.5% complete)
+
+## NEXT PRIORITIES
+
+1. **Gate 3: Cross-Target Parity** (Feature #76)
+2. **Gate 4: Extreme Scenarios** (Feature #77)
+3. **Optional Prior Sharing** (Feature #61)
+4. **CI Regression Checks** (Feature #64)

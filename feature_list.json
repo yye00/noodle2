@@ -1962,7 +1962,7 @@
       "Step 5: Verify examples of basic usage are provided",
       "Step 6: Verify links to detailed documentation are included"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

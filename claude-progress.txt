@@ -1,14 +1,13 @@
 # Noodle 2 - Progress Tracker
 
-## Session 19 - Stage-Specific Abort Thresholds
+## Session 19 - Stage Abort Thresholds and Fixed OpenROAD Seeds
 **Date:** 2026-01-08
-**Status:** 52/200 features passing (26%)
+**Status:** 53/200 features passing (26.5%)
 
 ### 🎯 SESSION ACCOMPLISHMENTS
 
-This session implemented **stage-specific abort thresholds**, enabling safety-critical
-execution control that prevents pursuing pathological ECOs that drastically worsen
-timing or cause excessive catastrophic failures.
+This session implemented **two critical features**: stage-specific abort thresholds for
+safety-critical execution control, and fixed OpenROAD seeds for deterministic placement/routing.
 
 #### ✅ Feature #52: Support Stage-Specific Abort Thresholds
 
@@ -146,7 +145,7 @@ With abort thresholds:
 - Clear audit trail of why stage was terminated
 - Compute budget protected from wasteful exploration
 
-**CODE QUALITY:**
+**CODE QUALITY (Stage Abort):**
 
 - **New Code**: stage_abort.py (283 lines), test_stage_abort.py (463 lines)
 - **Test Count**: 481 tests total (457 existing + 24 new), all passing
@@ -156,7 +155,142 @@ With abort thresholds:
 - **Documentation**: Complete docstrings on all public APIs
 - **No Regressions**: All existing 457 tests still passing
 
-**COMPLETION PROGRESS:** 52/200 features passing (26% complete)
+---
+
+#### ✅ Feature: Support Fixed OpenROAD Seeds for Deterministic Placement/Routing
+
+**Implementation:**
+
+**1. TrialConfig Extension** (trial.py):
+- Added optional `openroad_seed` field to TrialConfig
+- Type: `int | None = None` (defaults to None for random seed)
+- Accepts any integer value (0, positive integers)
+
+**2. TCL Script Generation** (tcl_generator.py):
+
+Updated Functions:
+- `generate_trial_script()`: Accept openroad_seed parameter
+- `_generate_sta_only_script()`: Emit seed command when provided
+- `_generate_sta_congestion_script()`: Emit seed command when provided
+- `_generate_full_route_script()`: Propagate seed to underlying mode
+- `write_trial_script()`: Pass seed through to generation
+
+Seed Injection Logic:
+- When seed is provided: generates `set_random_seed <value>` command
+- Seed is set BEFORE any placement/routing operations
+- When seed is None: omits set_random_seed (uses OpenROAD default)
+- Seed value documented in script header and logged during execution
+
+**3. Generated TCL Structure (with seed):**
+
+```tcl
+# Noodle 2 - STA-Only Execution
+# Design: test_design
+# Execution Mode: STA_ONLY
+# Clock Period: 10.0 ns
+# OpenROAD Seed: 42
+
+# DETERMINISTIC SEED (if configured)
+set_random_seed 42
+puts "OpenROAD seed set to: 42"
+
+# TIMING ANALYSIS (follows seed setting)
+...
+```
+
+**TEST COVERAGE:**
+
+Added 16 comprehensive tests in test_fixed_seeds.py:
+
+**TrialConfig with Seed** (3 tests):
+- openroad_seed field exists and has correct type
+- Defaults to None (random seed)
+- Accepts various integer values (0, positive, large)
+
+**TCL Script Generation** (8 tests):
+- STA-only script includes set_random_seed when seed provided
+- STA-only script omits command when seed is None
+- STA+congestion script includes/omits seed correctly
+- Seed command appears BEFORE timing analysis section
+- Different seeds produce different scripts
+- Same seed produces identical scripts
+- Seed value of 0 is valid
+
+**write_trial_script** (2 tests):
+- Writes script with seed to file correctly
+- Writes script without seed correctly
+
+**Reproducibility** (2 tests):
+- Seed value is documented in script header
+- Lack of seed documented as 'default (random)'
+
+**Seed Propagation** (1 test):
+- FULL_ROUTE mode propagates seed to underlying script
+
+**WHY THIS MATTERS:**
+
+**Reproducibility**:
+- Same seed → identical placement → identical routing → identical metrics
+- Enables A/B testing of ECOs with confidence that differences are from ECO, not randomness
+- Critical for validating ECO effectiveness across runs
+
+**Debugging**:
+- Failed trials can be reproduced exactly for investigation
+- Regression testing with deterministic baselines
+- Isolate ECO effects from placement/routing variation
+
+**Safety**:
+- Controlled experimentation vs. uncontrolled randomness
+- Enables deterministic abort threshold verification
+- Baseline comparison with identical physical layouts
+
+**USAGE:**
+
+```python
+# Deterministic trial (for reproducibility)
+config = TrialConfig(
+    study_name="reproducibility_test",
+    case_name="test_case",
+    stage_index=0,
+    trial_index=0,
+    script_path="/tmp/trial.tcl",
+    openroad_seed=42,  # Fixed seed
+)
+
+# Random trial (normal operation, maximum exploration)
+config = TrialConfig(
+    study_name="exploration",
+    case_name="test_case",
+    stage_index=0,
+    trial_index=0,
+    script_path="/tmp/trial.tcl",
+    # openroad_seed defaults to None (random)
+)
+```
+
+**CODE QUALITY (Fixed Seeds):**
+
+- **New Code**: Modifications to trial.py (+1 field), tcl_generator.py (+42 lines), test_fixed_seeds.py (302 lines)
+- **Test Count**: 497 tests total (481 existing + 16 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **Type Safety**: Full type hints on all new code
+- **Documentation**: Clear docstrings and inline comments
+- **No Regressions**: All existing tests still passing
+
+---
+
+**SESSION SUMMARY:**
+
+✅ **2 Features COMPLETE**: Stage abort thresholds, Fixed OpenROAD seeds
+
+**Total Session Test Count**: 497 tests (457 before session + 24 abort + 16 seeds)
+
+**Architecture Advancement**:
+- Safety-critical execution control with deterministic abort logic
+- Reproducible trial execution with fixed seeds
+- Foundation for controlled ECO experimentation
+
+**COMPLETION PROGRESS:** 53/200 features passing (26.5% complete)
 
 **NEXT PRIORITIES:**
 

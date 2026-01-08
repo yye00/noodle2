@@ -1,6 +1,8 @@
 """Case management and lineage tracking for Noodle 2."""
 
 from dataclasses import dataclass, field
+from pathlib import Path
+import subprocess
 from typing import Optional
 
 from .types import CaseIdentifier
@@ -446,3 +448,57 @@ class CaseGraph:
 
         lines.append("}")
         return "\n".join(lines)
+
+    def render_to_png(
+        self,
+        output_path: str | Path,
+        dot_content: str | None = None,
+    ) -> bool:
+        """
+        Render the case lineage graph to PNG format using Graphviz.
+
+        This method takes a DOT format graph specification and renders it
+        to a PNG image file using the `dot` command-line tool.
+
+        Args:
+            output_path: Path where PNG file should be written
+            dot_content: DOT format string to render. If None, calls export_to_dot()
+
+        Returns:
+            True if rendering succeeded, False otherwise
+
+        Raises:
+            FileNotFoundError: If graphviz `dot` command is not available
+            RuntimeError: If dot command fails
+        """
+        output_path = Path(output_path)
+
+        # Get DOT content if not provided
+        if dot_content is None:
+            dot_content = self.export_to_dot()
+
+        # Ensure output directory exists
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        try:
+            # Run dot command to render PNG
+            result = subprocess.run(
+                ["dot", "-Tpng", "-o", str(output_path)],
+                input=dot_content.encode("utf-8"),
+                capture_output=True,
+                check=True,
+                timeout=30,
+            )
+            return True
+
+        except FileNotFoundError:
+            raise FileNotFoundError(
+                "Graphviz 'dot' command not found. "
+                "Please install graphviz: apt-get install graphviz"
+            )
+        except subprocess.CalledProcessError as e:
+            raise RuntimeError(
+                f"Failed to render graph to PNG: {e.stderr.decode('utf-8')}"
+            )
+        except subprocess.TimeoutExpired:
+            raise RuntimeError("Graph rendering timed out after 30 seconds")

@@ -52,6 +52,10 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         stage = _parse_stage_config(stage_data)
         stages.append(stage)
 
+    # Parse ECO filtering constraints
+    eco_blacklist = data.get("eco_blacklist", [])
+    eco_whitelist = data.get("eco_whitelist")  # None if not specified
+
     # Create StudyConfig
     config = StudyConfig(
         name=data["name"],
@@ -61,6 +65,8 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         stages=stages,
         snapshot_path=data["snapshot_path"],
         metadata=data.get("metadata", {}),
+        eco_blacklist=eco_blacklist,
+        eco_whitelist=eco_whitelist,
     )
 
     # Validate configuration

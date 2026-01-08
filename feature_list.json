@@ -1446,7 +1446,7 @@
       "Step 4: Verify ECO is skipped with clear log message",
       "Step 5: Confirm other ECOs continue normally"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -1458,7 +1458,7 @@
       "Step 4: Execute whitelisted ECO successfully",
       "Step 5: Enforce whitelist as hard constraint"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

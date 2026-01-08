@@ -81,6 +81,9 @@ class StudyConfig:
     author: str | None = None  # Study author/creator
     creation_date: str | None = None  # ISO 8601 format creation timestamp
     description: str | None = None  # Human-readable Study description
+    # ECO filtering constraints
+    eco_blacklist: list[str] = field(default_factory=list)  # ECOs to exclude
+    eco_whitelist: list[str] | None = None  # If set, only these ECOs allowed
 
     def validate(self) -> None:
         """Validate Study configuration."""
@@ -102,6 +105,38 @@ class StudyConfig:
                     f"Stage {idx} survivor_count ({stage.survivor_count}) "
                     f"cannot exceed trial_budget ({stage.trial_budget})"
                 )
+
+        # Validate ECO blacklist and whitelist are mutually sensible
+        if self.eco_whitelist is not None and self.eco_blacklist:
+            # Check for overlap between blacklist and whitelist
+            overlap = set(self.eco_blacklist) & set(self.eco_whitelist)
+            if overlap:
+                raise ValueError(
+                    f"ECO(s) cannot be in both blacklist and whitelist: {sorted(overlap)}"
+                )
+
+    def is_eco_allowed(self, eco_name: str) -> tuple[bool, str | None]:
+        """Check if an ECO is allowed by this Study's constraints.
+
+        Args:
+            eco_name: Name of the ECO to check
+
+        Returns:
+            Tuple of (allowed: bool, reason: str | None)
+            If allowed=False, reason explains why
+        """
+        # Check whitelist first (if configured, it's a hard constraint)
+        if self.eco_whitelist is not None:
+            if eco_name not in self.eco_whitelist:
+                return False, f"ECO '{eco_name}' not in Study whitelist"
+            # ECO is whitelisted, continue to blacklist check
+
+        # Check blacklist
+        if eco_name in self.eco_blacklist:
+            return False, f"ECO '{eco_name}' is blacklisted in this Study"
+
+        # ECO is allowed
+        return True, None
 
 
 @dataclass

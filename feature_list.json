@@ -462,7 +462,7 @@
       "Step 5: Generate failure rationale",
       "Step 6: Write failure classification to telemetry"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -475,7 +475,7 @@
       "Step 5: Generate failure rationale",
       "Step 6: Mark trial as failed before analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -488,7 +488,7 @@
       "Step 5: Mark trial as failed",
       "Step 6: Preserve unparseable report for debugging"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -589,7 +589,7 @@
       "Step 5: Mark Study as blocked",
       "Step 6: Emit clear abort rationale"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -783,7 +783,7 @@
       "Step 4: Classify as early failure 'visualization_unavailable'",
       "Step 5: Verify trial is marked failed with clear rationale"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -1242,7 +1242,7 @@
       "Step 4: Emit clear diagnostic naming missing tool",
       "Step 5: Abort trial before wasting compute"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

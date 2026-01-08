@@ -441,6 +441,214 @@ class TestRunLegalityReport:
         assert "topology_neutral" in report_dict["allowed_eco_classes"]
 
 
+class TestRunLegalityReportFormatting:
+    """Test Run Legality Report formatting as clear readable document."""
+
+    def test_legality_report_is_formatted_as_clear_document(self):
+        """
+        Test Run Legality Report is formatted as clear readable document.
+
+        This validates the UX requirement that legality reports are:
+        - Well-structured with clear sections
+        - Pass/fail status prominently displayed
+        - Violations and warnings clearly marked
+        - Easy to read and understand
+
+        Steps:
+            Step 1: Generate Run Legality Report
+            Step 2: Open report file (validate it's text format)
+            Step 3: Take screenshot (manual step)
+            Step 4: Verify report has clear sections
+            Step 5: Verify pass/fail status is prominently displayed
+            Step 6: Verify illegal conditions are highlighted
+        """
+        # Step 1: Generate Run Legality Report (illegal case for full coverage)
+        study = StudyConfig(
+            name="test_formatting_study",
+            safety_domain=SafetyDomain.LOCKED,
+            base_case_name="nangate45_base",
+            pdk="Nangate45",
+            snapshot_path="/path/to/snapshot",
+            stages=[
+                StageConfig(
+                    name="good_stage",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                    trial_budget=5,
+                    survivor_count=2,
+                    allowed_eco_classes=[
+                        ECOClass.TOPOLOGY_NEUTRAL,
+                    ],
+                ),
+                StageConfig(
+                    name="bad_stage",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                    trial_budget=10,
+                    survivor_count=3,
+                    allowed_eco_classes=[
+                        ECOClass.ROUTING_AFFECTING,  # Illegal in LOCKED domain
+                    ],
+                ),
+            ],
+        )
+
+        report = generate_legality_report(study, timestamp="2026-01-08T12:00:00")
+
+        # Step 2: Convert to string (text format)
+        report_str = str(report)
+
+        # Verify it's readable text
+        assert isinstance(report_str, str)
+        assert len(report_str) > 0
+
+        # Step 4: Verify report has clear sections
+        # Required sections per specification
+        required_sections = [
+            "RUN LEGALITY REPORT",
+            "SAFETY DOMAIN",
+            "ALLOWED ECO CLASSES",
+            "VIOLATIONS",
+            "STUDY SUMMARY",
+            "VERDICT",
+        ]
+
+        for section in required_sections:
+            assert (
+                section in report_str
+            ), f"Report missing required section: {section}"
+
+        # Verify section headers are clearly formatted
+        assert "=" * 70 in report_str, "Report should have visual separators"
+
+        # Verify study identification
+        assert "Study: test_formatting_study" in report_str
+        assert "Timestamp: 2026-01-08T12:00:00" in report_str
+
+        # Verify safety domain is shown
+        assert "Domain: locked" in report_str
+
+        # Verify allowed ECO classes are listed
+        assert "topology_neutral" in report_str
+
+        # Verify study summary information
+        assert "Stages: 2" in report_str
+        assert "Total trial budget: 15" in report_str
+
+        # Step 5: Verify pass/fail status is prominently displayed
+        # VERDICT section should contain clear status
+        assert "VERDICT" in report_str
+
+        # For illegal study, should show ILLEGAL and BLOCKED
+        assert "ILLEGAL" in report_str
+        assert "BLOCKED" in report_str
+        assert "Violations: 1" in report_str
+
+        # Step 6: Verify illegal conditions are highlighted
+        # Check that violations are marked with visual indicators
+        assert "✗" in report_str, "Violations should be marked with X symbol"
+
+        # Verify specific violation details are present
+        assert "bad_stage" in report_str
+        assert "routing_affecting" in report_str
+
+        # Verify violation reason is shown
+        lines = report_str.split("\n")
+        violation_lines = [l for l in lines if "routing_affecting" in l.lower()]
+        assert len(violation_lines) > 0, "Violation should be listed"
+
+        # Check that the report contains reason information
+        # (The reason appears on the same or next line after the violation)
+        assert "Reason:" in report_str, "Violation should include reason explanation"
+
+    def test_legality_report_legal_case_formatting(self):
+        """Test formatting of legal report (positive case)."""
+        study = StudyConfig(
+            name="legal_study",
+            safety_domain=SafetyDomain.GUARDED,
+            base_case_name="nangate45_base",
+            pdk="Nangate45",
+            snapshot_path="/path/to/snapshot",
+            stages=[
+                StageConfig(
+                    name="stage0",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                    trial_budget=10,
+                    survivor_count=3,
+                    allowed_eco_classes=[
+                        ECOClass.TOPOLOGY_NEUTRAL,
+                        ECOClass.PLACEMENT_LOCAL,
+                    ],
+                ),
+            ],
+        )
+
+        report = generate_legality_report(study)
+        report_str = str(report)
+
+        # Verify required sections present
+        assert "RUN LEGALITY REPORT" in report_str
+        assert "SAFETY DOMAIN" in report_str
+        assert "ALLOWED ECO CLASSES" in report_str
+        assert "VIOLATIONS" in report_str
+        assert "VERDICT" in report_str
+
+        # Verify allowed ECO classes are marked with checkmarks
+        assert "✓" in report_str, "Allowed ECO classes should have checkmark"
+        assert "topology_neutral" in report_str
+        assert "placement_local" in report_str
+
+        # Verify no violations message
+        assert (
+            "None - configuration is legal" in report_str
+        ), "Legal report should state no violations"
+
+        # Verify positive verdict
+        assert "LEGAL" in report_str
+        assert "may proceed" in report_str
+
+        # Should NOT have illegal markers
+        assert "ILLEGAL" not in report_str
+        assert "BLOCKED" not in report_str
+
+    def test_legality_report_with_warnings_formatting(self):
+        """Test report formatting includes warnings prominently."""
+        study = StudyConfig(
+            name="study_with_warnings",
+            safety_domain=SafetyDomain.SANDBOX,
+            base_case_name="nangate45_base",
+            pdk="Nangate45",
+            snapshot_path="/path/to/snapshot",
+            stages=[
+                StageConfig(
+                    name="stage0",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                    trial_budget=100,  # Large budget might trigger warning
+                    survivor_count=50,
+                    allowed_eco_classes=[
+                        ECOClass.TOPOLOGY_NEUTRAL,
+                    ],
+                ),
+            ],
+        )
+
+        report = generate_legality_report(study)
+
+        # Manually add a warning for testing (simulating what might happen)
+        report.warnings.append("Large trial budget detected (100 trials)")
+        report.warnings.append("High survivor count may slow down execution")
+
+        report_str = str(report)
+
+        # Verify WARNINGS section appears when warnings exist
+        assert "WARNINGS" in report_str
+
+        # Verify warnings are marked with visual indicator
+        assert "⚠" in report_str, "Warnings should be marked with warning symbol"
+
+        # Verify warning messages are present
+        assert "Large trial budget detected" in report_str
+        assert "High survivor count" in report_str
+
+
 class TestCheckStudyLegality:
     """Test convenience function for checking legality."""
 

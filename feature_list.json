@@ -1770,7 +1770,7 @@
       "Step 5: Verify pass/fail status is prominently displayed",
       "Step 6: Verify illegal conditions are highlighted in red or similar"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

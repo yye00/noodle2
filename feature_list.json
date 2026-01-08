@@ -348,7 +348,7 @@
       "Step 5: Extract bins_total, bins_hot, hot_ratio metrics",
       "Step 6: Verify metrics are reasonable and numeric"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

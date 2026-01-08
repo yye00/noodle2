@@ -1092,7 +1092,7 @@
       "Step 4: Verify events are timestamped",
       "Step 5: Enable programmatic telemetry analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

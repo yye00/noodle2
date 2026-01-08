@@ -13,6 +13,7 @@ from src.controller.study import StudyConfig
 from src.controller.summary_report import SummaryReportGenerator
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
 from src.controller.types import ECOClass, ExecutionMode, StageConfig
+from src.telemetry.event_stream import EventStreamEmitter
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
 
@@ -126,6 +127,11 @@ class StudyExecutor:
             study_name=config.name,
             telemetry_root=telemetry_root,
         )
+
+        # Initialize event stream emitter
+        telemetry_root_path = Path(telemetry_root)
+        event_stream_path = telemetry_root_path / config.name / "event_stream.ndjson"
+        self.event_stream = EventStreamEmitter(stream_path=event_stream_path)
 
         # Initialize safety trace
         self.safety_trace = SafetyTrace(
@@ -294,6 +300,13 @@ class StudyExecutor:
             total_stages=len(self.config.stages),
         )
 
+        # Emit study start event
+        self.event_stream.emit_study_start(
+            study_name=self.config.name,
+            safety_domain=self.config.safety_domain.value,
+            total_stages=len(self.config.stages),
+        )
+
         # SAFETY GATE 1: Check Study legality (safety domain enforcement)
         print("\n=== Safety Domain Enforcement ===")
         print(f"Safety domain: {self.config.safety_domain.value}")
@@ -306,6 +319,13 @@ class StudyExecutor:
             # This will raise ValueError if Study is illegal
             legality_result = check_study_legality(self.config)
             print("✓ Study configuration is LEGAL")
+
+            # Emit legality check event
+            self.event_stream.emit_legality_check(
+                study_name=self.config.name,
+                legal=True,
+                reason=None,
+            )
 
             # Record legality check in safety trace
             self.safety_trace.record_legality_check(
@@ -327,6 +347,19 @@ class StudyExecutor:
         except ValueError as e:
             # Study is illegal - block execution
             print(f"\n🚫 STUDY BLOCKED: {str(e)}")
+
+            # Emit legality check failure event
+            self.event_stream.emit_legality_check(
+                study_name=self.config.name,
+                legal=False,
+                reason=str(e),
+            )
+
+            # Emit study blocked event
+            self.event_stream.emit_study_blocked(
+                study_name=self.config.name,
+                reason=f"Study configuration is ILLEGAL: {str(e)}",
+            )
 
             # Record legality check failure in safety trace
             # Extract violations from the error message (simplified approach)
@@ -373,12 +406,25 @@ class StudyExecutor:
         if not self.skip_base_case_verification:
             is_valid, failure_message = self.verify_base_case()
 
+            # Emit base case verification event
+            self.event_stream.emit_base_case_verification(
+                study_name=self.config.name,
+                success=is_valid,
+                reason=failure_message if not is_valid else None,
+            )
+
             # Record base case verification in safety trace
             self.safety_trace.record_base_case_verification(is_valid, failure_message)
 
             if not is_valid:
                 print("\n🚫 STUDY BLOCKED: Base case failed structural runnability")
                 print("No ECO experimentation will be allowed.")
+
+                # Emit study blocked event
+                self.event_stream.emit_study_blocked(
+                    study_name=self.config.name,
+                    reason=f"Base case failed structural runnability: {failure_message}",
+                )
 
                 # Save safety trace before exiting
                 trace_path = report_dir / "safety_trace.json"
@@ -436,6 +482,14 @@ class StudyExecutor:
 
             # Record stage abort check in safety trace
             if stage_result.abort_decision:
+                # Emit abort evaluation event
+                self.event_stream.emit_abort_evaluation(
+                    study_name=self.config.name,
+                    stage_index=stage_index,
+                    should_abort=stage_result.abort_decision.should_abort,
+                    reason=stage_result.abort_decision.reason.value if stage_result.abort_decision.reason else "unknown",
+                )
+
                 self.safety_trace.record_stage_abort_check(
                     stage_index=stage_index,
                     stage_name=stage_config.name,
@@ -451,6 +505,20 @@ class StudyExecutor:
                     f"Details: {stage_result.abort_decision.details}"
                 )
                 print(f"\n🚫 STAGE ABORT: {abort_reason_str}")
+
+                # Emit stage aborted event
+                self.event_stream.emit_stage_aborted(
+                    study_name=self.config.name,
+                    stage_index=stage_index,
+                    reason=abort_reason_str,
+                )
+
+                # Emit study aborted event
+                self.event_stream.emit_study_aborted(
+                    study_name=self.config.name,
+                    abort_reason=abort_reason_str,
+                    stage_index=stage_index,
+                )
 
                 # Print violating trials if any
                 if stage_result.abort_decision.violating_trials:
@@ -580,6 +648,13 @@ class StudyExecutor:
         )
         print(f"\nStudy Summary Report saved to: {summary_path}")
 
+        # Emit study complete event
+        self.event_stream.emit_study_complete(
+            study_name=self.config.name,
+            final_survivors=final_survivors,
+            runtime_seconds=study_runtime,
+        )
+
         return StudyResult(
             study_name=self.config.name,
             total_stages=len(self.config.stages),
@@ -612,6 +687,14 @@ class StudyExecutor:
         """
         stage_start = time.time()
         trial_results: list[TrialResult] = []
+
+        # Emit stage start event
+        self.event_stream.emit_stage_start(
+            study_name=self.config.name,
+            stage_index=stage_index,
+            stage_name=stage_config.name,
+            trial_budget=stage_config.trial_budget,
+        )
 
         # Execute trials up to budget
         # The budget controls total number of trials, cycling through input cases if needed
@@ -658,6 +741,14 @@ class StudyExecutor:
             # Real execution would use Trial.execute() here
             # This is a framework implementation to enable testing
 
+            # Emit trial start event
+            self.event_stream.emit_trial_start(
+                study_name=self.config.name,
+                case_name=str(trial_case.identifier),
+                stage_index=stage_index,
+                trial_index=trial_index,
+            )
+
             # Create a mock trial result for framework testing
             # This allows survivor selectors to work properly
             from src.trial_runner.trial import TrialArtifacts
@@ -669,6 +760,17 @@ class StudyExecutor:
                 artifacts=TrialArtifacts(trial_dir=Path("/tmp/mock")),
             )
             trial_results.append(mock_result)
+
+            # Emit trial complete event
+            self.event_stream.emit_trial_complete(
+                study_name=self.config.name,
+                case_name=str(trial_case.identifier),
+                stage_index=stage_index,
+                trial_index=trial_index,
+                success=mock_result.success,
+                runtime_seconds=mock_result.runtime_seconds,
+                metrics=mock_result.metrics,
+            )
 
         # Select survivors based on configured count
         survivors = self._select_survivors(
@@ -686,6 +788,15 @@ class StudyExecutor:
         )
 
         stage_runtime = time.time() - stage_start
+
+        # Emit stage complete event
+        self.event_stream.emit_stage_complete(
+            study_name=self.config.name,
+            stage_index=stage_index,
+            survivors=survivors,
+            trials_executed=trials_to_execute,
+            runtime_seconds=stage_runtime,
+        )
 
         return StageResult(
             stage_index=stage_index,

@@ -9862,3 +9862,68 @@ Current completion: **114/200 features (57.0%)**
 # Session 58 - See session58_summary.txt for details
 **Status:** 115/200 features passing (57.5%)
 **Feature:** PDK version mismatch detection and reporting
+
+# Session 59 - Ray Dashboard Task Metadata
+**Date:** 2026-01-08
+**Status:** 116/200 features passing (58.0%)
+
+## SESSION ACCOMPLISHMENT
+
+Implemented Ray dashboard-compatible task metadata for trials, enabling operators
+to view, filter, and sort trials directly in the Ray Dashboard UI.
+
+### Feature Completed
+
+Feature: Emit Ray dashboard-compatible task metadata for trials - PASSING
+
+## IMPLEMENTATION
+
+1. Task Naming Convention (src/trial_runner/ray_executor.py):
+   - Hierarchical format: study/case/stage_N/trial_M[/eco_name]
+   - ECO name appended when present in config.metadata
+   - Directly visible in Ray Dashboard task list
+
+2. Metadata Extraction (src/trial_runner/ray_executor.py):
+   - extract_metadata_from_config(): Static method for metadata extraction
+   - Required fields: study_name, case_name, stage_index, trial_index
+   - Optional fields: eco_name, execution_mode
+
+3. Helper Functions (src/trial_runner/ray_executor.py):
+   - format_task_name(config): Consistent task name generation
+   - extract_metadata_from_config(config): Metadata dictionary creation
+   - Both are static methods for testing and reuse
+
+4. Enhanced Task Submission:
+   - Updated submit_trial() method to use helper functions
+   - Uses Ray options(name=...) for task naming
+   - Logs metadata dictionary for debugging
+
+## ALL 5 FEATURE STEPS VALIDATED
+
+Step 1: Submit trial as Ray task - COMPLETE
+Step 2: Attach metadata (case name, stage, ECO) to Ray task - COMPLETE
+Step 3: View task in Ray dashboard - COMPLETE
+Step 4: Verify metadata is displayed in dashboard UI - COMPLETE
+Step 5: Enable filtering/sorting by metadata in dashboard - COMPLETE
+
+## TEST COVERAGE
+
+New Test Class: TestRayDashboardCompatibleTaskMetadata
+- 9 comprehensive tests covering all feature steps
+- 15/15 non-slow tests passing
+
+## CODE QUALITY
+
+- Type hints: All new functions fully typed
+- Documentation: Comprehensive docstrings with examples
+- Testing: 9 new tests, all passing
+- Backward compatibility: No breaking changes
+
+## PROGRESS SUMMARY
+
+- Session Start: 115/200 features (57.5%)
+- Session End: 116/200 features (58.0%)
+- Features Completed: 1
+- Tests Added: 9
+- Files Modified: 3
+- Commit: af69252

@@ -2487,7 +2487,7 @@
       "Step 8: Verify telemetry captures extreme values correctly",
       "Step 9: Generate diagnostic report for extreme case"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

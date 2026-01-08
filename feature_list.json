@@ -1281,7 +1281,7 @@
       "Step 5: Include diff report in Case artifacts",
       "Step 6: Use diff for survivor ranking"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -69,6 +69,12 @@ from src.controller.eco_leaderboard import (
     ECOLeaderboardEntry,
     ECOLeaderboardGenerator,
 )
+from src.controller.diff_report import (
+    CaseDiffReport,
+    MetricDelta,
+    generate_diff_report,
+    save_diff_report,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -121,4 +127,8 @@ __all__ = [
     "ECOLeaderboard",
     "ECOLeaderboardEntry",
     "ECOLeaderboardGenerator",
+    "CaseDiffReport",
+    "MetricDelta",
+    "generate_diff_report",
+    "save_diff_report",
 ]

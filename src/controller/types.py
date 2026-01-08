@@ -84,6 +84,8 @@ class StudyConfig:
     # ECO filtering constraints
     eco_blacklist: list[str] = field(default_factory=list)  # ECOs to exclude
     eco_whitelist: list[str] | None = None  # If set, only these ECOs allowed
+    # Study organization and cataloging
+    tags: list[str] = field(default_factory=list)  # Tags for organization and filtering
 
     def validate(self) -> None:
         """Validate Study configuration."""

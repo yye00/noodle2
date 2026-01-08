@@ -1646,7 +1646,7 @@
       "Step 4: Generate tag-based Study reports",
       "Step 5: Support tag-based Study search"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

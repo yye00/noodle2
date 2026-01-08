@@ -87,6 +87,12 @@ from src.controller.ci_runner import (
     RegressionBaseline,
     create_ci_config,
 )
+from src.controller.demo_study import (
+    create_minimal_demo_study,
+    create_nangate45_demo_study,
+    get_demo_study_expected_metrics,
+    save_demo_study_config,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -151,4 +157,8 @@ __all__ = [
     "CIRunner",
     "RegressionBaseline",
     "create_ci_config",
+    "create_nangate45_demo_study",
+    "create_minimal_demo_study",
+    "get_demo_study_expected_metrics",
+    "save_demo_study_config",
 ]

@@ -910,7 +910,7 @@
       "Step 4: Verify metrics are identical (within deterministic bounds)",
       "Step 5: Confirm demo is reproducible and shareable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -437,7 +437,7 @@
       "Step 4: Verify trial results are reproducible",
       "Step 5: Confirm no random scheduling in ECO selection"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

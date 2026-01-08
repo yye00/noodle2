@@ -1268,7 +1268,7 @@
       "Step 5: Mark trial as successful only if all artifacts pass validation",
       "Step 6: Classify as early failure if artifacts are incomplete"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -449,7 +449,7 @@
       "Step 4: Verify identical routing results",
       "Step 5: Confirm timing metrics are reproducible"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

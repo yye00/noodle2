@@ -33,6 +33,8 @@ class TrialConfig:
     memory_mb: float = 2048.0
     # Execution mode (controls what analysis is performed)
     execution_mode: ExecutionMode = ExecutionMode.STA_ONLY
+    # Optional fixed seed for deterministic placement/routing
+    openroad_seed: int | None = None
 
 
 @dataclass

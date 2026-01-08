@@ -12,6 +12,7 @@ def generate_trial_script(
     output_dir: str | Path = "/work",
     clock_period_ns: float = 10.0,
     metadata: dict[str, Any] | None = None,
+    openroad_seed: int | None = None,
 ) -> str:
     """
     Generate TCL script for trial execution based on execution mode.
@@ -22,6 +23,7 @@ def generate_trial_script(
         output_dir: Output directory for artifacts
         clock_period_ns: Clock period in nanoseconds
         metadata: Optional metadata to include in script
+        openroad_seed: Optional fixed seed for deterministic placement/routing
 
     Returns:
         TCL script content as string
@@ -30,11 +32,11 @@ def generate_trial_script(
         ValueError: If execution_mode is not supported
     """
     if execution_mode == ExecutionMode.STA_ONLY:
-        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata)
+        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
     elif execution_mode == ExecutionMode.STA_CONGESTION:
-        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata)
+        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
     elif execution_mode == ExecutionMode.FULL_ROUTE:
-        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata)
+        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
     else:
         raise ValueError(f"Unsupported execution mode: {execution_mode}")
 
@@ -44,6 +46,7 @@ def _generate_sta_only_script(
     output_dir: str | Path,
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
+    openroad_seed: int | None = None,
 ) -> str:
     """
     Generate STA-only script that performs timing analysis without congestion analysis.
@@ -52,11 +55,14 @@ def _generate_sta_only_script(
     """
     output_dir = str(output_dir)
     metadata_str = f"# Metadata: {metadata}" if metadata else ""
+    seed_comment = f"# OpenROAD Seed: {openroad_seed}" if openroad_seed is not None else "# OpenROAD Seed: default (random)"
+    seed_cmd = f"set_random_seed {openroad_seed}" if openroad_seed is not None else ""
 
     return f"""# Noodle 2 - STA-Only Execution
 # Design: {design_name}
 # Execution Mode: STA_ONLY
 # Clock Period: {clock_period_ns} ns
+{seed_comment}
 {metadata_str}
 
 puts "=== Noodle 2 STA-Only Execution ==="
@@ -67,6 +73,13 @@ puts ""
 set design_name "{design_name}"
 set output_dir "{output_dir}"
 set clock_period_ns {clock_period_ns}
+
+# ============================================================================
+# DETERMINISTIC SEED (if configured)
+# ============================================================================
+{"" if not seed_cmd else seed_cmd}
+{"" if not seed_cmd else 'puts "OpenROAD seed set to: ' + str(openroad_seed) + '"'}
+{"" if not seed_cmd else 'puts ""'}
 
 # ============================================================================
 # TIMING ANALYSIS ONLY
@@ -162,6 +175,7 @@ def _generate_sta_congestion_script(
     output_dir: str | Path,
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
+    openroad_seed: int | None = None,
 ) -> str:
     """
     Generate STA+congestion script that performs both timing and congestion analysis.
@@ -170,11 +184,14 @@ def _generate_sta_congestion_script(
     """
     output_dir = str(output_dir)
     metadata_str = f"# Metadata: {metadata}" if metadata else ""
+    seed_comment = f"# OpenROAD Seed: {openroad_seed}" if openroad_seed is not None else "# OpenROAD Seed: default (random)"
+    seed_cmd = f"set_random_seed {openroad_seed}" if openroad_seed is not None else ""
 
     return f"""# Noodle 2 - STA+Congestion Execution
 # Design: {design_name}
 # Execution Mode: STA_CONGESTION
 # Clock Period: {clock_period_ns} ns
+{seed_comment}
 {metadata_str}
 
 puts "=== Noodle 2 STA+Congestion Execution ==="
@@ -185,6 +202,13 @@ puts ""
 set design_name "{design_name}"
 set output_dir "{output_dir}"
 set clock_period_ns {clock_period_ns}
+
+# ============================================================================
+# DETERMINISTIC SEED (if configured)
+# ============================================================================
+{"" if not seed_cmd else seed_cmd}
+{"" if not seed_cmd else 'puts "OpenROAD seed set to: ' + str(openroad_seed) + '"'}
+{"" if not seed_cmd else 'puts ""'}
 
 # ============================================================================
 # TIMING ANALYSIS
@@ -306,6 +330,7 @@ def _generate_full_route_script(
     output_dir: str | Path,
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
+    openroad_seed: int | None = None,
 ) -> str:
     """
     Generate full-route script (placeholder for future implementation).
@@ -314,7 +339,7 @@ def _generate_full_route_script(
     """
     # For now, delegate to STA+congestion mode
     # Full routing implementation deferred
-    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata)
+    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
 
 
 def write_trial_script(
@@ -324,6 +349,7 @@ def write_trial_script(
     output_dir: str | Path = "/work",
     clock_period_ns: float = 10.0,
     metadata: dict[str, Any] | None = None,
+    openroad_seed: int | None = None,
 ) -> Path:
     """
     Generate and write TCL script to file.
@@ -335,6 +361,7 @@ def write_trial_script(
         output_dir: Output directory for artifacts
         clock_period_ns: Clock period in nanoseconds
         metadata: Optional metadata to include in script
+        openroad_seed: Optional fixed seed for deterministic placement/routing
 
     Returns:
         Path to written script file
@@ -349,6 +376,7 @@ def write_trial_script(
         output_dir=output_dir,
         clock_period_ns=clock_period_ns,
         metadata=metadata,
+        openroad_seed=openroad_seed,
     )
 
     # Ensure parent directory exists

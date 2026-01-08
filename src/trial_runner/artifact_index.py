@@ -122,6 +122,7 @@ class TrialArtifactIndex:
 
         with output_path.open("w") as f:
             json.dump(self.to_dict(), f, indent=2)
+            f.write("\n")  # Add trailing newline (POSIX standard)
 
         return output_path
 
@@ -193,6 +194,21 @@ class StageArtifactSummary:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert summary to dictionary for JSON serialization."""
+        # Convert trial_indexes to relative paths (portable)
+        relative_trial_indexes = []
+        for p in self.trial_indexes:
+            path_obj = Path(p)
+            if path_obj.is_absolute():
+                try:
+                    # Try to make it relative to stage_root
+                    relative_path = path_obj.relative_to(self.stage_root)
+                    relative_trial_indexes.append(str(relative_path))
+                except ValueError:
+                    # If path is not under stage_root, keep absolute
+                    relative_trial_indexes.append(str(p))
+            else:
+                relative_trial_indexes.append(str(p))
+
         return {
             "study_name": self.study_name,
             "case_name": self.case_name,
@@ -201,7 +217,7 @@ class StageArtifactSummary:
             "trial_count": self.trial_count,
             "success_count": self.success_count,
             "failure_count": self.failure_count,
-            "trial_indexes": [str(p) for p in self.trial_indexes],
+            "trial_indexes": relative_trial_indexes,
             "metrics_summary": self.metrics_summary,
         }
 
@@ -223,6 +239,7 @@ class StageArtifactSummary:
 
         with output_path.open("w") as f:
             json.dump(self.to_dict(), f, indent=2)
+            f.write("\n")  # Add trailing newline (POSIX standard)
 
         return output_path
 

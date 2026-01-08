@@ -454,3 +454,193 @@ class TestGenerateTrialArtifactIndex:
         for entry in heatmap_entries:
             assert entry.content_type == "text/csv"
             assert "Heatmap" in entry.label
+
+
+class TestArtifactIndexFormatting:
+    """Test artifact index JSON formatting and UX requirements."""
+
+    def test_artifact_index_json_is_well_formatted(self, tmp_path):
+        """
+        Test artifact_index.json is well-formatted and includes helpful descriptions.
+
+        This validates the UX requirement that artifact index JSON files are:
+        - Properly indented and readable
+        - Include descriptive labels for each artifact
+        - Include content-type hints
+        - Use relative, portable paths
+
+        Steps:
+            Step 1: Generate artifact_index.json
+            Step 2: Open in JSON viewer/editor (verify it's valid JSON)
+            Step 3: Take screenshot (manual step)
+            Step 4: Verify JSON is properly indented and readable
+            Step 5: Verify each artifact entry includes description and content-type
+            Step 6: Verify paths are relative and portable
+        """
+        # Step 1: Generate artifact_index.json
+        trial_dir = tmp_path / "test_study" / "base_case" / "stage_0" / "trial_0"
+        trial_dir.mkdir(parents=True)
+
+        # Create sample artifacts
+        (trial_dir / "timing_report.txt").write_text("WNS: -100 ps\nTNS: -500 ps")
+        (trial_dir / "congestion_report.txt").write_text("Hot bins: 5")
+        (trial_dir / "metrics.json").write_text('{"wns_ps": -100, "tns_ps": -500}')
+        (trial_dir / "design.v").write_text("module top();")
+
+        logs_dir = trial_dir / "logs"
+        logs_dir.mkdir()
+        (logs_dir / "stdout.txt").write_text("OpenROAD output...")
+        (logs_dir / "stderr.txt").write_text("")
+
+        # Generate index
+        index = generate_trial_artifact_index(
+            trial_root=trial_dir,
+            study_name="test_study",
+            case_name="base_case",
+            stage_index=0,
+            trial_index=0,
+            eco_names=["buffer_insertion"],
+        )
+
+        # Write to file
+        output_path = index.write_to_file()
+        assert output_path.exists()
+
+        # Step 2: Verify JSON is valid and can be loaded
+        with output_path.open() as f:
+            data = json.load(f)
+
+        # Step 4: Verify JSON is properly indented and readable
+        with output_path.open() as f:
+            raw_content = f.read()
+
+        # Check for proper indentation (2 spaces)
+        assert "  " in raw_content, "JSON should be indented"
+
+        # Check for newlines (pretty-printed, not compact)
+        assert "\n" in raw_content, "JSON should be multi-line"
+
+        # Verify the file ends with a newline (POSIX standard)
+        assert raw_content.endswith("\n"), "JSON should end with newline"
+
+        # Check that objects are not on single lines
+        # (pretty print should have opening brace, then newline)
+        assert "{\n" in raw_content, "Objects should be pretty-printed"
+
+        # Step 5: Verify each artifact entry includes description and content-type
+        assert "entries" in data
+        assert len(data["entries"]) > 0, "Should have at least one artifact"
+
+        for entry in data["entries"]:
+            # Every entry must have a label (description)
+            assert "label" in entry, f"Entry missing 'label': {entry}"
+            assert isinstance(entry["label"], str), "Label must be a string"
+            assert len(entry["label"]) > 0, "Label must not be empty"
+
+            # Every entry must have a content_type
+            assert "content_type" in entry, f"Entry missing 'content_type': {entry}"
+            assert isinstance(entry["content_type"], str), "Content type must be string"
+            assert len(entry["content_type"]) > 0, "Content type must not be empty"
+
+            # Verify content type follows standard format (e.g., "text/plain")
+            assert "/" in entry["content_type"] or entry[
+                "content_type"
+            ].startswith("text/x-"), (
+                f"Content type should follow MIME type format: {entry['content_type']}"
+            )
+
+            # Every entry must have a path
+            assert "path" in entry, f"Entry missing 'path': {entry}"
+            assert isinstance(entry["path"], str), "Path must be a string"
+
+            # Every entry should have size information
+            assert "size_bytes" in entry, f"Entry missing 'size_bytes': {entry}"
+            assert isinstance(entry["size_bytes"], int), "Size must be an integer"
+
+        # Step 6: Verify paths are relative and portable
+        for entry in data["entries"]:
+            path = entry["path"]
+
+            # Paths should not be absolute
+            assert not path.startswith("/"), f"Path should be relative: {path}"
+
+            # Paths should not contain Windows drive letters
+            assert ":" not in path or path.count(":") == path.count(
+                "::"
+            ), f"Path should not contain drive letters: {path}"
+
+            # Paths should use forward slashes (portable)
+            # (Python's Path automatically uses forward slashes in JSON)
+            if "\\" in path:
+                assert False, f"Path should use forward slashes: {path}"
+
+        # Verify high-level structure is present
+        assert "study_name" in data
+        assert "case_name" in data
+        assert "stage_index" in data
+        assert "trial_index" in data
+
+        # Verify metadata is present (for ECO traceability)
+        assert "metadata" in data
+        if "eco_names" in index.metadata:
+            assert "eco_names" in data["metadata"]
+
+    def test_stage_summary_json_is_well_formatted(self, tmp_path):
+        """
+        Test stage_artifact_summary.json is well-formatted.
+
+        Stage summaries should follow the same formatting standards:
+        - Properly indented
+        - Includes descriptive metadata
+        - Uses relative, portable paths
+        """
+        summary = StageArtifactSummary(
+            study_name="test_study",
+            case_name="base_case",
+            stage_index=0,
+            stage_root=tmp_path,
+        )
+
+        # Add trial data
+        for i in range(3):
+            trial_index_path = tmp_path / f"trial_{i}" / "artifact_index.json"
+            summary.add_trial(
+                trial_index=i,
+                success=(i < 2),  # First 2 succeed, last one fails
+                artifact_index_path=trial_index_path,
+                metrics={"wns_ps": -100 - i * 10, "tns_ps": -500 - i * 50},
+            )
+
+        # Write to file
+        output_path = summary.write_to_file()
+        assert output_path.exists()
+
+        # Verify JSON is valid
+        with output_path.open() as f:
+            data = json.load(f)
+
+        # Verify proper indentation
+        with output_path.open() as f:
+            raw_content = f.read()
+
+        assert "  " in raw_content, "JSON should be indented"
+        assert "\n" in raw_content, "JSON should be multi-line"
+        assert raw_content.endswith("\n"), "JSON should end with newline"
+
+        # Verify required fields
+        assert data["study_name"] == "test_study"
+        assert data["trial_count"] == 3
+        assert data["success_count"] == 2
+        assert data["failure_count"] == 1
+
+        # Verify metrics summary is present
+        assert "metrics_summary" in data
+        assert "wns_ps" in data["metrics_summary"]
+        assert len(data["metrics_summary"]["wns_ps"]) == 3
+
+        # Verify trial_indexes uses relative paths
+        for trial_path in data["trial_indexes"]:
+            # Should be relative paths
+            assert not trial_path.startswith(
+                "/"
+            ), f"Trial path should be relative: {trial_path}"

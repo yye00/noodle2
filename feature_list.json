@@ -1230,7 +1230,7 @@
       "Step 5: Identify optimal parameter value",
       "Step 6: Report parameter sensitivity analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

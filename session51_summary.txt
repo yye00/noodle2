@@ -1,0 +1,100 @@
+# Session 51 Summary - ECO Blacklist and Whitelist Filtering
+
+**Date:** 2026-01-08
+**Status:** 103/200 features passing (51.5%)
+**Features Completed:** 2 (ECO blacklist #115, ECO whitelist #116)
+
+## What Was Accomplished
+
+Implemented comprehensive ECO filtering support to enable safety-critical control
+over which ECOs can execute in a Study. This provides essential constraints for
+locked regression testing and safe sandbox exploration.
+
+### Features Implemented
+
+1. **ECO Blacklist (#115)** - Exclude known-bad ECOs from Study execution
+2. **ECO Whitelist (#116)** - Restrict Study to only approved ECOs
+
+### Code Changes
+
+**Modified Files:**
+- `src/controller/types.py` - Added eco_blacklist, eco_whitelist fields and is_eco_allowed() method
+- `src/controller/study.py` - Added YAML parsing for blacklist/whitelist configuration
+
+**New Files:**
+- `tests/test_eco_filtering.py` - 19 comprehensive tests covering all filtering scenarios
+
+### Technical Implementation
+
+**StudyConfig Extensions:**
+- `eco_blacklist: list[str]` - ECOs to exclude (defaults to [])
+- `eco_whitelist: list[str] | None` - If set, only these ECOs allowed (defaults to None)
+- `is_eco_allowed(eco_name) -> (bool, str | None)` - Check if ECO is allowed
+
+**Filtering Logic:**
+1. Whitelist checked first (hard constraint if configured)
+2. Blacklist checked second (always enforced)
+3. Clear rejection messages identify blocked ECO by name
+4. Validation prevents overlap between blacklist and whitelist
+
+**YAML Configuration:**
+```yaml
+eco_blacklist:
+  - catastrophic_eco
+  - broken_eco
+
+eco_whitelist:  # Optional - if set, only these ECOs allowed
+  - approved_eco1
+  - approved_eco2
+```
+
+## Test Coverage
+
+**19 new tests covering:**
+- ECO blacklist functionality (5 tests)
+- ECO whitelist functionality (6 tests)
+- Blacklist/whitelist interaction (2 tests)
+- YAML configuration loading (3 tests)
+- Realistic use cases (3 tests)
+
+**All 1267 tests passing** (no regressions introduced)
+
+## Use Cases Enabled
+
+1. **Regression Testing** - Locked domain with whitelist of known-good ECOs
+2. **Safe Exploration** - Sandbox domain with blacklist of catastrophic ECOs
+3. **Hybrid Control** - Both filters can be applied together
+
+## Why This Matters
+
+**Safety-Critical Control:**
+- Prevents accidental execution of risky ECOs
+- Hard constraints enforced at configuration validation time
+- Clear rejection messages for auditability
+
+**Operational Flexibility:**
+- Blacklist: "Try everything except these known-bad ECOs"
+- Whitelist: "Only try these approved ECOs"
+- None/empty defaults allow unrestricted exploration when appropriate
+
+**Auditability:**
+- ECO filtering decisions explicit in Study configuration
+- Rejection messages clearly identify why ECO was blocked
+- No silent failures or mysterious skips
+
+## Session Statistics
+
+- **Time:** ~45 minutes
+- **Tests Added:** 19
+- **Tests Passing:** 1267/1267
+- **Features Completed:** 2
+- **Overall Progress:** 103/200 (51.5%)
+
+## Next Session Priorities
+
+Remaining high-priority features (99 remaining):
+1. CI Integration for regression safety checks
+2. Reproducible demo Study on Nangate45
+3. ASAP7-specific failure mode detection
+4. ECO parameter sweeps with systematic variation
+5. Study resumption from interrupted execution

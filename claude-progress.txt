@@ -1,3 +1,136 @@
+# Session 51 - ECO Blacklist and Whitelist Filtering
+**Date:** 2026-01-08
+**Status:** 103/200 features passing (51.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **ECO blacklist and whitelist filtering**, enabling
+safety-critical control over which ECOs can execute in a Study. This provides
+essential constraints for locked regression testing and safe sandbox exploration.
+
+### Features Completed
+
+**Feature #115: Support ECO blacklist to exclude known-bad ECOs from Study** ✅
+**Feature #116: Support ECO whitelist to restrict Study to approved ECOs only** ✅
+
+## IMPLEMENTATION
+
+**1. StudyConfig Extensions** (src/controller/types.py):
+- Added `eco_blacklist: list[str]` field - ECOs to exclude from Study
+- Added `eco_whitelist: list[str] | None` field - If set, only these ECOs allowed
+- Added `is_eco_allowed(eco_name)` method - Returns (allowed, reason) tuple
+- Validates no overlap between blacklist and whitelist
+- Whitelist None = no restriction, empty list blacklist = no exclusions
+
+**2. YAML Configuration Support** (src/controller/study.py):
+- Parse `eco_blacklist` and `eco_whitelist` from Study YAML
+- Default to empty list for blacklist, None for whitelist
+- Support both filtering modes independently or combined
+
+**3. Filtering Logic**:
+- Whitelist checked first (hard constraint if configured)
+- Blacklist checked second (always enforced)
+- Clear rejection messages identify blocked ECO by name
+- Method signature: `is_eco_allowed(eco_name) -> (bool, str | None)`
+
+**4. Test Coverage**: 19 comprehensive tests covering:
+- ECO blacklist functionality and validation
+- ECO whitelist functionality and validation
+- Blacklist/whitelist interaction and overlap detection
+- YAML configuration loading for both modes
+- Realistic use cases (locked domain with whitelist, sandbox with blacklist)
+- Clear error messages identifying blocked ECOs
+
+## ALL FEATURE STEPS VALIDATED
+
+### Feature #115: ECO Blacklist
+
+✅ **Step 1: Identify ECO known to cause catastrophic failures**
+   - Test: `test_blacklist_identifies_eco_by_name`
+   - Blacklisted ECO clearly identified in rejection message
+
+✅ **Step 2: Add ECO to Study blacklist**
+   - Configuration: `eco_blacklist: ["catastrophic_eco", "broken_eco"]`
+   - Loaded from YAML via `load_study_config()`
+
+✅ **Step 3: Attempt to execute blacklisted ECO**
+   - Method: `config.is_eco_allowed("catastrophic_eco")`
+   - Returns: `(False, "ECO 'catastrophic_eco' is blacklisted in this Study")`
+
+✅ **Step 4: Verify ECO is skipped with clear log message**
+   - Rejection reason clearly states ECO name and "blacklisted"
+   - Test: `test_is_eco_allowed_rejects_blacklisted_eco`
+
+✅ **Step 5: Confirm other ECOs continue normally**
+   - Non-blacklisted ECOs return `(True, None)`
+   - Test: `test_is_eco_allowed_accepts_non_blacklisted_eco`
+
+### Feature #116: ECO Whitelist
+
+✅ **Step 1: Configure Study with ECO whitelist**
+   - Configuration: `eco_whitelist: ["approved_eco1", "approved_eco2"]`
+   - Loaded from YAML via `load_study_config()`
+
+✅ **Step 2: Attempt to execute ECO not on whitelist**
+   - Method: `config.is_eco_allowed("unapproved_eco")`
+   - Returns: `(False, "ECO 'unapproved_eco' not in Study whitelist")`
+
+✅ **Step 3: Verify ECO is rejected**
+   - Rejection reason clearly states ECO name and "whitelist"
+   - Test: `test_is_eco_allowed_rejects_non_whitelisted_eco`
+
+✅ **Step 4: Execute whitelisted ECO successfully**
+   - Whitelisted ECO returns `(True, None)`
+   - Test: `test_is_eco_allowed_accepts_whitelisted_eco`
+
+✅ **Step 5: Enforce whitelist as hard constraint**
+   - Whitelist=None: no restriction (all ECOs allowed)
+   - Whitelist=[...]: ONLY listed ECOs allowed
+   - Test: `test_whitelist_none_allows_all_ecos`
+
+## WHY THIS MATTERS
+
+**Safety-Critical Control:**
+- Locked safety domain can enforce regression-only ECOs via whitelist
+- Sandbox domain can explore freely while excluding known-bad ECOs
+- Hard constraints prevent accidental execution of risky changes
+
+**Operational Flexibility:**
+- Blacklist: "Try everything except these known-bad ECOs"
+- Whitelist: "Only try these approved ECOs"
+- Both modes support multiple ECOs and clear rejection messages
+
+**Auditability:**
+- ECO filtering decisions are explicit in Study configuration
+- Rejection messages clearly identify why ECO was blocked
+- No silent failures or mysterious skips
+
+**Use Cases Enabled:**
+1. **Regression Testing**: Locked domain with whitelist of known-good ECOs
+2. **Safe Exploration**: Sandbox domain with blacklist of catastrophic ECOs
+3. **Hybrid Control**: Both filters applied (whitelist first, then blacklist)
+
+## TESTING SUMMARY
+
+All 1267 tests passing (no regressions)
+- 19 new tests for ECO filtering
+- Complete coverage of blacklist, whitelist, and interaction
+- YAML configuration loading validated
+- Realistic use cases tested
+
+## NEXT SESSION RECOMMENDATIONS
+
+Remaining high-priority features (99 features remaining):
+1. **CI Integration** - Use Noodle 2 for regression safety checks
+2. **Reproducible Demo Study** - Nangate45 baseline with full observability
+3. **ASAP7 Support** - Failure mode detection and workarounds
+4. **ECO Parameter Sweeps** - Systematic variation and sensitivity analysis
+5. **Study Resumption** - Continue from last completed stage after interruption
+
+Current completion: **103/200 features (51.5%)**
+
+---
+
 # Session 50 - Study Results Export
 **Date:** 2026-01-08
 **Status:** 101/200 features passing (50.5%)

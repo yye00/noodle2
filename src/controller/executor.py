@@ -9,7 +9,7 @@ from src.controller.case import Case, CaseGraph
 from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.study import StudyConfig
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
-from src.controller.types import ECOClass, StageConfig
+from src.controller.types import ECOClass, ExecutionMode, StageConfig
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
 
@@ -139,6 +139,9 @@ class StudyExecutor:
         script_path = Path(self.base_case.snapshot_path) / "run_sta.tcl"
 
         # Create a trial for base case verification
+        # Use the execution mode from stage 0 (or default to STA_ONLY for verification)
+        execution_mode = self.config.stages[0].execution_mode if self.config.stages else ExecutionMode.STA_ONLY
+
         trial_config = TrialConfig(
             study_name=self.config.name,
             case_name=self.base_case.case_name,
@@ -146,6 +149,7 @@ class StudyExecutor:
             trial_index=0,
             script_path=str(script_path),
             snapshot_dir=str(self.base_case.snapshot_path),
+            execution_mode=execution_mode,
             metadata={"verification": True, "pdk": self.config.pdk},
         )
 
@@ -470,6 +474,7 @@ class StudyExecutor:
                 script_path=self.config.snapshot_path,  # Placeholder - should be actual script
                 snapshot_dir=self.config.snapshot_path,
                 timeout_seconds=stage_config.timeout_seconds,
+                execution_mode=stage_config.execution_mode,
                 metadata={
                     "stage_name": stage_config.name,
                     "execution_mode": stage_config.execution_mode.value,

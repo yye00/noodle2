@@ -412,7 +412,7 @@
       "Step 5: Verify wns_ps and tns_ps are computed",
       "Step 6: Verify execution is faster than full STA+congestion mode"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -425,7 +425,7 @@
       "Step 5: Verify both metrics are available for ranking",
       "Step 6: Confirm artifacts include both timing and congestion reports"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -7,6 +7,8 @@ from pathlib import Path
 from typing import Any
 
 from src.controller.failure import FailureClassification, FailureClassifier
+from src.controller.types import ExecutionMode
+from src.parsers.congestion import parse_congestion_report_file
 from src.parsers.timing import parse_openroad_metrics_json, parse_timing_report
 from src.trial_runner.docker_runner import DockerRunConfig, DockerTrialRunner
 
@@ -27,6 +29,8 @@ class TrialConfig:
     num_cpus: float = 1.0
     num_gpus: float = 0.0
     memory_mb: float = 2048.0
+    # Execution mode (controls what analysis is performed)
+    execution_mode: ExecutionMode = ExecutionMode.STA_ONLY
 
 
 @dataclass
@@ -340,6 +344,18 @@ class Trial:
                     metrics["failing_endpoints"] = timing_obj.failing_endpoints
             except Exception as e:
                 metrics["timing_parse_error"] = str(e)
+
+        # Parse congestion metrics (if available)
+        if artifacts.congestion_report and artifacts.congestion_report.exists():
+            try:
+                congestion_obj = parse_congestion_report_file(str(artifacts.congestion_report))
+                metrics["bins_total"] = congestion_obj.bins_total
+                metrics["bins_hot"] = congestion_obj.bins_hot
+                metrics["hot_ratio"] = congestion_obj.hot_ratio
+                if congestion_obj.max_overflow is not None:
+                    metrics["max_overflow"] = congestion_obj.max_overflow
+            except Exception as e:
+                metrics["congestion_parse_error"] = str(e)
 
         return metrics
 

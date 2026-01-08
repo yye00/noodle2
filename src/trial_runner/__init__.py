@@ -14,6 +14,10 @@ from src.trial_runner.docker_runner import (
     TrialExecutionResult,
 )
 from src.trial_runner.ray_executor import RayTrialExecutor, execute_trial_remote
+from src.trial_runner.tcl_generator import (
+    generate_trial_script,
+    write_trial_script,
+)
 from src.trial_runner.trial import Trial, TrialArtifacts, TrialConfig, TrialResult
 
 __all__ = [
@@ -30,4 +34,6 @@ __all__ = [
     "ArtifactEntry",
     "StageArtifactSummary",
     "generate_trial_artifact_index",
+    "generate_trial_script",
+    "write_trial_script",
 ]

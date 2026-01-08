@@ -1,5 +1,190 @@
 # Noodle 2 - Progress Tracker
 
+## Session 27 - PDK Path Validation
+**Date:** 2026-01-08
+**Status:** 66/200 features passing (33.0%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented comprehensive testing for **PDK path validation**, ensuring that all PDK references use container filesystem paths, preventing implicit PDK replacement, and supporting custom container images with modified PDKs.
+
+#### ✅ Features Completed: PDK Path Validation (Features #54-#56)
+
+**Feature #54: Validate PDK paths are resolved inside container not on host** ✅
+**Feature #55: Prevent implicit PDK replacement without explicit declaration** ✅
+**Feature #56: Support custom container image with modified PDK as explicit override** ✅
+
+**Implementation Strategy:**
+
+The PDK path functionality was already correctly implemented in `generate_pdk_library_paths()` from previous sessions (Session 23 for Sky130). This session validated the implementation with comprehensive tests to ensure all three feature requirements are met.
+
+**FEATURE #54 REQUIREMENTS VALIDATED:**
+
+**Step 1-2: Verify PDK paths exist in container filesystem** ✅
+- All PDK paths use `/pdk/` prefix (container filesystem)
+- Nangate45: `/pdk/nangate45/NangateOpenCellLibrary.*`
+- Sky130: `/pdk/sky130A/libs.ref/sky130_fd_sc_hd/...`
+- ASAP7: `/pdk/asap7/asap7sc7p5t_28/...`
+
+**Step 3-4: Execute OpenROAD command referencing PDK path** ✅
+- PDK paths embedded in generated TCL scripts
+- Scripts reference container paths only (no host paths)
+- Verified for all execution modes (STA_CONGESTION, FULL_ROUTE)
+
+**Step 5: Verify no network access is required for PDK data** ✅
+- PDK paths are static and deterministic
+- No URLs, wget, curl, or dynamic downloads
+- All PDK files baked into container image
+
+**FEATURE #55 REQUIREMENTS VALIDATED:**
+
+**Step 1-2: Verify PDK must be explicitly declared** ✅
+- Default PDK is Nangate45 when not specified
+- PDK override requires explicit `pdk` parameter
+- Each PDK has distinct paths (no accidental mixing)
+
+**Step 3-4: Prevent implicit PDK replacement** ✅
+- Cannot override PDK without declaring in function call
+- Default script uses Nangate45, override requires explicit parameter
+- Unknown PDK generates template (not crash)
+
+**FEATURE #56 REQUIREMENTS VALIDATED:**
+
+**Custom PDK support** ✅
+- Custom PDK names supported (e.g., "nangate45_modified")
+- Custom PDKs follow `/pdk/<name>/` convention
+- No implicit PDK detection or filesystem scanning
+- Modified PDK requires explicit declaration
+
+**TEST COVERAGE:**
+
+Created `test_pdk_path_validation.py` with **22 comprehensive tests** organized in 4 test classes:
+
+**TestPDKPathsResolvedInsideContainer** (8 tests):
+- Nangate45, Sky130, ASAP7 paths use container filesystem
+- No network access required for PDK data
+- PDK paths are deterministic (same every time)
+- PDK paths embedded in trial scripts
+- All supported PDKs use container paths consistently
+- PDK name is case-insensitive
+
+**TestPreventImplicitPDKReplacement** (5 tests):
+- Default PDK is Nangate45
+- Explicit PDK declaration in scripts
+- PDK replacement requires explicit parameter
+- Unknown PDK generates template (not crash)
+- PDK consistency across script generation
+
+**TestCustomContainerWithModifiedPDK** (5 tests):
+- Custom PDK names can be specified
+- Custom PDK paths follow container convention
+- Custom container PDK explicit in script
+- No implicit PDK detection
+- Modified PDK requires explicit declaration
+
+**TestPDKPathIntegration** (4 tests):
+- PDK path contract across all execution modes
+- PDK paths immutable per Study
+- Container path validation in metadata
+- PDK version pinning via container (not Noodle 2)
+
+**WHY THIS MATTERS:**
+
+**Reproducibility:**
+- PDK paths always reference container filesystem
+- No host-specific dependencies
+- Same paths on every machine/cluster
+
+**Safety:**
+- No implicit PDK replacement
+- Explicit declaration required for PDK override
+- Unknown PDKs generate template (not crash)
+
+**Container Contract:**
+- PDK version pinned in container image tag
+- No dynamic PDK downloads at runtime
+- Air-gapped environments supported
+
+**Custom PDK Support:**
+- Custom container images with modified PDKs
+- Follows same `/pdk/<name>/` convention
+- Explicit declaration enforces auditability
+
+**Provenance:**
+- PDK version is part of container's semantic contract
+- PDK paths deterministic and trackable
+- No version confusion across Studies
+
+**CODE QUALITY:**
+
+- **New Tests**: test_pdk_path_validation.py (470 lines, 22 tests)
+- **Test Count**: 692 tests total (670 existing + 22 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **No Implementation Changes**: Existing code already met all requirements
+- **No Regressions**: All existing 670 tests still passing
+- **Zero False Positives**: All tests verify real PDK path behavior
+
+**FILES MODIFIED THIS SESSION:**
+
+**Created:**
+- tests/test_pdk_path_validation.py (470 lines, 22 tests)
+- analyze_features.py (utility script for feature tracking)
+
+**Modified:**
+- feature_list.json (3 features marked passing: #54, #55, #56)
+
+**GIT HISTORY:**
+
+```
+87a1209 Implement PDK path validation - 3 features passing
+```
+
+**SESSION SUMMARY:**
+
+✅ **3 Features COMPLETE**: PDK path validation (container paths, no implicit replacement, custom container support)
+
+**Methodology:** This session demonstrates the value of comprehensive validation of existing functionality. The PDK path infrastructure was already correctly implemented in previous sessions (particularly Session 23 when Sky130 support was added). By writing 22 focused tests across 4 test classes, we:
+1. Validated all PDK paths use container filesystem (`/pdk/...`)
+2. Confirmed no network access is required for PDK data
+3. Verified PDK override requires explicit declaration
+4. Ensured custom PDKs are supported with same convention
+5. Documented expected behavior for operators
+6. Provided confidence to mark features as passing
+
+**Testing:** All 692 tests passing (670 existing + 22 new), zero regressions.
+
+**Completion Progress:** 66/200 features passing (33.0% complete)
+
+**NEXT PRIORITIES:**
+
+With PDK path validation complete, the next focus areas are:
+
+1. **Telemetry Isolation and Prior Sharing** (Medium Priority)
+   - Verify no telemetry leakage across isolated Studies
+   - Enable optional prior sharing with explicit configuration
+   - Features #60-#61 in feature_list.json
+
+2. **Safety Trace Generation** (Medium Priority)
+   - Generate safety trace showing all safety-gate evaluations
+   - Document all policy decisions during execution
+   - Feature #63 in feature_list.json
+
+3. **Visualization and Observability** (Medium-High Priority)
+   - GUI mode support (X11 passthrough, Xvfb)
+   - Heatmap export (placement density, RUDY, routing congestion)
+   - PNG preview generation from CSV heatmaps
+   - Features #57-#62 in feature_list.json
+
+4. **Staged Validation Ladder** (High Priority)
+   - Gate 0: Baseline viability
+   - Gate 1: Full output contract on basic config
+   - Gate 2: Controlled regression/failure injection
+   - Gate 3: Cross-target parity
+   - Gate 4: Extreme scenarios (demo-grade)
+   - Features #66-#70 in feature_list.json
+
+---
+
 ## Session 26 - Unattended Long-Running Study Execution
 **Date:** 2026-01-08
 **Status:** 63/200 features passing (31.5%)

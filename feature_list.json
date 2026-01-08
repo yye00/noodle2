@@ -1043,7 +1043,7 @@
       "Step 4: Emit per-layer metrics to telemetry",
       "Step 5: Use layer-specific data for ECO targeting"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -1055,7 +1055,7 @@
       "Step 4: Emit top paths to timing analysis artifacts",
       "Step 5: Enable path-level debugging and ECO targeting"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

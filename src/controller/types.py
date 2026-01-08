@@ -132,6 +132,17 @@ class CaseIdentifier:
 
 
 @dataclass
+class TimingPath:
+    """Detailed timing path information."""
+
+    slack_ps: int  # Path slack in picoseconds
+    startpoint: str  # Starting point (e.g., input port or register)
+    endpoint: str  # Ending point (e.g., register or output port)
+    path_group: str | None = None  # Path group (e.g., clock name)
+    path_type: str | None = None  # Path type (e.g., "max", "min")
+
+
+@dataclass
 class TimingMetrics:
     """Timing analysis results."""
 
@@ -139,6 +150,7 @@ class TimingMetrics:
     tns_ps: int | None = None  # Total Negative Slack in picoseconds
     failing_endpoints: int | None = None
     critical_path_delay_ps: int | None = None
+    top_paths: list[TimingPath] = field(default_factory=list)  # Top N critical paths
 
 
 @dataclass

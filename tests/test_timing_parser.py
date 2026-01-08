@@ -8,6 +8,7 @@ from src.parsers.timing import (
     parse_timing_report,
     parse_timing_report_content,
     parse_openroad_metrics_json,
+    parse_timing_paths,
 )
 
 
@@ -201,3 +202,309 @@ def test_parse_various_formats() -> None:
     # Mixed case
     metrics3 = parse_timing_report_content("Wns -10.0")
     assert metrics3.wns_ps == -10000
+
+
+# ============================================================================
+# Tests for Feature #20: Support inspection of top timing paths
+# ============================================================================
+
+
+def test_parse_timing_paths_single_path() -> None:
+    """
+    Feature #20: Support inspection of top timing paths from report_checks output.
+
+    Test parsing a single timing path with all details.
+    """
+    report_content = """
+Startpoint: input_port (input port clocked by clk)
+Endpoint: reg1/D (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+           0.00   clock clk (rise edge)
+           0.00   clock network delay (ideal)
+           0.00 ^ input_port (in)
+     2.15  2.15 ^ input_buffer/A (BUF_X1)
+     0.75  2.90 ^ input_buffer/Z (BUF_X1)
+           2.90   data arrival time
+
+          10.00   clock clk (rise edge)
+           0.00   clock network delay (ideal)
+          -0.50   library setup time
+           9.50   data required time
+---------------------------------------------------------
+           9.50   data required time
+          -2.90   data arrival time
+---------------------------------------------------------
+           6.60   slack (MET)
+
+wns 6.60
+"""
+
+    paths = parse_timing_paths(report_content)
+
+    # Step 2: Parse top N critical paths
+    assert len(paths) == 1, "Should extract one path"
+
+    # Step 3: Extract path slack, startpoint, endpoint
+    path = paths[0]
+    assert path.slack_ps == 6600  # 6.60 ns = 6600 ps
+    assert path.startpoint == "input_port"
+    assert path.endpoint == "reg1/D"
+    assert path.path_group == "clk"
+    assert path.path_type == "max"
+
+
+def test_parse_timing_paths_multiple_paths() -> None:
+    """
+    Feature #20: Test parsing multiple timing paths.
+
+    Step 2: Parse top N critical paths
+    """
+    report_content = """
+Startpoint: reg1/Q (rising edge-triggered flip-flop clocked by clk)
+Endpoint: reg2/D (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+           4.50   slack (MET)
+
+Startpoint: reg2/Q (rising edge-triggered flip-flop clocked by clk)
+Endpoint: reg3/D (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+          -2.30   slack (VIOLATED)
+
+Startpoint: input_a (input port clocked by clk)
+Endpoint: output_z (output port clocked by clk)
+Path Group: clk
+Path Type: max
+
+           8.75   slack (MET)
+
+wns -2.30
+"""
+
+    paths = parse_timing_paths(report_content)
+
+    assert len(paths) == 3, "Should extract three paths"
+
+    # First path
+    assert paths[0].slack_ps == 4500
+    assert paths[0].startpoint == "reg1/Q"
+    assert paths[0].endpoint == "reg2/D"
+
+    # Second path (worst)
+    assert paths[1].slack_ps == -2300
+    assert paths[1].startpoint == "reg2/Q"
+    assert paths[1].endpoint == "reg3/D"
+
+    # Third path
+    assert paths[2].slack_ps == 8750
+    assert paths[2].startpoint == "input_a"
+    assert paths[2].endpoint == "output_z"
+
+
+def test_parse_timing_paths_with_max_limit() -> None:
+    """
+    Feature #20: Test limiting the number of paths extracted.
+
+    Step 2: Parse top N critical paths (with limit)
+    """
+    # Create report with 5 paths
+    report_content = """
+Startpoint: reg1/Q
+Endpoint: reg2/D
+Path Group: clk
+Path Type: max
+           1.00   slack (MET)
+
+Startpoint: reg3/Q
+Endpoint: reg4/D
+Path Group: clk
+Path Type: max
+           2.00   slack (MET)
+
+Startpoint: reg5/Q
+Endpoint: reg6/D
+Path Group: clk
+Path Type: max
+           3.00   slack (MET)
+
+Startpoint: reg7/Q
+Endpoint: reg8/D
+Path Group: clk
+Path Type: max
+           4.00   slack (MET)
+
+Startpoint: reg9/Q
+Endpoint: reg10/D
+Path Group: clk
+Path Type: max
+           5.00   slack (MET)
+
+wns 1.00
+"""
+
+    # Extract only top 3 paths
+    paths = parse_timing_paths(report_content, max_paths=3)
+
+    assert len(paths) == 3, "Should extract only 3 paths"
+    assert paths[0].slack_ps == 1000
+    assert paths[1].slack_ps == 2000
+    assert paths[2].slack_ps == 3000
+
+
+def test_parse_timing_report_with_paths() -> None:
+    """
+    Feature #20: Test complete parsing including WNS and top paths.
+
+    Steps 1-5: Execute, parse, extract all metrics including paths.
+    """
+    report_content = """
+Startpoint: input_port (input port clocked by clk)
+Endpoint: reg1/D (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+           4.50   slack (MET)
+
+Startpoint: reg1/Q (rising edge-triggered flip-flop clocked by clk)
+Endpoint: reg2/D (rising edge-triggered flip-flop clocked by clk)
+Path Group: clk
+Path Type: max
+
+          -5.50   slack (VIOLATED)
+
+wns -5.50
+tns -12.30
+failing endpoints: 3
+"""
+
+    # Parse with path extraction enabled (default)
+    metrics = parse_timing_report_content(report_content)
+
+    # Step 4: Emit top paths to timing analysis artifacts
+    assert metrics.wns_ps == -5500
+    assert metrics.tns_ps == -12300
+    assert metrics.failing_endpoints == 3
+
+    # Step 3: Extract path slack, startpoint, endpoint
+    assert len(metrics.top_paths) == 2
+    assert metrics.top_paths[0].slack_ps == 4500
+    assert metrics.top_paths[0].startpoint == "input_port"
+    assert metrics.top_paths[1].slack_ps == -5500
+    assert metrics.top_paths[1].startpoint == "reg1/Q"
+
+
+def test_parse_timing_report_without_paths() -> None:
+    """
+    Feature #20: Test parsing with path extraction disabled.
+    """
+    report_content = """
+Startpoint: input_port
+Endpoint: reg1/D
+           4.50   slack (MET)
+
+wns 4.50
+"""
+
+    # Parse with path extraction disabled
+    metrics = parse_timing_report_content(report_content, extract_paths=False)
+
+    assert metrics.wns_ps == 4500
+    assert len(metrics.top_paths) == 0, "Should not extract paths when disabled"
+
+
+def test_parse_timing_paths_minimal_format() -> None:
+    """
+    Feature #20: Test parsing paths with minimal information.
+
+    Paths may not always have all optional fields.
+    """
+    report_content = """
+Startpoint: A
+Endpoint: B
+           -10.25   slack (VIOLATED)
+
+wns -10.25
+"""
+
+    paths = parse_timing_paths(report_content)
+
+    assert len(paths) == 1
+    assert paths[0].slack_ps == -10250
+    assert paths[0].startpoint == "A"
+    assert paths[0].endpoint == "B"
+    assert paths[0].path_group is None  # Optional field not present
+    assert paths[0].path_type is None  # Optional field not present
+
+
+def test_parse_timing_paths_empty_report() -> None:
+    """
+    Feature #20: Test parsing report with no path information.
+    """
+    report_content = """
+Some header text
+wns 0.0
+tns 0.0
+"""
+
+    paths = parse_timing_paths(report_content)
+
+    assert len(paths) == 0, "Should return empty list for report without paths"
+
+
+def test_parse_timing_paths_for_eco_targeting() -> None:
+    """
+    Feature #20 Step 5: Enable path-level debugging and ECO targeting.
+
+    Verify that parsed paths contain sufficient detail for ECO decisions.
+    """
+    report_content = """
+Startpoint: critical_reg1/Q (rising edge-triggered flip-flop clocked by sys_clk)
+Endpoint: critical_reg2/D (rising edge-triggered flip-flop clocked by sys_clk)
+Path Group: sys_clk
+Path Type: max
+
+  Delay    Time   Description
+---------------------------------------------------------
+           0.00   clock sys_clk (rise edge)
+     5.25  5.25 ^ critical_reg1/Q (DFF_X2)
+     8.75 14.00 ^ logic_chain/Z (NAND3_X1)
+          14.00   data arrival time
+
+          10.00   clock sys_clk (rise edge)
+          -0.50   library setup time
+           9.50   data required time
+---------------------------------------------------------
+          -4.50   slack (VIOLATED)
+
+wns -4.50
+"""
+
+    metrics = parse_timing_report_content(report_content)
+
+    # Verify path details are sufficient for ECO targeting
+    assert len(metrics.top_paths) == 1
+    path = metrics.top_paths[0]
+
+    # Critical information for ECO decisions:
+    # 1. Which path is critical
+    assert path.slack_ps == -4500  # Negative slack - needs fixing
+
+    # 2. What are the endpoints (targets for buffering, resizing, etc.)
+    assert "critical_reg1" in path.startpoint
+    assert "critical_reg2" in path.endpoint
+
+    # 3. Path characteristics (for understanding constraints)
+    assert path.path_group == "sys_clk"  # Clock domain
+    assert path.path_type == "max"  # Setup path
+
+    # This information enables ECO targeting:
+    # - Buffer insertion between critical_reg1 and critical_reg2
+    # - Cell resizing on critical path
+    # - Clock tree optimization for sys_clk domain

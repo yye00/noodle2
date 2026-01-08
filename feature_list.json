@@ -1331,7 +1331,7 @@
       "Step 5: Emit custom metrics to telemetry",
       "Step 6: Use custom metrics in ranking and policy"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

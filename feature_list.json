@@ -1383,7 +1383,7 @@
       "Step 5: Sum total compute time across all trials",
       "Step 6: Write performance summary to stage artifacts"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

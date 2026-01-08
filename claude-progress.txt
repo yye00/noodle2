@@ -6791,3 +6791,48 @@ After completing ECO effectiveness comparison, the next priorities are:
    - Validate ASAP7 bring-up stability
 
 ---
+
+# Session 44 - ECO Effectiveness Leaderboard
+**Date:** 2026-01-08
+**Status:** 92/200 features passing (46.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **ECO effectiveness leaderboard generation**, which aggregates
+ECO performance across all trials in a Study and ranks ECOs by their average WNS improvement.
+
+### Features Completed
+
+**Feature #12: Generate ECO effectiveness leaderboard across all trials in Study** ✅
+**Feature (style): ECO effectiveness leaderboard is formatted as sortable table** ✅
+
+## IMPLEMENTATION
+
+**1. ECOLeaderboard Module** (src/controller/eco_leaderboard.py):
+- ECOLeaderboardEntry: Single leaderboard entry with rank and metrics
+- ECOLeaderboard: Complete leaderboard with entries and summary
+- ECOLeaderboardGenerator: Generates and saves leaderboards
+- Ranks ECOs by average WNS improvement (descending)
+- Outputs both JSON and human-readable text formats
+- Text format includes formatted table with legend
+
+**2. StudyExecutor Integration** (src/controller/executor.py):
+- Added eco_effectiveness_map to track ECO performance across trials
+- Added eco_class_map to track ECO classifications
+- Integrated leaderboard generation at Study finalization
+- Leaderboard automatically saved to Study artifacts directory
+- Only generated if ECO data is available
+
+**3. Test Coverage** (22 tests, all passing):
+- Unit Tests (test_eco_leaderboard.py): 17 tests
+- Integration Tests (test_eco_leaderboard_integration.py): 5 tests
+
+## WHY THIS MATTERS
+
+**ECO Analysis:**
+- Operators can quickly identify most effective ECOs
+- Prioritize proven ECOs in future Studies
+- Make data-driven decisions based on actual trial results
+
+**Completion Progress:** 92/200 features passing (46.0% complete)
+

@@ -1,5 +1,189 @@
 # Noodle 2 - Progress Tracker
 
+## Session 24 - Trial Timestamp Tracking
+**Date:** 2026-01-08
+**Status:** 59/200 features passing (29.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **trial timestamp tracking for execution time analysis**, enabling performance monitoring and optimization across trials, stages, and studies.
+
+#### ✅ Feature Completed: Log Trial Timestamps for Execution Time Tracking (Feature #85)
+
+**Implementation:**
+
+**1. TrialResult Timestamp Fields** (trial.py):
+
+Added top-level timestamp fields to `TrialResult`:
+- `start_time: str` - ISO 8601 format timestamp at trial start
+- `end_time: str` - ISO 8601 format timestamp at trial completion
+- Both fields default to empty string for backward compatibility
+- Captured using `datetime.now(timezone.utc).isoformat()` for consistent UTC timestamps
+
+**2. Duration Calculation Method**:
+
+Added `calculate_duration_seconds()` method to TrialResult:
+- Calculates wall-clock duration from timestamps
+- Returns `float | None` (None if timestamps missing or invalid)
+- Complements `runtime_seconds` (process execution time) with wall-clock time
+- Handles invalid timestamp formats gracefully
+
+**3. Trial Telemetry Integration**:
+
+Updated `TrialResult.to_dict()` to serialize timestamps:
+- Timestamps included at top level for easy access
+- Also preserved in provenance for complete reproducibility
+- Written to `trial_summary.json` in trial artifact directory
+- Enables performance analysis without parsing nested structures
+
+**4. Backward Compatibility**:
+
+Design ensures backward compatibility:
+- Default empty strings prevent breaking existing code
+- Duration calculation returns None if timestamps unavailable
+- Provenance still contains timestamps (redundancy for robustness)
+- All existing tests continue to pass
+
+**TEST COVERAGE:**
+
+Created `test_trial_timestamps.py` with 13 comprehensive tests:
+
+**TestTrialTimestamps** (5 tests):
+- TrialResult has start_time and end_time fields
+- Timestamp fields default to empty string
+- Timestamps use ISO 8601 format
+- Timestamps serialized to dict
+- Timestamps enable performance analysis
+
+**TestTrialDurationCalculation** (5 tests):
+- Calculate duration from valid timestamps
+- Returns None if timestamps missing
+- Handles invalid timestamp formats gracefully
+- Duration calculation with fractional seconds
+- Duration calculation across midnight boundary
+
+**TestTimestampPerformanceAnalysis** (3 tests):
+- Compare multiple trials by execution time
+- Identify slow trials exceeding threshold
+- Compute stage-level performance summary (min/max/avg/total duration)
+
+**WHY THIS MATTERS:**
+
+**Performance Monitoring:**
+- Track trial execution time across stages and studies
+- Identify performance regressions or improvements
+- Compare ECO effectiveness including execution cost
+
+**Resource Planning:**
+- Estimate compute budget for large Studies
+- Optimize stage budgets based on historical durations
+- Identify outlier trials for investigation
+
+**Analysis Capabilities:**
+- Stage-level performance summaries (min/max/avg duration)
+- Trial ranking by execution time
+- Slow trial identification (exceeds threshold)
+- Historical performance trends
+
+**Auditability:**
+- ISO 8601 timestamps for precise temporal ordering
+- Enables timeline reconstruction for debugging
+- Supports root cause analysis of performance issues
+
+**USAGE EXAMPLE:**
+
+```python
+# After trial execution
+result = trial.execute()
+
+# Access timestamps directly
+print(f"Started: {result.start_time}")
+print(f"Ended: {result.end_time}")
+
+# Calculate wall-clock duration
+duration = result.calculate_duration_seconds()
+print(f"Duration: {duration:.2f} seconds")
+
+# Compare with process execution time
+print(f"Process time: {result.runtime_seconds:.2f} seconds")
+
+# Performance analysis across trials
+trials = [trial1, trial2, trial3]
+durations = [t.calculate_duration_seconds() for t in trials]
+avg_duration = sum(d for d in durations if d) / len(durations)
+```
+
+**CODE QUALITY:**
+
+- **Modified Code**: trial.py (+23 lines: 2 fields + calculate_duration_seconds method)
+- **New Tests**: test_trial_timestamps.py (408 lines, 13 tests)
+- **Test Count**: 590 tests total (577 existing + 13 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **Type Safety**: Full type hints maintained
+- **Documentation**: Clear docstrings and inline comments
+- **No Regressions**: All existing 577 tests still passing
+
+**FILES MODIFIED THIS SESSION:**
+
+**Modified:**
+- src/trial_runner/trial.py (+23 lines: timestamp fields + calculation method)
+- feature_list.json (1 feature marked passing)
+
+**Created:**
+- tests/test_trial_timestamps.py (408 lines, 13 tests)
+
+**GIT HISTORY:**
+
+```
+d3bca2c Implement trial timestamp tracking for performance analysis - Feature passing
+```
+
+**SESSION SUMMARY:**
+
+✅ **1 Feature COMPLETE**: Trial timestamp tracking for execution time analysis
+
+**Architecture Advancement:** Noodle 2 now provides:
+- Comprehensive execution time tracking at trial level
+- Easy-to-access timestamps in trial telemetry
+- Duration calculation utilities for performance analysis
+- ISO 8601 timestamps for precise temporal ordering
+- Foundation for stage-level and study-level performance summaries
+
+**Testing:** All 590 tests passing (577 existing + 13 new), zero regressions.
+
+**Completion Progress:** 59/200 features passing (29.5% complete)
+
+**NEXT PRIORITIES:**
+
+With timestamp tracking complete, the next focus areas are:
+
+1. **Trial Timeout Support** (High Priority)
+   - Configure stage-level trial timeout limits
+   - Detect timeout expiration and terminate trial process
+   - Classify as early failure 'timeout'
+   - Feature #95 in feature_list.json
+
+2. **Stdout/Stderr Capture** (High Priority)
+   - Redirect stdout to trial log file
+   - Redirect stderr to separate error log file
+   - Preserve both logs in trial artifacts
+   - Extract log excerpts for failure classification
+   - Feature #86 in feature_list.json
+
+3. **Stage-Level Performance Summaries** (Medium Priority)
+   - Aggregate trial timestamps across entire stage
+   - Compute min/max/avg/total stage duration
+   - Identify performance bottlenecks
+   - Enable stage-level resource planning
+
+4. **ECO Application Integration** (Medium Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs during trial execution (prepend to script)
+   - Track which ECOs were applied in each trial
+   - Update ECOClassTracker based on outcomes
+
+---
+
 ## Session 23 - Sky130 Base Case Support
 **Date:** 2026-01-08
 **Status:** 58/200 features passing (29.0%)

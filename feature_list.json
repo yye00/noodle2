@@ -2611,7 +2611,7 @@
       "Step 4: Use env vars in OpenROAD scripts",
       "Step 5: Document env vars in telemetry"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

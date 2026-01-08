@@ -86,6 +86,8 @@ class StudyConfig:
     eco_whitelist: list[str] | None = None  # If set, only these ECOs allowed
     # Study organization and cataloging
     tags: list[str] = field(default_factory=list)  # Tags for organization and filtering
+    # Environment variables for trial execution
+    environment: dict[str, str] = field(default_factory=dict)  # Environment variables passed to Docker
 
     def validate(self) -> None:
         """Validate Study configuration."""

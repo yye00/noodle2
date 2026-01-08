@@ -56,6 +56,9 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
     eco_blacklist = data.get("eco_blacklist", [])
     eco_whitelist = data.get("eco_whitelist")  # None if not specified
 
+    # Parse environment variables
+    environment = data.get("environment", {})
+
     # Create StudyConfig
     config = StudyConfig(
         name=data["name"],
@@ -67,6 +70,7 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         metadata=data.get("metadata", {}),
         eco_blacklist=eco_blacklist,
         eco_whitelist=eco_whitelist,
+        environment=environment,
     )
 
     # Validate configuration

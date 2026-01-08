@@ -285,7 +285,7 @@
       "Step 4: Confirm Study A telemetry is not accessible to Study B",
       "Step 5: Verify Studies maintain independent memory"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -298,7 +298,7 @@
       "Step 5: Verify graph is a valid DAG (no cycles)",
       "Step 6: Export graph in machine-readable format"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

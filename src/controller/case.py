@@ -245,3 +245,152 @@ class CaseGraph:
     def count_cases_by_stage(self, stage_index: int) -> int:
         """Count cases at a specific stage."""
         return len(self.get_cases_by_stage(stage_index))
+
+    def export_dag(self) -> dict:
+        """
+        Export the case DAG in machine-readable format.
+
+        Returns a dictionary with:
+        - nodes: List of all cases with their metadata
+        - edges: List of parent-child relationships
+        - statistics: DAG statistics (depth, branching factor, etc.)
+
+        Returns:
+            Dictionary representation of the DAG
+        """
+        nodes = []
+        edges = []
+
+        for case in self.cases.values():
+            # Add node
+            nodes.append({
+                "case_id": case.case_id,
+                "case_name": case.case_name,
+                "stage_index": case.stage_index,
+                "derived_index": case.identifier.derived_index,
+                "is_base_case": case.is_base_case,
+                "eco_applied": case.eco_applied,
+                "snapshot_path": case.snapshot_path,
+                "metadata": case.metadata,
+            })
+
+            # Add edge if there's a parent
+            if case.parent_id is not None:
+                edges.append({
+                    "source": case.parent_id,
+                    "target": case.case_id,
+                    "eco": case.eco_applied,
+                })
+
+        # Calculate statistics
+        stats = {
+            "total_cases": len(nodes),
+            "total_edges": len(edges),
+            "max_stage": max((case.stage_index for case in self.cases.values()), default=0),
+            "cases_per_stage": {
+                i: self.count_cases_by_stage(i)
+                for i in range(max((case.stage_index for case in self.cases.values()), default=0) + 1)
+            },
+        }
+
+        return {
+            "nodes": nodes,
+            "edges": edges,
+            "statistics": stats,
+        }
+
+    def verify_dag_integrity(self) -> tuple[bool, list[str]]:
+        """
+        Verify that the case graph is a valid DAG (no cycles).
+
+        Uses depth-first search to detect cycles.
+
+        Returns:
+            Tuple of (is_valid, errors)
+            - is_valid: True if DAG is valid (no cycles, all parents exist)
+            - errors: List of error messages if invalid
+        """
+        errors = []
+
+        # Check 1: All parents exist
+        for case in self.cases.values():
+            if case.parent_id is not None and case.parent_id not in self.cases:
+                errors.append(
+                    f"Case {case.case_id} references non-existent parent {case.parent_id}"
+                )
+
+        # Check 2: Detect cycles using DFS
+        visited = set()
+        rec_stack = set()
+
+        def has_cycle(case_id: str) -> bool:
+            """DFS to detect cycles."""
+            visited.add(case_id)
+            rec_stack.add(case_id)
+
+            case = self.cases.get(case_id)
+            if case and case.parent_id:
+                if case.parent_id not in visited:
+                    if has_cycle(case.parent_id):
+                        return True
+                elif case.parent_id in rec_stack:
+                    errors.append(
+                        f"Cycle detected involving case {case_id} and parent {case.parent_id}"
+                    )
+                    return True
+
+            rec_stack.remove(case_id)
+            return False
+
+        for case_id in self.cases:
+            if case_id not in visited:
+                if has_cycle(case_id):
+                    break
+
+        return (len(errors) == 0, errors)
+
+    def get_dag_depth(self) -> int:
+        """
+        Calculate the maximum depth of the DAG.
+
+        Depth is the longest path from base case to any leaf case.
+
+        Returns:
+            Maximum DAG depth
+        """
+        def calculate_depth(case_id: str, memo: dict[str, int]) -> int:
+            """Calculate depth for a case with memoization."""
+            if case_id in memo:
+                return memo[case_id]
+
+            case = self.cases[case_id]
+            if case.is_base_case:
+                depth = 0
+            else:
+                parent_depth = calculate_depth(case.parent_id, memo)
+                depth = parent_depth + 1
+
+            memo[case_id] = depth
+            return depth
+
+        if not self.cases:
+            return 0
+
+        memo: dict[str, int] = {}
+        return max(calculate_depth(case_id, memo) for case_id in self.cases)
+
+    def get_leaf_cases(self) -> list[Case]:
+        """
+        Get all leaf cases (cases with no children).
+
+        Returns:
+            List of leaf cases
+        """
+        # Find all cases that are parents
+        parent_ids = {case.parent_id for case in self.cases.values() if case.parent_id}
+
+        # Leaf cases are those not in the parent set
+        return [
+            case for case in self.cases.values()
+            if case.case_id not in parent_ids
+        ]

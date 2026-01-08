@@ -34,6 +34,12 @@ class FailureType(str, Enum):
     SEGFAULT = "segfault"  # Segmentation fault
     CORE_DUMP = "core_dump"  # Core dump detected
 
+    # Transient failures (may succeed on retry)
+    NETWORK_ERROR = "network_error"  # Network connectivity issues
+    RESOURCE_BUSY = "resource_busy"  # Resource temporarily unavailable
+    CONTAINER_ERROR = "container_error"  # Container orchestration failure
+    FILESYSTEM_ERROR = "filesystem_error"  # Temporary filesystem issues
+
     # Unknown/other
     UNKNOWN = "unknown"
 
@@ -162,8 +168,28 @@ class FailureClassifier:
                     recoverable=False,
                 )
 
-            # Timeout detection
-            if "timeout" in combined_output or return_code == 124:
+            # Transient failures - network errors (check before generic timeout)
+            if any(
+                marker in combined_output
+                for marker in [
+                    "network error",
+                    "connection refused",
+                    "connection timeout",
+                    "connection reset",
+                    "no route to host",
+                    "temporary failure in name resolution",
+                ]
+            ):
+                return FailureClassification(
+                    failure_type=FailureType.NETWORK_ERROR,
+                    severity=FailureSeverity.MEDIUM,
+                    reason=f"Network connectivity issue (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=True,
+                )
+
+            # Timeout detection (trial execution timeout, not network)
+            if ("timeout" in combined_output and "connection" not in combined_output) or return_code == 124:
                 return FailureClassification(
                     failure_type=FailureType.TIMEOUT,
                     severity=FailureSeverity.HIGH,
@@ -180,6 +206,62 @@ class FailureClassifier:
                     reason=f"Required tool not found (exit code {return_code})",
                     log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
                     recoverable=False,
+                )
+
+            # Transient failures - resource busy
+            if any(
+                marker in combined_output
+                for marker in [
+                    "resource temporarily unavailable",
+                    "resource busy",
+                    "device busy",
+                    "try again later",
+                ]
+            ):
+                return FailureClassification(
+                    failure_type=FailureType.RESOURCE_BUSY,
+                    severity=FailureSeverity.LOW,
+                    reason=f"Resource temporarily unavailable (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=True,
+                )
+
+            # Transient failures - container errors
+            if any(
+                marker in combined_output
+                for marker in [
+                    "container not found",
+                    "container start failed",
+                    "container error",
+                    "docker error",
+                    "failed to create container",
+                ]
+            ):
+                return FailureClassification(
+                    failure_type=FailureType.CONTAINER_ERROR,
+                    severity=FailureSeverity.MEDIUM,
+                    reason=f"Container orchestration failure (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=True,
+                )
+
+            # Transient failures - filesystem errors
+            if any(
+                marker in combined_output
+                for marker in [
+                    "no space left on device",
+                    "disk quota exceeded",
+                    "filesystem full",
+                    "stale file handle",
+                    "input/output error",
+                ]
+            ) and "oom" not in combined_output:  # Avoid misclassifying OOM
+                return FailureClassification(
+                    failure_type=FailureType.FILESYSTEM_ERROR,
+                    severity=FailureSeverity.MEDIUM,
+                    reason=f"Temporary filesystem issue (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=True,
                 )
 
             # Placement failure
@@ -347,3 +429,28 @@ class FailureClassifier:
         }
 
         return failure.failure_type in catastrophic_types or failure.severity == FailureSeverity.CRITICAL
+
+    @staticmethod
+    def is_transient(failure: FailureClassification) -> bool:
+        """
+        Determine if a failure is transient and may succeed on retry.
+
+        Transient failures are temporary issues (network, resource contention,
+        container orchestration) that may resolve themselves and are worth
+        retrying with exponential backoff.
+
+        Args:
+            failure: FailureClassification to check
+
+        Returns:
+            True if failure is transient and retriable, False otherwise
+        """
+        # Transient failure types that are worth retrying
+        transient_types = {
+            FailureType.NETWORK_ERROR,
+            FailureType.RESOURCE_BUSY,
+            FailureType.CONTAINER_ERROR,
+            FailureType.FILESYSTEM_ERROR,
+        }
+
+        return failure.failure_type in transient_types

@@ -1572,7 +1572,7 @@
       "Step 5: Mark trial as permanently failed if all retries exhausted",
       "Step 6: Log retry attempts in telemetry"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

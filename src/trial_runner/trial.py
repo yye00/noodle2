@@ -35,6 +35,10 @@ class TrialConfig:
     execution_mode: ExecutionMode = ExecutionMode.STA_ONLY
     # Optional fixed seed for deterministic placement/routing
     openroad_seed: int | None = None
+    # Retry configuration for transient failures
+    max_retries: int = 3  # Maximum number of retry attempts
+    retry_backoff_base: float = 2.0  # Base multiplier for exponential backoff (seconds)
+    retry_backoff_max: float = 60.0  # Maximum backoff delay (seconds)
 
 
 @dataclass
@@ -85,6 +89,9 @@ class TrialResult:
     # Resource utilization metrics
     cpu_time_seconds: float | None = None  # Total CPU time consumed by OpenROAD process
     peak_memory_mb: float | None = None  # Peak memory usage during trial execution
+    # Retry tracking for transient failures
+    retry_count: int = 0  # Number of retry attempts made
+    retry_history: list[dict[str, Any]] = field(default_factory=list)  # Log of all retry attempts
 
     def calculate_duration_seconds(self) -> float | None:
         """

@@ -1409,7 +1409,7 @@
       "Step 5: Reject Study if snapshot is corrupted",
       "Step 6: Emit clear diagnostic of missing/invalid files"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

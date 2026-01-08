@@ -7,6 +7,12 @@ from src.telemetry.stage_performance import (
     StagePerformanceSummary,
     StudyPerformanceSummary,
 )
+from src.telemetry.study_export import (
+    CaseMetricsSummary,
+    StudyExport,
+    StudyExporter,
+    export_study_results,
+)
 
 __all__ = [
     "Event",
@@ -14,4 +20,8 @@ __all__ = [
     "EventType",
     "StagePerformanceSummary",
     "StudyPerformanceSummary",
+    "CaseMetricsSummary",
+    "StudyExport",
+    "StudyExporter",
+    "export_study_results",
 ]

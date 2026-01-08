@@ -1,0 +1,179 @@
+# Session 46 Summary - TCL Script Logging for Reproducibility
+**Date:** 2026-01-08
+**Status:** 95/200 features passing (47.5%)
+
+## FEATURE IMPLEMENTED
+
+**Feature #114: Log OpenROAD TCL script invocations for reproducibility** ✅
+
+This feature ensures that every trial saves a copy of the exact TCL script
+that was executed, enabling manual reproduction of any trial.
+
+## IMPLEMENTATION SUMMARY
+
+### Code Changes
+
+**src/trial_runner/trial.py** (+31 lines):
+- Added `_copy_script_to_trial_dir()` method to copy TCL script to artifacts
+- Script saved as standardized name: 'trial_script.tcl'
+- Integrated script copying into `execute()` workflow
+- Added `script` field to `TrialArtifacts` dataclass
+- Updated `to_dict()` and `_discover_artifacts()` methods
+
+**tests/test_tcl_script_logging.py** (new file, 580 lines):
+- 16 comprehensive tests across 6 test classes
+- All 5 feature steps validated end-to-end
+- Tests cover generation, copying, execution, reproducibility, and manual reproduction
+
+### Test Coverage
+
+**TestTCLScriptGeneration** (4 tests):
+- Script generation with different execution modes
+- Metadata and seed inclusion
+- TCL syntax validation
+
+**TestTCLScriptCopyToArtifacts** (3 tests):
+- Script copying to trial directory
+- Exact content preservation
+- Error handling for missing files
+
+**TestTCLScriptInTrialExecution** (2 tests):
+- Automatic script logging during execution
+- Script path in trial summary JSON
+
+**TestTCLScriptReproducibility** (2 tests):
+- Script validation and re-execution
+- Reproducibility verification
+
+**TestManualReproduction** (3 tests):
+- Manual reproduction workflow
+- Artifact completeness
+- Location documentation
+
+**TestEndToEndScriptLogging** (2 tests):
+- Complete workflow integration
+- Multiple trial isolation
+
+## ALL 5 FEATURE STEPS VALIDATED
+
+✅ Step 1: Generate TCL script for trial execution
+✅ Step 2: Write TCL script to trial artifacts
+✅ Step 3: Execute OpenROAD with logged TCL script
+✅ Step 4: Verify trial is reproducible by re-running logged script
+✅ Step 5: Enable manual reproduction of any trial
+
+## WHY THIS MATTERS
+
+**Reproducibility:**
+- Any trial can be manually re-executed using the logged script
+- Exact script content preserved for debugging
+- No ambiguity about what was executed
+- Eliminates "I can't reproduce this" problems
+
+**Debugging:**
+- Failed trials can be reproduced locally
+- Script content available for inspection
+- Enables manual tweaking and re-testing
+- Facilitates understanding of failures
+
+**Auditability:**
+- Complete record of what was executed
+- Script content immutable after execution
+- Provenance chain includes exact TCL commands
+- Satisfies compliance requirements
+
+**Documentation:**
+- Self-documenting trial artifacts
+- Demonstrates OpenROAD command sequences
+- Educational resource for understanding flows
+- New users can learn from logged scripts
+
+## TEST RESULTS
+
+```
+tests/test_tcl_script_logging.py::TestTCLScriptGeneration::test_generate_sta_only_script PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptGeneration::test_generate_sta_congestion_script PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptGeneration::test_script_includes_metadata PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptGeneration::test_script_includes_seed PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptCopyToArtifacts::test_script_copied_to_trial_directory PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptCopyToArtifacts::test_script_copy_preserves_exact_content PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptCopyToArtifacts::test_script_copy_fails_if_script_not_found PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptInTrialExecution::test_script_logged_during_execution PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptInTrialExecution::test_script_accessible_in_trial_summary PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptReproducibility::test_logged_script_is_valid_tcl PASSED
+tests/test_tcl_script_logging.py::TestTCLScriptReproducibility::test_script_can_be_reexecuted_manually PASSED
+tests/test_tcl_script_logging.py::TestManualReproduction::test_manual_reproduction_instructions_via_script PASSED
+tests/test_tcl_script_logging.py::TestManualReproduction::test_script_location_documented_in_artifacts PASSED
+tests/test_tcl_script_logging.py::TestManualReproduction::test_all_required_artifacts_present_for_reproduction PASSED
+tests/test_tcl_script_logging.py::TestEndToEndScriptLogging::test_complete_workflow_with_script_logging PASSED
+tests/test_tcl_script_logging.py::TestEndToEndScriptLogging::test_multiple_trials_each_have_own_script PASSED
+```
+
+All 16 tests passing. Full test suite: **1092 tests passing, 1 skipped**.
+
+## CODE QUALITY
+
+- **Type hints** on all new methods
+- **Comprehensive docstrings** explaining purpose and behavior
+- **16 new tests**, all passing
+- **No breaking changes** to existing APIs
+- **Full backward compatibility** (script field optional)
+- **Best practices**: standardized naming, clear error messages
+
+## GIT COMMITS
+
+```
+70284db Add Session 46 progress notes - TCL script logging complete, 95/200 passing (47.5%)
+6eac791 Implement TCL script logging for reproducibility - Feature #114 passing
+```
+
+## SESSION METRICS
+
+- **Features Completed**: 1 (Feature #114)
+- **New Tests**: 16
+- **Total Tests**: 1092 (all passing)
+- **Lines Added**: ~611 (31 production + 580 test)
+- **Time**: Single session
+- **Regressions**: 0
+
+## COMPLETION PROGRESS
+
+**Before:** 94/200 features (47.0%)
+**After:** 95/200 features (47.5%)
+**Progress:** +1 feature (+0.5%)
+
+## NEXT PRIORITIES
+
+1. **OpenROAD Command Logging** (Feature #118)
+   - Log all OpenROAD commands with timing
+   - Enable fine-grained debugging
+
+2. **Tool Version Detection** (Feature #125)
+   - Detect and report OpenROAD version
+   - Record in trial provenance
+
+3. **Container Image Pinning** (Feature #124)
+   - Support SHA256 digest specification
+   - Ensure reproducible container versions
+
+4. **Study Tags** (Feature #126)
+   - Add tags for organization
+   - Enable filtering and search
+
+5. **ECO Blacklist/Whitelist** (Features #116-117)
+   - Support ECO exclusion/restriction
+   - Enforce lists with clear diagnostics
+
+## NOTES
+
+This session demonstrates production-quality reproducibility engineering:
+- Automatic script logging (no configuration needed)
+- Standardized artifact naming for easy discovery
+- Exact content preservation for faithful reproduction
+- Comprehensive test coverage (16 tests, 6 test classes)
+- Clear documentation of manual reproduction workflow
+- Zero regressions on existing functionality
+
+The implementation is minimal, focused, and integrated seamlessly with
+existing trial execution infrastructure. Scripts are always logged,
+regardless of trial success or failure, ensuring complete reproducibility.

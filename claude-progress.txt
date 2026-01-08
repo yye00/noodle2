@@ -14542,3 +14542,87 @@ Or continue with other style features:
 
 Current state: Codebase clean, all tests passing, ready for next feature.
 
+
+================================================================================
+SESSION 89 UPDATE - Second Feature Completed
+================================================================================
+
+### Feature Completed: Run Legality Report Formatting (#140)
+
+Implemented comprehensive validation for Run Legality Report formatting.
+
+**Feature Requirements:**
+1. Generate Run Legality Report ✓
+2. Open report file (text format) ✓
+3. Screenshot (manual step)
+4. Verify clear sections ✓
+5. Verify pass/fail status prominently displayed ✓
+6. Verify illegal conditions highlighted ✓
+
+**Implementation Details:**
+
+1. **tests/test_safety.py**
+   - Added TestRunLegalityReportFormatting class
+   - test_legality_report_is_formatted_as_clear_document: validates all 6 requirements
+     * Checks all required sections present
+     * Verifies visual separators (=== lines)
+     * Validates pass/fail verdict prominence
+     * Confirms violation highlighting (✗ symbol)
+     * Ensures reason explanations included
+   - test_legality_report_legal_case_formatting: positive case validation
+   - test_legality_report_with_warnings_formatting: warning display validation
+   
+2. **No source code changes needed**
+   - Existing RunLegalityReport.__str__() already well-formatted
+   - Already includes clear sections, visual indicators, and proper structure
+   - Tests validate existing implementation meets all requirements
+
+**Test Coverage:**
+- 22 total tests in test_safety.py
+- 3 new formatting validation tests
+- All tests passing, no regressions
+
+**Why This Matters:**
+
+**For Operators:**
+- Immediate understanding of safety status
+- Easy violation identification
+- Professional audit documentation
+- Visual indicators for quick scanning
+
+**For Compliance:**
+- Audit trail with timestamps
+- Clear safety domain enforcement
+- Violation reasons documented
+- Professional presentation
+
+**For Debugging:**
+- Complete Study configuration context
+- Budget and stage information
+- Warning messages for issues
+- Easy-to-parse structure
+
+## SESSION SUMMARY
+
+**Features Completed:** 2
+1. Artifact Index JSON Formatting (#144)
+2. Run Legality Report Formatting (#140)
+
+**Progress:**
+- Started: 152/200 (76.0%)
+- Finished: 154/200 (77.0%)
+- Improvement: +2 features (+1.0%)
+
+**Remaining:** 46 features
+
+**Test Results:**
+- All artifact_index tests: 23/23 passing
+- All safety tests: 22/22 passing
+- No regressions in any existing tests
+
+**Code Quality:**
+- Full type hints throughout
+- Comprehensive test coverage
+- Professional documentation
+- No breaking changes
+

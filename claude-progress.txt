@@ -13570,3 +13570,58 @@ Next Session Recommendations:
 - Or tackle e2e features like Feature #160: Complete Nangate45 Study (18 steps)
 
 The notification system is production-ready and fully integrated with the Study configuration system.
+
+=== SECOND FEATURE: Feature #195 - Study Templates ===
+
+Implementation Summary:
+- Created comprehensive Study template system for rapid configuration
+- Implemented TemplateParameter with validation for required/optional parameters
+- Created StudyTemplate with {{placeholder}} substitution
+- Built-in Nangate45 template for common use cases
+- Full save/load support for template persistence
+
+Key Features:
+1. **Parameter System**:
+   - Required and optional parameters
+   - Default values for optional parameters
+   - Validation: name format, required vs default conflict
+
+2. **Template Instantiation**:
+   - {{param}} placeholder substitution
+   - Multiple occurrence handling
+   - Validation: missing required, unknown parameters, unsubstituted placeholders
+   - Direct conversion to StudyConfig
+
+3. **Persistence**:
+   - Save templates to YAML
+   - Load templates from YAML
+   - Complete metadata preservation
+
+4. **Built-in Templates**:
+   - get_nangate45_template() for standard Nangate45 studies
+   - Configurable: study_name, snapshot_path, trial_budget, survivor_count
+
+Testing:
+- 27 tests covering all template functionality
+  - Parameter validation (5 tests)
+  - Template creation and instantiation (9 tests)
+  - YAML value formatting (6 tests)
+  - Built-in templates (3 tests)
+  - Full workflow integration (4 tests)
+
+Example Usage:
+```python
+from src.controller.study_template import get_nangate45_template
+
+template = get_nangate45_template()
+config = template.instantiate_to_config({
+    "study_name": "my_experiment",
+    "snapshot_path": "/path/to/snapshot",
+    "trial_budget": 20,
+    "survivor_count": 10
+})
+# config is ready to use StudyConfig
+```
+
+Progress: 148/200 features (74.0%)
+Remaining: 52 features

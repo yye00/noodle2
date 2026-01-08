@@ -2664,7 +2664,7 @@
       "Step 5: Execute Study from template",
       "Step 6: Save successful Studies as new templates"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

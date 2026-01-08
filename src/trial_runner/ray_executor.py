@@ -1,11 +1,17 @@
 """Ray-based parallel trial execution for Noodle 2."""
 
 import logging
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import ray
 
+from src.controller.early_stopping import (
+    EarlyStoppingConfig,
+    SurvivorDeterminationResult,
+    can_determine_survivors_early,
+)
 from src.trial_runner.docker_runner import DockerRunConfig
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
@@ -279,3 +285,158 @@ class RayTrialExecutor:
             metadata["execution_mode"] = config.execution_mode.value
 
         return metadata
+
+    def execute_trials_with_early_stopping(
+        self,
+        configs: list[TrialConfig],
+        required_survivor_count: int,
+        early_stopping_config: EarlyStoppingConfig,
+        progress_callback: Callable[[list[TrialResult], int], None] | None = None,
+    ) -> tuple[list[TrialResult], list[str], int]:
+        """
+        Execute trials in parallel with early stopping when survivors are determined.
+
+        This method incrementally checks completed trials and cancels remaining trials
+        once survivors can be confidently determined, saving compute resources.
+
+        Args:
+            configs: List of trial configurations to execute
+            required_survivor_count: Number of survivors required
+            early_stopping_config: Configuration for early stopping behavior
+            progress_callback: Optional callback called with (results_so_far, remaining_count)
+
+        Returns:
+            Tuple of:
+            - list[TrialResult]: All completed trial results
+            - list[str]: Case IDs of cancelled trials
+            - int: Number of trials saved by early stopping
+
+        Notes:
+            - Uses ray.wait() to check completed trials incrementally
+            - Evaluates survivor determination after each completion
+            - Cancels remaining trials when survivors are determined
+            - All completed trials are returned regardless of success
+        """
+        if not configs:
+            return [], [], 0
+
+        logger.info(
+            f"Executing {len(configs)} trials with early stopping "
+            f"(policy={early_stopping_config.policy.value}, survivors={required_survivor_count})"
+        )
+
+        # Submit all trials as Ray tasks
+        task_refs = [self.submit_trial(config) for config in configs]
+        config_map = {task_refs[i]: configs[i] for i in range(len(configs))}
+
+        # Track results and remaining tasks
+        completed_results: list[TrialResult] = []
+        remaining_refs = task_refs.copy()
+        cancelled_case_ids: list[str] = []
+
+        # Process trials as they complete
+        while remaining_refs:
+            # Wait for next batch of completions (timeout 0.1s for responsiveness)
+            ready_refs, remaining_refs = ray.wait(
+                remaining_refs, num_returns=1, timeout=0.1
+            )
+
+            if not ready_refs:
+                # No completions yet, continue waiting
+                continue
+
+            # Collect completed results
+            for ref in ready_refs:
+                try:
+                    result = ray.get(ref)
+                    completed_results.append(result)
+                    logger.info(
+                        f"Trial completed: {result.config.case_name} "
+                        f"(success={result.success}, {len(completed_results)}/{len(configs)})"
+                    )
+                except Exception as e:
+                    logger.error(f"Trial failed with exception: {e}")
+                    # Continue processing other trials
+
+            # Call progress callback if provided
+            if progress_callback:
+                progress_callback(completed_results, len(remaining_refs))
+
+            # Check if we can determine survivors early
+            determination = can_determine_survivors_early(
+                config=early_stopping_config,
+                completed_results=completed_results,
+                required_survivor_count=required_survivor_count,
+                total_trial_budget=len(configs),
+            )
+
+            if determination.can_determine and remaining_refs:
+                # We can determine survivors - cancel remaining trials
+                trials_saved = len(remaining_refs)
+                logger.info(
+                    f"Early stopping triggered: {determination.reason}"
+                )
+                logger.info(
+                    f"Cancelling {trials_saved} remaining trials "
+                    f"(survivors: {determination.survivors})"
+                )
+
+                # Cancel remaining Ray tasks
+                for ref in remaining_refs:
+                    try:
+                        ray.cancel(ref, force=True)
+                        config = config_map[ref]
+                        cancelled_case_ids.append(config.case_name)
+                        logger.info(f"Cancelled trial: {config.case_name}")
+                    except Exception as e:
+                        logger.warning(f"Failed to cancel task: {e}")
+
+                # Clear remaining refs since we've cancelled them
+                remaining_refs = []
+
+                logger.info(
+                    f"Early stopping complete: {len(completed_results)} trials completed, "
+                    f"{trials_saved} trials saved"
+                )
+
+                return completed_results, cancelled_case_ids, trials_saved
+
+        # All trials completed without early stopping
+        logger.info(
+            f"All {len(completed_results)} trials completed "
+            f"(no early stopping triggered)"
+        )
+
+        return completed_results, [], 0
+
+
+@dataclass
+class EarlyStoppingExecutionResult:
+    """Result of trial execution with early stopping."""
+
+    completed_results: list[TrialResult]
+    cancelled_case_ids: list[str]
+    trials_saved: int
+    determination: SurvivorDeterminationResult | None
+    total_trials: int
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "completed_count": len(self.completed_results),
+            "cancelled_count": len(self.cancelled_case_ids),
+            "cancelled_case_ids": self.cancelled_case_ids,
+            "trials_saved": self.trials_saved,
+            "total_trials": self.total_trials,
+            "early_stopped": self.trials_saved > 0,
+            "determination": self.determination.to_dict() if self.determination else None,
+            "metadata": self.metadata,
+        }
+
+    @property
+    def compute_savings_percent(self) -> float:
+        """Calculate compute savings as percentage of total trials."""
+        if self.total_trials == 0:
+            return 0.0
+        return (self.trials_saved / self.total_trials) * 100

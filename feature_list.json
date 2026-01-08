@@ -1622,7 +1622,7 @@
       "Step 5: Confirm stage proceeds with selected survivors",
       "Step 6: Measure compute savings from early stopping"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

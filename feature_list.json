@@ -1585,7 +1585,7 @@
       "Step 5: Generate resource utilization report in Study summary",
       "Step 6: Identify resource bottlenecks"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

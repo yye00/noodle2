@@ -47,6 +47,7 @@ class TrialArtifacts:
     metrics_json: Path | None = None
     netlist: Path | None = None
     logs: Path | None = None
+    script: Path | None = None  # TCL script used for execution (for reproducibility)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert artifacts to dictionary for JSON serialization."""
@@ -57,6 +58,7 @@ class TrialArtifacts:
             "metrics_json": str(self.metrics_json) if self.metrics_json else None,
             "netlist": str(self.netlist) if self.netlist else None,
             "logs": str(self.logs) if self.logs else None,
+            "script": str(self.script) if self.script else None,
         }
 
 
@@ -223,6 +225,32 @@ class Trial:
 
         return snapshot_dest
 
+    def _copy_script_to_trial_dir(self) -> Path:
+        """
+        Copy the TCL script to the trial artifacts directory for reproducibility.
+
+        This enables manual reproduction of any trial by providing the exact
+        script that was executed. The script is saved as 'trial_script.tcl' in
+        the trial directory.
+
+        Returns:
+            Path to the copied script file
+
+        Raises:
+            FileNotFoundError: If script file not found
+        """
+        script_src = Path(self.config.script_path)
+        if not script_src.exists():
+            raise FileNotFoundError(f"Script file not found: {script_src}")
+
+        # Save script with standardized name for easy discovery
+        script_dest = self.trial_dir / "trial_script.tcl"
+
+        # Copy script content (preserving exact content for reproducibility)
+        shutil.copy2(script_src, script_dest)
+
+        return script_dest
+
     def execute(self) -> TrialResult:
         """
         Execute the trial and return complete results.
@@ -246,6 +274,9 @@ class Trial:
 
         # Copy snapshot to trial directory for isolated execution
         snapshot_copy = self._copy_snapshot_to_trial_dir()
+
+        # Copy TCL script to trial artifacts for reproducibility
+        self._copy_script_to_trial_dir()
 
         # Execute trial via Docker, using the copied snapshot
         exec_result = self.docker_runner.execute_trial(
@@ -375,6 +406,11 @@ class Trial:
         logs_dir = self.trial_dir / "logs"
         if logs_dir.exists():
             artifacts.logs = logs_dir
+
+        # TCL script (for reproducibility)
+        script_path = self.trial_dir / "trial_script.tcl"
+        if script_path.exists():
+            artifacts.script = script_path
 
         return artifacts
 

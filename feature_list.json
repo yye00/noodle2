@@ -1434,7 +1434,7 @@
       "Step 4: Verify trial is reproducible by re-running logged script",
       "Step 5: Enable manual reproduction of any trial"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

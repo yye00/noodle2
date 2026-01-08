@@ -346,7 +346,7 @@ class SafetyTrace:
         }
 
     def __str__(self) -> str:
-        """Generate human-readable safety trace report."""
+        """Generate human-readable safety trace report with clear pass/fail indicators."""
         lines = []
         lines.append("=" * 70)
         lines.append("SAFETY TRACE REPORT")
@@ -355,28 +355,41 @@ class SafetyTrace:
 
         # Header
         lines.append(f"Study: {self.study_name}")
-        lines.append(f"Safety Domain: {self.safety_domain.value}")
+        lines.append(f"Safety Domain: {self.safety_domain.value.upper()}")
         lines.append("")
 
-        # Summary
+        # Summary with visual indicators
         summary = self._generate_summary()
         lines.append("SUMMARY")
         lines.append(f"  Total safety checks: {summary['total_checks']}")
-        lines.append(f"  Passed: {summary['passed']}")
-        lines.append(f"  Failed: {summary['failed']}")
-        lines.append(f"  Warnings: {summary['warnings']}")
-        lines.append(f"  Blocked: {summary['blocked']}")
+
+        # Use visual indicators for summary
+        lines.append(f"  ✓ Passed:  {summary['passed']}")
+        lines.append(f"  ✗ Failed:  {summary['failed']}")
+
+        if summary['warnings'] > 0:
+            lines.append(f"  ⚠ Warnings: {summary['warnings']}")
+        if summary['blocked'] > 0:
+            lines.append(f"  🚫 Blocked: {summary['blocked']}")
+        lines.append("")
+
+        # Overall status indicator
+        if summary['failed'] > 0 or summary['blocked'] > 0:
+            lines.append("  ⚠️  SAFETY VIOLATIONS DETECTED")
+        else:
+            lines.append("  ✅  ALL SAFETY CHECKS PASSED")
         lines.append("")
 
         # Checks by type
         lines.append("CHECKS BY TYPE")
         for gate_type, count in summary['by_gate_type'].items():
-            lines.append(f"  {gate_type}: {count}")
+            lines.append(f"  • {gate_type.replace('_', ' ').title()}: {count}")
         lines.append("")
 
-        # Chronological evaluation log
+        # Chronological evaluation log with enhanced formatting
         lines.append("CHRONOLOGICAL EVALUATION LOG")
-        lines.append("")
+        lines.append("─" * 70)
+
         for i, eval in enumerate(self.evaluations, 1):
             status_symbol = {
                 SafetyGateStatus.PASS: "✓",
@@ -385,17 +398,87 @@ class SafetyTrace:
                 SafetyGateStatus.BLOCKED: "🚫",
             }.get(eval.status, "?")
 
-            lines.append(f"{i}. [{status_symbol}] {eval.gate_type.value.upper()}")
-            lines.append(f"   Status: {eval.status.value}")
-            lines.append(f"   Time: {eval.timestamp}")
-            lines.append(f"   Rationale: {eval.rationale}")
-            if eval.context:
-                lines.append(f"   Context: {eval.context}")
-            lines.append("")
+            # Enhanced status display
+            status_display = {
+                SafetyGateStatus.PASS: "PASS",
+                SafetyGateStatus.FAIL: "FAIL",
+                SafetyGateStatus.WARNING: "WARNING",
+                SafetyGateStatus.BLOCKED: "BLOCKED",
+            }.get(eval.status, "UNKNOWN")
 
+            # Header line with visual separation
+            lines.append("")
+            lines.append(f"{i}. [{status_symbol}] {eval.gate_type.value.replace('_', ' ').upper()}")
+            lines.append(f"   Status:    {status_display}")
+            lines.append(f"   Timestamp: {self._format_timestamp_readable(eval.timestamp)}")
+            lines.append(f"   Rationale: {eval.rationale}")
+
+            # Format context more cleanly - only show non-empty, relevant fields
+            if eval.context:
+                clean_context = self._format_context(eval.context)
+                if clean_context:
+                    lines.append(f"   Details:   {clean_context}")
+
+        lines.append("")
         lines.append("=" * 70)
 
         return "\n".join(lines)
+
+    def _format_timestamp_readable(self, timestamp: str) -> str:
+        """
+        Format ISO timestamp in a more readable way.
+
+        Args:
+            timestamp: ISO 8601 timestamp string
+
+        Returns:
+            More readable timestamp format
+        """
+        # Keep ISO format but make it slightly more readable
+        # From: 2026-01-08T23:00:25.782834+00:00
+        # To:   2026-01-08 23:00:25 UTC
+        try:
+            if 'T' in timestamp:
+                date_part, time_part = timestamp.split('T')
+                # Extract just the time without microseconds
+                time_clean = time_part.split('.')[0] if '.' in time_part else time_part
+                time_clean = time_clean.split('+')[0].split('-')[0]  # Remove timezone offset
+                return f"{date_part} {time_clean} UTC"
+        except Exception:
+            pass
+        return timestamp
+
+    def _format_context(self, context: dict[str, Any]) -> str:
+        """
+        Format context dictionary in a clean, readable way.
+
+        Args:
+            context: Context dictionary from evaluation
+
+        Returns:
+            Formatted context string
+        """
+        # Filter out empty/false/none values and internal metadata
+        relevant_items = []
+        for key, value in context.items():
+            # Skip empty lists, empty strings, and False booleans
+            if value == [] or value == "" or value is False:
+                continue
+            # Skip True booleans that just confirm the obvious
+            if key in ("is_legal", "is_valid", "is_allowed") and value is True:
+                continue
+            # Format the value nicely
+            if isinstance(value, list) and len(value) > 0:
+                if len(value) <= 3:
+                    relevant_items.append(f"{key}: {', '.join(str(v) for v in value)}")
+                else:
+                    relevant_items.append(f"{key}: {len(value)} items")
+            elif isinstance(value, dict):
+                relevant_items.append(f"{key}: {len(value)} entries")
+            else:
+                relevant_items.append(f"{key}: {value}")
+
+        return " | ".join(relevant_items) if relevant_items else ""
 
     def save_to_file(self, filepath: str | Path) -> None:
         """

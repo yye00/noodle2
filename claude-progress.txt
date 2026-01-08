@@ -1,5 +1,189 @@
 # Noodle 2 - Progress Tracker
 
+## Session 20 - Stage Abort Integration with StudyExecutor
+**Date:** 2026-01-08
+**Status:** 53/200 features passing (26.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session integrated the stage abort decision logic (implemented in Session 19) with
+the StudyExecutor, enabling automatic stage termination based on comprehensive abort
+conditions. This is critical infrastructure that makes the abort logic operational.
+
+#### ✅ Feature: Integrate Stage Abort with StudyExecutor
+
+**Implementation:**
+
+**1. StudyExecutor Integration** (executor.py):
+
+Changes:
+- Added import of `evaluate_stage_abort` and `StageAbortDecision`
+- Extended `StageResult` dataclass with `abort_decision` field
+- Added `baseline_wns_ps` field to StudyExecutor class
+- Updated `verify_base_case()` to extract and store baseline WNS
+- Modified `_execute_stage()` to call `evaluate_stage_abort()` after trials execute
+- Replaced simple "no survivors" check with comprehensive abort decision logic
+- Enhanced `execute()` to handle abort decisions with detailed messaging
+
+Abort Flow:
+```python
+# In _execute_stage(), after survivor selection:
+abort_decision = evaluate_stage_abort(
+    stage_config=stage_config,
+    trial_results=trial_results,
+    survivors=survivors,
+    baseline_wns_ps=self.baseline_wns_ps,
+)
+
+# In execute(), after stage completes:
+if stage_result.abort_decision and stage_result.abort_decision.should_abort:
+    # Terminate Study with detailed abort reason
+    # Print violating trials
+    # Emit telemetry with abort decision
+```
+
+**2. Stage Abort Logic Enhancement** (stage_abort.py):
+
+Updated `check_wns_threshold_violation()` to handle both dict and object formats:
+- Supports `trial.metrics.timing.wns_ps` (object format)
+- Supports `trial.metrics['timing']['wns_ps']` (dict format)
+- Ensures compatibility with various trial result formats
+
+**3. Baseline WNS Tracking**:
+
+When base case is verified:
+- Extract WNS from timing metrics
+- Store in `executor.baseline_wns_ps`
+- Pass to `evaluate_stage_abort()` for context
+- Handles both dict and object metrics formats
+
+**4. Abort Decision Telemetry**:
+
+`StageResult.to_dict()` now includes abort decision:
+```json
+{
+  "stage_index": 0,
+  "stage_name": "exploration",
+  "trials_executed": 10,
+  "survivors": [],
+  "abort_decision": {
+    "should_abort": true,
+    "reason": "wns_threshold_violated",
+    "details": "Trial case_2 has WNS -6000 ps which is worse than threshold -5000 ps",
+    "violating_trials": ["case_2"]
+  }
+}
+```
+
+**TEST COVERAGE:**
+
+Created `test_stage_abort_integration.py` with 11 comprehensive tests:
+
+**Basic Integration** (3 tests):
+- StageResult includes abort_decision field
+- Baseline WNS stored from verification
+- _execute_stage returns abort_decision
+
+**WNS Threshold Abort** (2 tests):
+- No abort when all trials pass threshold
+- Abort when any trial violates threshold
+
+**Catastrophic Failure Abort** (1 test):
+- Abort when catastrophic failure rate exceeds 50%
+
+**No Survivors Abort** (1 test):
+- Abort when zero survivors remain
+
+**Abort Priority** (1 test):
+- WNS violations checked before catastrophic failures (priority order)
+
+**Configuration Handling** (1 test):
+- Stages without WNS threshold don't abort on WNS
+
+**Serialization** (2 tests):
+- Abort decision serializes to dict for telemetry
+- StageResult with abort_decision serializes correctly
+
+**ABORT PRIORITY ORDER:**
+
+Evaluated sequentially (first match triggers abort):
+1. **WNS threshold violations** (highest priority)
+2. **Catastrophic failure rate** (>50% of trials)
+3. **No survivors** (cannot continue)
+
+**SAFETY IMPACT:**
+
+This integration enables:
+- ✅ Automatic detection of timing regressions via WNS thresholds
+- ✅ Immediate containment of catastrophic failures (segfaults, OOM)
+- ✅ Deterministic stage termination with clear rationale
+- ✅ Audit trail of why stages aborted
+- ✅ Protection of compute budgets from pathological ECOs
+- ✅ Safe, unattended experimentation
+
+**WHY THIS MATTERS:**
+
+**Before Integration:**
+- Stage abort logic existed but wasn't enforced
+- Studies could waste compute on bad ECO sets
+- No automatic termination on timing regressions
+- Operators had to manually monitor and kill bad runs
+
+**After Integration:**
+- Noodle 2 automatically stops wasting compute on bad ECOs
+- Timing regression limits enforced automatically
+- Clear feedback on why stages aborted
+- Enables truly unattended experimentation
+
+**CODE QUALITY:**
+
+- **New Code**: executor.py (+58 lines), stage_abort.py (+15 lines),
+  test_stage_abort_integration.py (600 lines)
+- **Test Count**: 508 tests total (497 existing + 11 new), all passing
+- **Test Execution Time**: ~10.6 seconds (all tests)
+- **Type Safety**: Full type hints on all new code
+- **Error Handling**: Comprehensive handling of both dict and object metrics
+- **Documentation**: Clear docstrings and inline comments
+- **No Regressions**: All existing 497 tests still passing
+
+**GIT HISTORY:**
+
+```
+9465476 Integrate stage abort logic with StudyExecutor - Infrastructure complete
+```
+
+**COMPLETION PROGRESS:** 53/200 features passing (26.5% complete)
+
+**NEXT PRIORITIES:**
+
+With stage abort integration complete, the system now has end-to-end safety enforcement.
+The next focus areas are:
+
+1. **Global Routing with Congestion Reports** (High Priority)
+   - Generate actual `global_route -congestion_report_file` commands in TCL
+   - Replace mock congestion reports with real OpenROAD commands
+   - Integrate with existing congestion parser
+   - Test end-to-end congestion metric extraction
+
+2. **ECO Application Integration** (High Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs during trial execution (prepend to script)
+   - Track which ECOs were applied in each trial
+   - Update ECOClassTracker based on actual trial outcomes
+
+3. **Study-Level E2E Testing** (Medium Priority)
+   - Test complete Study execution with multiple stages
+   - Verify abort decisions propagate correctly
+   - Test telemetry output and artifact generation
+   - Validate survivor selection across stages
+
+4. **Ray Distributed Execution** (Medium Priority)
+   - Test stage abort on distributed Ray clusters
+   - Verify telemetry collection from remote workers
+   - Test artifact indexing across nodes
+
+---
+
 ## Session 19 - Stage Abort Thresholds and Fixed OpenROAD Seeds
 **Date:** 2026-01-08
 **Status:** 53/200 features passing (26.5%)

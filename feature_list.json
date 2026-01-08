@@ -550,7 +550,7 @@
       "Step 5: Select top N trials as survivors",
       "Step 6: Verify ranking is deterministic"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -563,7 +563,7 @@
       "Step 5: Select top N trials as survivors",
       "Step 6: Verify ranking is deterministic"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -576,7 +576,7 @@
       "Step 5: Select survivors using multi-objective policy",
       "Step 6: Verify ranking balances both objectives"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -198,12 +198,22 @@ class StudyExecutor:
 
         # Check for structural failures
         if not result.success:
+            # Extract failure details from FailureClassification if available
+            if result.failure:
+                failure_type = result.failure.failure_type.value
+                failure_reason = result.failure.reason
+                log_excerpt = result.failure.log_excerpt
+            else:
+                failure_type = "unknown"
+                failure_reason = "Trial failed but no failure classification available"
+                log_excerpt = ""
+
             failure_msg = (
                 f"Base case failed structural runnability check:\n"
                 f"  Return code: {result.return_code}\n"
-                f"  Failure type: {result.failure_type}\n"
-                f"  Reason: {result.failure_reason}\n"
-                f"  Log excerpt:\n{result.log_excerpt}"
+                f"  Failure type: {failure_type}\n"
+                f"  Reason: {failure_reason}\n"
+                f"  Log excerpt:\n{log_excerpt}"
             )
             print(f"\nBASE CASE FAILURE:\n{failure_msg}")
             return False, failure_msg
@@ -221,30 +231,16 @@ class StudyExecutor:
         # Base case is valid
         print(f"✓ Base case verification PASSED")
         if result.metrics:
-            # Metrics could be a dict or an object
+            # Metrics are stored in flat structure: metrics["wns_ps"], metrics["tns_ps"], etc.
             if isinstance(result.metrics, dict):
-                if "timing" in result.metrics:
-                    timing = result.metrics["timing"]
-                    if isinstance(timing, dict):
-                        wns = timing.get("wns_ps")
-                        tns = timing.get("tns_ps")
-                    else:
-                        wns = timing.wns_ps
-                        tns = timing.tns_ps if hasattr(timing, "tns_ps") else None
-                    if wns is not None:
-                        print(f"  WNS: {wns} ps")
-                        # Store baseline WNS for abort threshold checks
-                        self.baseline_wns_ps = wns
-                    if tns is not None:
-                        print(f"  TNS: {tns} ps")
-            else:
-                # Object with attributes
-                wns = result.metrics.timing.wns_ps
-                print(f"  WNS: {wns} ps")
-                # Store baseline WNS for abort threshold checks
-                self.baseline_wns_ps = wns
-                if result.metrics.timing.tns_ps is not None:
-                    print(f"  TNS: {result.metrics.timing.tns_ps} ps")
+                wns = result.metrics.get("wns_ps")
+                tns = result.metrics.get("tns_ps")
+                if wns is not None:
+                    print(f"  WNS: {wns} ps")
+                    # Store baseline WNS for abort threshold checks
+                    self.baseline_wns_ps = wns
+                if tns is not None:
+                    print(f"  TNS: {tns} ps")
         print(f"  Return code: {result.return_code}")
 
         return True, ""

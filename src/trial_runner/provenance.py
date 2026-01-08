@@ -28,6 +28,9 @@ class ToolProvenance:
     tool_name: str = "openroad"
     tool_version: str | None = None
 
+    # PDK information
+    pdk_name: str | None = None
+
     # Command invocation
     command: str = ""
     working_directory: str = ""
@@ -47,6 +50,7 @@ class ToolProvenance:
             "container_id": self.container_id,
             "tool_name": self.tool_name,
             "tool_version": self.tool_version,
+            "pdk_name": self.pdk_name,
             "command": self.command,
             "working_directory": self.working_directory,
             "start_time": self.start_time,
@@ -118,6 +122,7 @@ def create_provenance(
     start_time: str = "",
     end_time: str = "",
     query_version: bool = True,
+    pdk_name: str | None = None,
 ) -> ToolProvenance:
     """
     Create provenance record for trial execution.
@@ -131,6 +136,7 @@ def create_provenance(
         start_time: Start timestamp (ISO format)
         end_time: End timestamp (ISO format)
         query_version: Whether to query tool version (may be slow)
+        pdk_name: Name of the PDK used for this trial
 
     Returns:
         ToolProvenance object
@@ -147,6 +153,7 @@ def create_provenance(
         container_id=container_id,
         tool_name="openroad",
         tool_version=tool_version,
+        pdk_name=pdk_name,
         command=command,
         working_directory=str(working_dir) if working_dir else "",
         start_time=start_time,

@@ -288,6 +288,7 @@ class Trial:
             start_time=start_time,
             end_time=end_time,
             query_version=False,  # Skip version query for performance (best-effort)
+            pdk_name=self.config.metadata.get("pdk"),
         )
 
         # Create trial result

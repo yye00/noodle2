@@ -935,7 +935,7 @@
       "Step 5: Verify early-failure classification fields exist",
       "Step 6: Verify structured telemetry meets schema requirements"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -650,6 +650,7 @@ class StudyExecutor:
                 metadata={
                     "stage_name": stage_config.name,
                     "execution_mode": stage_config.execution_mode.value,
+                    "pdk": self.config.pdk,
                 },
             )
 

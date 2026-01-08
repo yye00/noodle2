@@ -111,7 +111,7 @@ class TestTCLScriptGeneration:
     def test_unsupported_execution_mode_raises_error(self):
         """Unsupported execution mode should raise ValueError."""
         # Create a fake execution mode
-        with pytest.raises(ValueError, match="Unsupported execution mode"):
+        with pytest.raises(ValueError, match="Unsupported execution_mode"):
             generate_trial_script(
                 execution_mode="invalid_mode",  # type: ignore
                 design_name="test_design",

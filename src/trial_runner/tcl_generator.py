@@ -13,6 +13,7 @@ def generate_trial_script(
     clock_period_ns: float = 10.0,
     metadata: dict[str, Any] | None = None,
     openroad_seed: int | None = None,
+    pdk: str = "nangate45",
 ) -> str:
     """
     Generate TCL script for trial execution based on execution mode.
@@ -24,6 +25,7 @@ def generate_trial_script(
         clock_period_ns: Clock period in nanoseconds
         metadata: Optional metadata to include in script
         openroad_seed: Optional fixed seed for deterministic placement/routing
+        pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
 
     Returns:
         TCL script content as string
@@ -32,13 +34,13 @@ def generate_trial_script(
         ValueError: If execution_mode is not supported
     """
     if execution_mode == ExecutionMode.STA_ONLY:
-        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
+        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
     elif execution_mode == ExecutionMode.STA_CONGESTION:
-        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
+        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
     elif execution_mode == ExecutionMode.FULL_ROUTE:
-        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
+        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
     else:
-        raise ValueError(f"Unsupported execution mode: {execution_mode}")
+        raise ValueError(f"Unsupported execution_mode: {execution_mode}")
 
 
 def _generate_sta_only_script(
@@ -47,6 +49,7 @@ def _generate_sta_only_script(
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
+    pdk: str = "nangate45",
 ) -> str:
     """
     Generate STA-only script that performs timing analysis without congestion analysis.
@@ -176,6 +179,7 @@ def _generate_sta_congestion_script(
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
+    pdk: str = "nangate45",
 ) -> str:
     r"""
     Generate STA+congestion script that performs both timing and congestion analysis.
@@ -192,6 +196,7 @@ def _generate_sta_congestion_script(
     metadata_str = f"# Metadata: {metadata}" if metadata else ""
     seed_comment = f"# OpenROAD Seed: {openroad_seed}" if openroad_seed is not None else "# OpenROAD Seed: default (random)"
     seed_cmd = f"set_random_seed {openroad_seed}" if openroad_seed is not None else ""
+    pdk_commands = generate_pdk_specific_commands(pdk)
 
     return f"""# Noodle 2 - STA+Congestion Execution with Global Routing
 # Design: {design_name}
@@ -294,7 +299,7 @@ puts $fp "endmodule"
 close $fp
 
 puts "Generated netlist: $netlist_file"
-
+{pdk_commands}
 # ============================================================================
 # FLOORPLANNING
 # ============================================================================
@@ -443,6 +448,7 @@ def _generate_full_route_script(
     clock_period_ns: float,
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
+    pdk: str = "nangate45",
 ) -> str:
     """
     Generate full-route script (placeholder for future implementation).
@@ -451,7 +457,7 @@ def _generate_full_route_script(
     """
     # For now, delegate to STA+congestion mode
     # Full routing implementation deferred
-    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed)
+    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
 
 
 def write_trial_script(
@@ -462,6 +468,7 @@ def write_trial_script(
     clock_period_ns: float = 10.0,
     metadata: dict[str, Any] | None = None,
     openroad_seed: int | None = None,
+    pdk: str = "nangate45",
 ) -> Path:
     """
     Generate and write TCL script to file.
@@ -474,6 +481,7 @@ def write_trial_script(
         clock_period_ns: Clock period in nanoseconds
         metadata: Optional metadata to include in script
         openroad_seed: Optional fixed seed for deterministic placement/routing
+        pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
 
     Returns:
         Path to written script file
@@ -489,6 +497,7 @@ def write_trial_script(
         clock_period_ns=clock_period_ns,
         metadata=metadata,
         openroad_seed=openroad_seed,
+        pdk=pdk,
     )
 
     # Ensure parent directory exists
@@ -498,3 +507,95 @@ def write_trial_script(
     script_path.write_text(script_content)
 
     return script_path
+
+
+# ============================================================================
+# PDK-Specific TCL Generation Helpers
+# ============================================================================
+
+
+def generate_asap7_routing_constraints() -> str:
+    """
+    Generate ASAP7-specific routing layer constraints.
+
+    ASAP7 requires explicit routing layer constraints to avoid unstable
+    or non-reproducible routing grid inference.
+
+    Returns:
+        TCL commands for ASAP7 routing constraints
+    """
+    return """# ASAP7-Specific Routing Layer Constraints
+# Required to avoid unstable routing grid inference
+set_routing_layers -signal metal2-metal9 -clock metal6-metal9
+puts "ASAP7: Applied routing layer constraints (signal: metal2-metal9, clock: metal6-metal9)"
+"""
+
+
+def generate_asap7_floorplan_site() -> str:
+    """
+    Generate ASAP7-specific floorplan site specification.
+
+    ASAP7 requires explicit site specification to avoid row snapping / site
+    mismatch that may survive placement but collapse in routing.
+
+    Returns:
+        TCL site specification for initialize_floorplan
+    """
+    return """# ASAP7-Specific Site Specification
+# Site: asap7sc7p5t_28_R_24_NP_162NW_34O
+# Required to avoid row alignment issues
+set asap7_site "asap7sc7p5t_28_R_24_NP_162NW_34O"
+puts "ASAP7: Using site $asap7_site for floorplan"
+
+# initialize_floorplan \\
+#   -utilization 0.55 \\
+#   -site $asap7_site
+"""
+
+
+def generate_asap7_pin_placement_constraints() -> str:
+    """
+    Generate ASAP7-specific pin placement constraints.
+
+    ASAP7 requires pins to be placed only on mid-stack metals to avoid
+    stricter pin-access rules that cause silent violations.
+
+    Returns:
+        TCL commands for ASAP7 pin placement constraints
+    """
+    return """# ASAP7-Specific Pin Placement Constraints
+# Place pins only on mid-stack metals (metal4/metal5)
+# Required to avoid pin-access violations
+# place_pins -random \\
+#   -hor_layers {metal4} \\
+#   -ver_layers {metal5}
+puts "ASAP7: Pin placement constrained to metal4 (horizontal) and metal5 (vertical)"
+"""
+
+
+def generate_pdk_specific_commands(pdk: str) -> str:
+    """
+    Generate PDK-specific TCL commands.
+
+    Args:
+        pdk: PDK name ('nangate45', 'asap7', 'sky130', etc.)
+
+    Returns:
+        TCL commands specific to the PDK, or empty string if no special handling needed
+    """
+    pdk_lower = pdk.lower()
+
+    if pdk_lower == "asap7":
+        return f"""
+# ============================================================================
+# ASAP7-SPECIFIC WORKAROUNDS
+# ============================================================================
+# ASAP7 requires explicit constraints for stable routing
+
+{generate_asap7_routing_constraints()}
+{generate_asap7_floorplan_site()}
+{generate_asap7_pin_placement_constraints()}
+"""
+    else:
+        # Nangate45, Sky130, and others don't require special workarounds
+        return ""

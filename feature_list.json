@@ -639,7 +639,7 @@
       "Step 4: Verify routing uses only specified layers",
       "Step 5: Confirm stable routing results"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -651,7 +651,7 @@
       "Step 4: Execute placement",
       "Step 5: Confirm no site mismatch errors"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -663,7 +663,7 @@
       "Step 4: Execute routing",
       "Step 5: Confirm no pin-access violations"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

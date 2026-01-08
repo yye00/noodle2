@@ -163,7 +163,7 @@
       "Step 5: Verify human-readable rationale is generated",
       "Step 6: Confirm failure classification is deterministic"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

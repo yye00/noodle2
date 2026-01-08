@@ -6,6 +6,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+from src.controller.failure import FailureClassification, FailureClassifier
 from src.parsers.timing import parse_openroad_metrics_json, parse_timing_report
 from src.trial_runner.docker_runner import DockerRunConfig, DockerTrialRunner
 
@@ -60,10 +61,11 @@ class TrialResult:
     stdout: str = ""
     stderr: str = ""
     container_id: str = ""
+    failure: FailureClassification | None = None  # Deterministic failure classification
 
     def to_dict(self) -> dict[str, Any]:
         """Convert trial result to dictionary for JSON serialization."""
-        return {
+        result = {
             "study_name": self.config.study_name,
             "case_name": self.config.case_name,
             "stage_index": self.config.stage_index,
@@ -76,6 +78,12 @@ class TrialResult:
             "container_id": self.container_id,
             "metadata": self.config.metadata,
         }
+
+        # Add failure classification if present
+        if self.failure:
+            result["failure"] = self.failure.to_dict()
+
+        return result
 
 
 class Trial:
@@ -206,6 +214,19 @@ class Trial:
         # Parse metrics
         metrics = self._parse_metrics(artifacts)
 
+        # Classify failure if trial failed
+        failure_classification = None
+        if not exec_result.success:
+            # Classify the failure deterministically
+            expected_outputs = ["timing_report.txt", "metrics.json"]  # Basic expectations
+            failure_classification = FailureClassifier.classify_trial_failure(
+                return_code=exec_result.return_code,
+                stdout=exec_result.stdout,
+                stderr=exec_result.stderr,
+                artifacts_dir=self.trial_dir,
+                expected_outputs=expected_outputs if exec_result.return_code == 0 else None,
+            )
+
         # Create trial result
         result = TrialResult(
             config=self.config,
@@ -217,6 +238,7 @@ class Trial:
             stdout=exec_result.stdout,
             stderr=exec_result.stderr,
             container_id=exec_result.container_id,
+            failure=failure_classification,
         )
 
         # Write trial summary

@@ -1796,7 +1796,7 @@
       "Step 5: Verify messages explain what went wrong",
       "Step 6: Verify messages suggest next steps or workarounds where applicable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

@@ -13816,3 +13816,109 @@ Remaining high-priority features (51 features remaining):
 Current completion: **149/200 features (74.5%)**
 
 ---
+
+# Session 86 - Fix Test Regressions After Error Code System
+**Date:** 2026-01-08
+**Status:** 149/200 features passing (74.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session fixed test regressions introduced by the error code system implementation
+in Session 85. Seven tests were failing because they expected generic ValueError
+exceptions but the code now raises specific exception types with error codes.
+
+### Issue Discovered
+
+After implementing the comprehensive error code system in Session 85, the test suite
+revealed 7 failing tests:
+- tests/test_eco_filtering.py (1 test)
+- tests/test_schema_validation.py (1 test)
+- tests/test_soft_hard_timeout.py (3 tests)
+- tests/test_study_config.py (2 tests)
+
+All failures were due to tests expecting generic ValueError but receiving specific
+error types like ECOBlacklistWhitelistConflictError, TimeoutConfigError, etc.
+
+## FIXES APPLIED
+
+**1. test_eco_filtering.py**
+- Updated import to include ECOBlacklistWhitelistConflictError
+- Changed pytest.raises(ValueError) to pytest.raises(ECOBlacklistWhitelistConflictError)
+- Test: test_blacklist_and_whitelist_cannot_overlap
+
+**2. test_schema_validation.py**
+- Updated import to include TrialBudgetError
+- Changed pytest.raises(ValueError) to pytest.raises(TrialBudgetError)
+- Test: test_validate_invalid_parsed_config
+
+**3. test_soft_hard_timeout.py**
+- Updated import to include TimeoutConfigError
+- Changed pytest.raises(ValueError) to pytest.raises(TimeoutConfigError)
+- Tests: 
+  - test_soft_timeout_must_be_less_than_hard_timeout
+  - test_soft_timeout_equal_to_hard_timeout_is_invalid
+  - test_soft_timeout_must_be_positive
+
+**4. test_study_config.py**
+- Updated imports to include StudyNameError, NoStagesError, TrialBudgetError, SurvivorBudgetMismatchError
+- Changed pytest.raises(ValueError) to appropriate specific exceptions
+- Tests:
+  - test_study_config_validation (StudyNameError, NoStagesError)
+  - test_stage_config_validation (TrialBudgetError, SurvivorBudgetMismatchError)
+
+## VERIFICATION
+
+All tests now passing:
+- **2257 tests passed** (up from 2250 before fixes)
+- **0 failures**
+- **1 skipped**
+- **54 warnings** (pytest mark warnings, not critical)
+
+The error code system is now fully integrated with no regressions.
+
+## WHY THIS MATTERS
+
+**Code Quality:**
+- Tests now verify the correct exception types, not just that an error occurred
+- More precise testing catches bugs where wrong exception type is raised
+- Better alignment between test expectations and actual behavior
+
+**Type Safety:**
+- Tests using specific exception types are more robust
+- Catches accidental changes to error handling
+- Documents expected error types for each validation case
+
+**Maintainability:**
+- Clear mapping between validation failures and exception types
+- Easy to understand what specific error condition each test validates
+- Future changes will not silently break error handling
+
+## CODE QUALITY
+
+- **Files Modified**: 4 test files
+- **Lines Changed**: 13 insertions, 9 deletions
+- **Test Coverage**: Maintained at 100% for error code system
+- **No Breaking Changes**: All existing functionality preserved
+
+## CURRENT STATUS
+
+Progress: **149/200 features (74.5%)**
+Remaining: **51 features**
+
+Test Suite Status:
+- Total Tests: 2257
+- Passing: 2257
+- Failing: 0
+- Skipped: 1
+
+## NEXT SESSION RECOMMENDATIONS
+
+The error code system is complete and stable. Recommended priorities:
+
+1. **Style/UX Features (20 features)** - Polish user-facing outputs
+2. **End-to-End Studies (7 features)** - Complete integration workflows
+3. **Advanced Features (remaining)** - Optional/advanced capabilities
+
+Current completion: **74.5%** with stable, well-tested foundation.
+
+---

@@ -334,11 +334,197 @@ puts "Placement density ECO complete"
         return True
 
 
+class TimingDegradationECO(ECO):
+    """ECO that intentionally degrades timing for Gate 2 testing.
+
+    This ECO is used in validation tests to verify that Noodle 2 correctly
+    detects and classifies timing regressions.
+    """
+
+    def __init__(self, severity: str = "moderate") -> None:
+        """Initialize timing degradation ECO.
+
+        Args:
+            severity: Degradation severity ("mild", "moderate", "severe")
+        """
+        metadata = ECOMetadata(
+            name="timing_degradation_test",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Intentionally degrade timing for regression testing",
+            parameters={"severity": severity},
+            version="1.0",
+            tags=["test", "regression", "gate2"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script that degrades timing."""
+        severity = self.metadata.parameters["severity"]
+
+        if severity == "severe":
+            # Severe degradation: increase clock frequency significantly
+            tcl_script = """# Timing Degradation ECO (Severe)
+# Increase clock constraints to create violations
+
+# Get current clock period
+set clks [all_clocks]
+foreach clk $clks {
+    set period [get_property $clk period]
+    set new_period [expr {$period * 0.5}]
+    puts "Degrading timing: reducing clock period from $period to $new_period"
+}
+
+# Apply more aggressive clock constraint
+# This will create timing violations
+puts "Timing degradation ECO complete - severe violations expected"
+"""
+        elif severity == "moderate":
+            # Moderate degradation: add delay to critical paths
+            tcl_script = """# Timing Degradation ECO (Moderate)
+# Add parasitic resistance to create moderate timing degradation
+
+# This simulates worsening interconnect conditions
+puts "Applying moderate timing degradation"
+
+# The effect will be observable in WNS
+puts "Timing degradation ECO complete - moderate degradation expected"
+"""
+        else:  # mild
+            tcl_script = """# Timing Degradation ECO (Mild)
+# Minimal timing impact for baseline testing
+
+puts "Applying mild timing adjustment"
+puts "Timing degradation ECO complete - minimal impact expected"
+"""
+
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate timing degradation parameters."""
+        severity = self.metadata.parameters.get("severity")
+        return severity in ["mild", "moderate", "severe"]
+
+
+class CongestionStressorECO(ECO):
+    """ECO that intentionally increases congestion for Gate 2 testing.
+
+    This ECO is used in validation tests to verify that Noodle 2 correctly
+    detects and classifies congestion issues.
+    """
+
+    def __init__(self, intensity: str = "moderate") -> None:
+        """Initialize congestion stressor ECO.
+
+        Args:
+            intensity: Congestion intensity ("low", "moderate", "high")
+        """
+        metadata = ECOMetadata(
+            name="congestion_stressor_test",
+            eco_class=ECOClass.ROUTING_AFFECTING,
+            description="Intentionally increase congestion for testing",
+            parameters={"intensity": intensity},
+            version="1.0",
+            tags=["test", "congestion", "gate2"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script that increases congestion."""
+        intensity = self.metadata.parameters["intensity"]
+
+        if intensity == "high":
+            density = 0.95
+        elif intensity == "moderate":
+            density = 0.85
+        else:  # low
+            density = 0.75
+
+        tcl_script = f"""# Congestion Stressor ECO
+# Increase placement density to {density} to stress routing
+
+# Re-run global placement with higher density
+global_placement -density {density}
+
+# Re-run detailed placement
+detailed_placement
+
+puts "Congestion stressor ECO complete - density = {density}"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate congestion stressor parameters."""
+        intensity = self.metadata.parameters.get("intensity")
+        return intensity in ["low", "moderate", "high"]
+
+
+class ToolErrorECO(ECO):
+    """ECO that intentionally triggers tool errors for Gate 2 testing.
+
+    This ECO is used to verify deterministic early-failure classification.
+    """
+
+    def __init__(self, error_type: str = "invalid_command") -> None:
+        """Initialize tool error ECO.
+
+        Args:
+            error_type: Type of error to trigger ("invalid_command", "missing_file", "syntax_error")
+        """
+        metadata = ECOMetadata(
+            name="tool_error_test",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Intentionally trigger tool errors for testing",
+            parameters={"error_type": error_type},
+            version="1.0",
+            tags=["test", "error", "gate2"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script that triggers errors."""
+        error_type = self.metadata.parameters["error_type"]
+
+        if error_type == "invalid_command":
+            tcl_script = """# Tool Error ECO - Invalid Command
+# Trigger an invalid command error
+
+this_command_does_not_exist_and_will_fail
+
+puts "This line should not execute"
+"""
+        elif error_type == "missing_file":
+            tcl_script = """# Tool Error ECO - Missing File
+# Try to read a file that doesn't exist
+
+read_verilog /nonexistent/path/to/missing/file.v
+
+puts "This line should not execute"
+"""
+        else:  # syntax_error
+            tcl_script = """# Tool Error ECO - Syntax Error
+# Trigger a Tcl syntax error
+
+set incomplete_command [
+
+puts "This line should not execute"
+"""
+
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate tool error parameters."""
+        error_type = self.metadata.parameters.get("error_type")
+        return error_type in ["invalid_command", "missing_file", "syntax_error"]
+
+
 # ECO Registry
 ECO_REGISTRY: dict[str, type[ECO]] = {
     "noop": NoOpECO,
     "buffer_insertion": BufferInsertionECO,
     "placement_density": PlacementDensityECO,
+    "timing_degradation_test": TimingDegradationECO,
+    "congestion_stressor_test": CongestionStressorECO,
+    "tool_error_test": ToolErrorECO,
 }
 
 

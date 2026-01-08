@@ -40,6 +40,14 @@ from src.controller.snapshot import (
     detect_snapshot_tampering,
     verify_snapshot_hash,
 )
+from src.controller.stage_abort import (
+    AbortReason,
+    StageAbortDecision,
+    check_catastrophic_failure_rate,
+    check_no_survivors,
+    check_wns_threshold_violation,
+    evaluate_stage_abort,
+)
 from src.controller.telemetry import (
     CaseTelemetry,
     StageTelemetry,
@@ -83,4 +91,10 @@ __all__ = [
     "compute_snapshot_hash",
     "verify_snapshot_hash",
     "detect_snapshot_tampering",
+    "AbortReason",
+    "StageAbortDecision",
+    "check_wns_threshold_violation",
+    "check_catastrophic_failure_rate",
+    "check_no_survivors",
+    "evaluate_stage_abort",
 ]

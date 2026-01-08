@@ -770,3 +770,111 @@ class TestTelemetryBackwardCompatibility:
         ]
         for field in required_study_fields:
             assert field in study_dict
+
+
+class TestTelemetryFormatting:
+    """Test that telemetry files are properly formatted."""
+
+    def test_study_telemetry_has_iso8601_timestamps(self):
+        """Test that study telemetry includes ISO 8601 timestamps."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            emitter = TelemetryEmitter("test_study", tmpdir)
+            study_telemetry = StudyTelemetry(
+                study_name="test_study",
+                safety_domain="sandbox",
+                total_stages=2,
+            )
+            study_telemetry.finalize(final_survivors=["case1"])
+
+            telemetry_file = emitter.emit_study_telemetry(study_telemetry)
+
+            # Load and check for ISO 8601 timestamps
+            with telemetry_file.open("r") as f:
+                data = json.load(f)
+
+            assert "start_time_iso8601" in data
+            assert data["start_time_iso8601"] is not None
+            assert "T" in data["start_time_iso8601"]
+            assert data["start_time_iso8601"].endswith("Z")
+
+            assert "end_time_iso8601" in data
+            assert "T" in data["end_time_iso8601"]
+
+    def test_telemetry_has_human_readable_durations(self):
+        """Test that telemetry includes human-readable durations."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            emitter = TelemetryEmitter("test_study", tmpdir)
+            study_telemetry = StudyTelemetry(
+                study_name="test_study",
+                safety_domain="sandbox",
+                total_stages=1,
+            )
+            study_telemetry.total_runtime_seconds = 125.5
+            study_telemetry.finalize(final_survivors=["case1"])
+
+            telemetry_file = emitter.emit_study_telemetry(study_telemetry)
+
+            with telemetry_file.open("r") as f:
+                data = json.load(f)
+
+            assert "total_runtime_human" in data
+            assert "m" in data["total_runtime_human"]  # Should include minutes
+
+    def test_telemetry_is_properly_indented(self):
+        """Test that telemetry JSON is properly indented."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            emitter = TelemetryEmitter("test_study", tmpdir)
+            study_telemetry = StudyTelemetry(
+                study_name="test_study",
+                safety_domain="sandbox",
+                total_stages=1,
+            )
+            telemetry_file = emitter.emit_study_telemetry(study_telemetry)
+
+            with telemetry_file.open("r") as f:
+                content = f.read()
+
+            # Should have indentation
+            assert "  " in content
+            # Should have newlines
+            assert "\n" in content
+
+    def test_stage_telemetry_has_human_readable_duration(self):
+        """Test that stage telemetry includes human-readable duration."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            emitter = TelemetryEmitter("test_study", tmpdir)
+            stage_telemetry = StageTelemetry(
+                stage_index=0,
+                stage_name="test_stage",
+                trial_budget=10,
+                survivor_count=5,
+            )
+            stage_telemetry.total_runtime_seconds = 3725.0
+
+            telemetry_file = emitter.emit_stage_telemetry(stage_telemetry)
+
+            with telemetry_file.open("r") as f:
+                data = json.load(f)
+
+            assert "total_runtime_human" in data
+            assert "h" in data["total_runtime_human"]  # Should include hours
+
+    def test_case_telemetry_has_human_readable_duration(self):
+        """Test that case telemetry includes human-readable duration."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            emitter = TelemetryEmitter("test_study", tmpdir)
+            case_telemetry = CaseTelemetry(
+                case_id="test_0_1",
+                base_case="test",
+                stage_index=0,
+                derived_index=1,
+            )
+            case_telemetry.total_runtime_seconds = 45.2
+
+            telemetry_file = emitter.emit_case_telemetry(case_telemetry)
+
+            with telemetry_file.open("r") as f:
+                data = json.load(f)
+
+            assert "total_runtime_human" in data
+            assert "s" in data["total_runtime_human"]  # Should include seconds

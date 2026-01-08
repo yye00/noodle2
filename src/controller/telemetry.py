@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from src.controller.telemetry_formatting import write_formatted_telemetry
+
 if TYPE_CHECKING:
     from src.trial_runner.trial import TrialResult
 
@@ -244,8 +246,7 @@ class TelemetryEmitter:
             Path to the written telemetry file
         """
         telemetry_file = self.study_dir / "study_telemetry.json"
-        with telemetry_file.open("w") as f:
-            json.dump(study_telemetry.to_dict(), f, indent=2)
+        write_formatted_telemetry(study_telemetry.to_dict(), telemetry_file)
         return telemetry_file
 
     def emit_stage_telemetry(self, stage_telemetry: StageTelemetry) -> Path:
@@ -259,8 +260,7 @@ class TelemetryEmitter:
             Path to the written telemetry file
         """
         telemetry_file = self.study_dir / f"stage_{stage_telemetry.stage_index}_telemetry.json"
-        with telemetry_file.open("w") as f:
-            json.dump(stage_telemetry.to_dict(), f, indent=2)
+        write_formatted_telemetry(stage_telemetry.to_dict(), telemetry_file)
         return telemetry_file
 
     def emit_case_telemetry(self, case_telemetry: CaseTelemetry) -> Path:
@@ -277,8 +277,7 @@ class TelemetryEmitter:
         safe_case_id = case_telemetry.case_id.replace("/", "_")
         telemetry_file = self.cases_dir / f"{safe_case_id}_telemetry.json"
 
-        with telemetry_file.open("w") as f:
-            json.dump(case_telemetry.to_dict(), f, indent=2)
+        write_formatted_telemetry(case_telemetry.to_dict(), telemetry_file)
         return telemetry_file
 
     def get_or_create_case_telemetry(self, case_id: str, base_case: str, stage_index: int, derived_index: int) -> CaseTelemetry:

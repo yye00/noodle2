@@ -9927,3 +9927,196 @@ New Test Class: TestRayDashboardCompatibleTaskMetadata
 - Tests Added: 9
 - Files Modified: 3
 - Commit: af69252
+
+---
+
+# Session 60 - Trial Retry with Exponential Backoff
+**Date:** 2026-01-08
+**Status:** 117/200 features passing (58.5%)
+
+## SESSION ACCOMPLISHMENT
+
+Implemented comprehensive trial retry logic with exponential backoff for transient failures.
+This enables Noodle 2 to automatically recover from temporary infrastructure issues without
+operator intervention, improving reliability in distributed execution environments.
+
+### Feature Completed
+
+Feature #125: Support trial retry with exponential backoff for transient failures - PASSING
+
+## IMPLEMENTATION
+
+### 1. Transient Failure Types (src/controller/failure.py)
+Added 4 new transient failure types to FailureType enum:
+- `NETWORK_ERROR` - Network connectivity issues
+- `RESOURCE_BUSY` - Resource temporarily unavailable
+- `CONTAINER_ERROR` - Container orchestration failures
+- `FILESYSTEM_ERROR` - Temporary filesystem issues
+
+### 2. Enhanced Failure Classification (src/controller/failure.py)
+- Added `is_transient()` static method to FailureClassifier
+- Enhanced `classify_trial_failure()` with transient error detection:
+  - Network errors: connection timeout, connection refused, connection reset, etc.
+  - Resource busy: resource temporarily unavailable, device busy, try again later
+  - Container errors: container not found, docker error, failed to create container
+  - Filesystem errors: no space left, disk quota exceeded, stale file handle, I/O error
+- Reordered detection logic: network errors before generic timeout to avoid misclassification
+
+### 3. Retry Configuration (src/trial_runner/trial.py)
+Added retry parameters to TrialConfig:
+- `max_retries: int = 3` - Maximum retry attempts
+- `retry_backoff_base: float = 2.0` - Base multiplier for exponential backoff (seconds)
+- `retry_backoff_max: float = 60.0` - Maximum backoff delay (seconds)
+
+### 4. Retry Tracking (src/trial_runner/trial.py)
+Added retry tracking to TrialResult:
+- `retry_count: int = 0` - Number of retry attempts made
+- `retry_history: list[dict] = []` - Log of all retry attempts with timestamps and failure types
+
+### 5. Retry Logic Module (src/trial_runner/retry.py)
+New module with complete retry implementation:
+
+**Functions:**
+- `calculate_backoff_delay(attempt, base, max_delay)` - Exponential backoff calculation
+- `should_retry_failure(failure, retry_count, max_retries)` - Retry decision logic
+- `execute_trial_with_retry(config, trial_executor)` - Main retry wrapper
+
+**Behavior:**
+- Executes trial and checks for transient failures
+- Retries up to max_retries with exponential backoff: base * 2^attempt, capped at max_delay
+- Records all retry attempts in retry_history with timestamps and failure details
+- Stops immediately for non-transient failures (segfaults, OOM, placement failures, etc.)
+- Returns final result with complete retry tracking
+
+## ALL 6 FEATURE STEPS VALIDATED
+
+Step 1: Execute trial that fails with transient error - COMPLETE
+Step 2: Classify failure as transient - COMPLETE
+Step 3: Schedule retry with exponential backoff - COMPLETE
+Step 4: Retry trial up to max retry count - COMPLETE
+Step 5: Mark trial as permanently failed if all retries exhausted - COMPLETE
+Step 6: Log retry attempts in telemetry - COMPLETE
+
+## TEST COVERAGE
+
+New Test File: tests/test_retry.py - 21 comprehensive tests
+
+**Test Classes:**
+1. TestBackoffCalculation (4 tests)
+   - Exponential increase verification
+   - Max delay capping
+   - Custom base multiplier
+   - Zero attempt behavior
+
+2. TestShouldRetryFailure (5 tests)
+   - Success doesn't retry
+   - Transient failures retry with remaining attempts
+   - Exhausted retries stop
+   - Non-transient failures don't retry
+   - All transient types are retryable
+
+3. TestExecuteTrialWithRetry (6 tests)
+   - Success on first attempt (no retry)
+   - Transient failure retries until success
+   - Exhausts retries on persistent failure
+   - Non-transient failure returns immediately
+   - Retry history records all attempts
+   - max_retries=0 disables retry
+
+4. TestFailureClassifierTransientDetection (6 tests)
+   - Network error detection
+   - Resource busy detection
+   - Container error detection
+   - Filesystem error detection
+   - Segfault not transient
+   - is_transient() helper correctness
+
+**Test Results:**
+- 21/21 new tests passing ✅
+- 18/18 existing failure classification tests passing ✅
+- 57/57 other integration tests passing ✅
+- 96/96 total tests verified passing ✅
+
+## CODE QUALITY
+
+- ✅ Full type hints on all new functions
+- ✅ Comprehensive docstrings with examples
+- ✅ 100% test coverage of retry logic
+- ✅ Zero breaking changes to existing API
+- ✅ Backward compatible (retry disabled by default possible via max_retries=0)
+- ✅ Proper logging at INFO and WARNING levels
+
+## FILES MODIFIED/CREATED
+
+1. `src/controller/failure.py` - Added transient types, detection, is_transient() method
+2. `src/trial_runner/trial.py` - Added retry config and tracking fields
+3. `src/trial_runner/retry.py` - New module with retry logic (142 lines)
+4. `tests/test_retry.py` - New test file (377 lines, 21 tests)
+5. `feature_list.json` - Marked feature #125 as passing
+
+## WHY THIS MATTERS
+
+### Operational Resilience:
+- **Automatic recovery** from transient infrastructure issues
+- **Reduced operator burden** - no manual retry needed for temporary failures
+- **Improved success rate** in distributed execution environments
+- **Better resource utilization** - don't waste work on temporary issues
+
+### Production-Ready Behavior:
+- **Exponential backoff** prevents thundering herd on shared resources
+- **Max retry limits** prevent infinite loops
+- **Detailed telemetry** - every retry logged with timestamp and reason
+- **Deterministic classification** - clear distinction between transient and permanent failures
+
+### Use Cases Enabled:
+1. Kubernetes pod scheduling delays → Container error → Automatic retry succeeds
+2. Network hiccups during container image pull → Network error → Retry after backoff
+3. Temporary NFS stalls → Filesystem error → Retry when I/O recovers
+4. Ray worker resource contention → Resource busy → Backoff and retry on next slot
+
+## COMMITS
+
+- `d43ccb9` - Implement trial retry with exponential backoff for transient failures
+
+## PROGRESS SUMMARY
+
+- Session Start: 116/200 features (58.0%)
+- Session End: 117/200 features (58.5%)
+- Features Completed: 1
+- Tests Added: 21
+- Lines Added: ~783 (implementation + tests)
+- Progress Gained: +0.5%
+
+## REMAINING WORK
+
+- **Failing Features:** 83
+- **Passing Features:** 117
+- **Completion:** 58.5%
+
+## NEXT SESSION RECOMMENDATIONS
+
+High-priority features remaining:
+1. **CI Integration** - Use Noodle 2 for regression safety checks
+2. **Reproducible Demo Study** - Nangate45 baseline with full observability
+3. **ASAP7-Specific Failure Detection** - Detect and classify ASAP7 issues
+4. **Graceful Shutdown with Checkpointing** - Resume interrupted Studies
+5. **Trial Cancellation** - Cancel trials when survivor set determined
+
+Or continue with dashboard/visualization features:
+1. **Trial Artifact Deep Links** - Link from Ray Dashboard to artifacts
+2. **Stage-Level Progress Tracking** - Real-time stage progress in dashboard
+3. **Heatmap Generation** - GUI exports for spatial analysis
+
+## LESSONS LEARNED
+
+- Exponential backoff is critical - linear backoff doesn't scale
+- Transient failure detection requires careful ordering (network timeout before generic timeout)
+- Retry history is valuable for debugging - timestamp + failure type per attempt
+- max_retries=0 is useful for debugging - disable retry to see raw failures
+- Fast backoff in tests (0.1s base) keeps test suite fast
+
+---
+
+**Codebase Status:** Clean - all changes committed ✅
+**Test Status:** All tests passing (117/200 features) ✅
+**Ready for next session:** Yes ✅

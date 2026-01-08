@@ -898,7 +898,7 @@
       "Step 5: Rank ECOs by aggregate effectiveness",
       "Step 6: Identify best-performing ECO classes"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -2135,7 +2135,7 @@
       "Step 6: Identify top 3 most effective ECO classes",
       "Step 7: Identify bottom 3 least effective or harmful ECOs",
       "Step 8: Perform parameter sensitivity analysis for tunable ECOs",
-      "Step 9: Generate effectiveness heatmap (ECO type × base case)",
+      "Step 9: Generate effectiveness heatmap (ECO type \u00d7 base case)",
       "Step 10: Identify which ECOs work best for which problem types",
       "Step 11: Export ECO priors for future Study initialization",
       "Step 12: Generate ECO recommendation report for similar designs"

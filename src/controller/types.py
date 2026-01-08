@@ -76,6 +76,7 @@ class StudyConfig:
     stages: list[StageConfig]
     snapshot_path: str  # Path to design snapshot/checkpoint
     metadata: dict[str, Any] = field(default_factory=dict)
+    snapshot_hash: str | None = None  # SHA-256 hash for integrity verification
 
     def validate(self) -> None:
         """Validate Study configuration."""

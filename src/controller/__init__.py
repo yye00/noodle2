@@ -29,6 +29,13 @@ from src.controller.ranking import (
     rank_by_wns_delta,
     rank_multi_objective,
 )
+from src.controller.snapshot import (
+    SnapshotHash,
+    compute_file_hash,
+    compute_snapshot_hash,
+    detect_snapshot_tampering,
+    verify_snapshot_hash,
+)
 from src.controller.telemetry import (
     CaseTelemetry,
     StageTelemetry,
@@ -65,4 +72,9 @@ __all__ = [
     "rank_by_congestion_delta",
     "rank_multi_objective",
     "create_survivor_selector",
+    "SnapshotHash",
+    "compute_file_hash",
+    "compute_snapshot_hash",
+    "verify_snapshot_hash",
+    "detect_snapshot_tampering",
 ]

@@ -627,7 +627,7 @@
       "Step 4: Verify snapshot integrity before each Study execution",
       "Step 5: Detect snapshot tampering or corruption"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

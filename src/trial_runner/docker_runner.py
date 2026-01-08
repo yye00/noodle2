@@ -22,6 +22,7 @@ class DockerRunConfig:
     cpu_count: int | None = None
     environment: dict[str, str] | None = None
     gui_mode: bool = False  # Enable GUI mode with X11 passthrough
+    readonly_snapshot: bool = True  # Mount snapshot as read-only (recommended for safety)
 
 
 @dataclass
@@ -45,10 +46,11 @@ class DockerTrialRunner:
     Execute OpenROAD trials inside Docker containers.
 
     Each trial runs in an isolated container with:
-    - Immutable snapshot mounted read-only
+    - Snapshot mounted (read-only by default for safety)
     - Dedicated working directory for outputs
     - Resource limits (memory, CPU, timeout)
     - Captured stdout/stderr
+    - Configurable snapshot write protection
     """
 
     def __init__(self, config: DockerRunConfig | None = None) -> None:
@@ -86,7 +88,8 @@ class DockerTrialRunner:
         Args:
             script_path: Path to TCL script to execute
             working_dir: Host directory for trial outputs (mounted at /work)
-            snapshot_dir: Optional snapshot directory (mounted read-only at /snapshot)
+            snapshot_dir: Optional snapshot directory (mounted at /snapshot).
+                         Mount mode controlled by config.readonly_snapshot (default: read-only)
             timeout_seconds: Optional timeout override
 
         Returns:
@@ -114,7 +117,9 @@ class DockerTrialRunner:
         if snapshot_dir:
             snapshot_dir = Path(snapshot_dir)
             if snapshot_dir.exists():
-                volumes[str(snapshot_dir.absolute())] = {"bind": "/snapshot", "mode": "ro"}
+                # Mount snapshot with appropriate mode (read-only by default for safety)
+                snapshot_mode = "ro" if self.config.readonly_snapshot else "rw"
+                volumes[str(snapshot_dir.absolute())] = {"bind": "/snapshot", "mode": snapshot_mode}
 
         # Add X11 socket for GUI mode
         if self.config.gui_mode:

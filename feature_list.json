@@ -1559,7 +1559,7 @@
       "Step 4: Render diff heatmap showing regions of improvement/degradation",
       "Step 5: Include diff heatmap in ECO analysis artifacts"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

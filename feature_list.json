@@ -1019,7 +1019,7 @@
       "Step 4: Write timestamps to trial telemetry",
       "Step 5: Use timestamps for performance analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

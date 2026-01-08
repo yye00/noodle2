@@ -75,6 +75,29 @@ class TrialResult:
     container_id: str = ""
     failure: FailureClassification | None = None  # Deterministic failure classification
     provenance: ToolProvenance | None = None  # Execution provenance for reproducibility
+    # Timestamps for execution time tracking and performance analysis
+    start_time: str = ""  # ISO 8601 format timestamp
+    end_time: str = ""  # ISO 8601 format timestamp
+
+    def calculate_duration_seconds(self) -> float | None:
+        """
+        Calculate trial duration from timestamps.
+
+        This provides an alternative to runtime_seconds that is based on
+        wall-clock time rather than process execution time.
+
+        Returns:
+            Duration in seconds, or None if timestamps are missing
+        """
+        if not self.start_time or not self.end_time:
+            return None
+
+        try:
+            start = datetime.fromisoformat(self.start_time)
+            end = datetime.fromisoformat(self.end_time)
+            return (end - start).total_seconds()
+        except (ValueError, TypeError):
+            return None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert trial result to dictionary for JSON serialization."""
@@ -86,6 +109,8 @@ class TrialResult:
             "success": self.success,
             "return_code": self.return_code,
             "runtime_seconds": self.runtime_seconds,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
             "metrics": self.metrics,
             "artifacts": self.artifacts.to_dict(),
             "container_id": self.container_id,
@@ -275,6 +300,8 @@ class Trial:
             container_id=exec_result.container_id,
             failure=failure_classification,
             provenance=provenance,
+            start_time=start_time,
+            end_time=end_time,
         )
 
         # Write trial summary

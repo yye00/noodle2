@@ -97,6 +97,9 @@ class StudyConfig:
     tags: list[str] = field(default_factory=list)  # Tags for organization and filtering
     # Environment variables for trial execution
     environment: dict[str, str] = field(default_factory=dict)  # Environment variables passed to Docker
+    # Notification configuration
+    notification_webhook_url: str | None = None  # URL to send notifications
+    notification_events: list[str] | None = None  # Events to notify about (defaults to completion/failure)
 
     def validate(self) -> None:
         """Validate Study configuration."""

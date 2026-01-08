@@ -59,6 +59,10 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
     # Parse environment variables
     environment = data.get("environment", {})
 
+    # Parse notification configuration
+    notification_webhook_url = data.get("notification_webhook_url")
+    notification_events = data.get("notification_events")
+
     # Create StudyConfig
     config = StudyConfig(
         name=data["name"],
@@ -71,6 +75,8 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         eco_blacklist=eco_blacklist,
         eco_whitelist=eco_whitelist,
         environment=environment,
+        notification_webhook_url=notification_webhook_url,
+        notification_events=notification_events,
     )
 
     # Validate configuration

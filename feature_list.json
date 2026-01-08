@@ -2690,7 +2690,7 @@
       "Step 5: Trigger notification on Study failure",
       "Step 6: Verify webhook receives failure details"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

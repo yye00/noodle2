@@ -2001,7 +2001,7 @@
       "Step 5: Verify feature status persists across runs",
       "Step 6: Verify other features remain unchanged"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

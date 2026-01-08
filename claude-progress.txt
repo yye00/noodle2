@@ -1,3 +1,146 @@
+# Session 43 - Timing Violation Classification (Setup/Hold)
+**Date:** 2026-01-08
+**Status:** 90/200 features passing (45.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **timing violation classification by type** (setup vs hold),
+enabling targeted ECO strategies based on the specific nature of timing violations.
+
+### Feature Completed: Detect and Classify Timing Violations
+
+**Feature #107: Detect and classify timing violations (setup, hold)** ✅
+
+## IMPLEMENTATION
+
+**1. New Data Structure** (src/controller/types.py):
+- Added `TimingViolationBreakdown` dataclass:
+  - `setup_violations`: Count of setup (max path) violations
+  - `hold_violations`: Count of hold (min path) violations
+  - `total_violations`: Total violation count
+  - `worst_setup_slack_ps`: Worst setup path slack in picoseconds
+  - `worst_hold_slack_ps`: Worst hold path slack in picoseconds
+- Added `violation_breakdown` field to `TimingMetrics` for seamless integration
+
+**2. Violation Classification Logic** (src/parsers/timing.py):
+- New `classify_timing_violations(paths)` function:
+  - Classifies violations by `path_type`: "max" → setup, "min" → hold
+  - Defaults to setup if path_type not specified (common STA behavior)
+  - Tracks worst slack for each violation type for prioritization
+  - Case-insensitive path_type matching
+- Integrated into `parse_timing_report_content()`:
+  - Automatically classifies violations when paths are extracted
+  - No additional API changes or configuration required
+  - Backward compatible with existing code
+
+**3. Comprehensive Test Coverage** (tests/test_timing_violations.py):
+- 16 tests covering all aspects:
+  - All 6 feature steps validated end-to-end
+  - Setup violation classification (max paths with negative slack)
+  - Hold violation classification (min paths with negative slack)
+  - Mixed violation scenarios
+  - Edge cases: empty paths, no violations, case sensitivity
+  - ECO targeting use cases
+  - Telemetry integration
+
+## ALL 6 FEATURE STEPS VALIDATED
+
+✅ **Step 1: Execute STA producing report_checks output**
+   - Tests simulate OpenROAD report_checks output
+   - Parse timing paths with violation information
+
+✅ **Step 2: Parse timing paths and identify violation types**
+   - Extract path_type from report_checks output
+   - Identify max (setup) and min (hold) paths
+
+✅ **Step 3: Classify setup violations (negative WNS on max paths)**
+   - Count setup violations from max paths with slack < 0
+   - Track worst setup slack for prioritization
+   - Handle missing path_type (defaults to setup)
+
+✅ **Step 4: Classify hold violations (negative slack on min paths)**
+   - Count hold violations from min paths with slack < 0
+   - Track worst hold slack for prioritization
+   - Support mixed violation scenarios
+
+✅ **Step 5: Emit violation breakdown to telemetry**
+   - Violation breakdown included in TimingMetrics
+   - Flows through existing telemetry infrastructure
+   - Available in trial summaries and aggregations
+
+✅ **Step 6: Use violation classification for ECO targeting**
+   - Tests demonstrate ECO targeting based on violation type
+   - Setup violations → timing optimization, buffer insertion, cell upsizing
+   - Hold violations → delay insertion, cell downsizing, conservative hold fixing
+   - Path-level information enables precise targeting
+
+## WHY THIS MATTERS
+
+**Targeted ECO Strategies:**
+- Different ECO approaches for setup vs hold violations
+- Prevents one-size-fits-all approaches that may worsen hold while fixing setup
+- Enables conservative hold fixing vs aggressive setup optimization
+
+**Improved Diagnostics:**
+- Operators see violation breakdown at a glance
+- Identify whether design has setup-dominated or hold-dominated issues
+- Track violation trends across trials and stages
+
+**ECO Effectiveness Analysis:**
+- Measure ECO impact on specific violation types
+- Detect ECOs that fix setup but create hold violations
+- Validate ECO safety with violation-type granularity
+
+**Production-Grade Telemetry:**
+- Violation breakdown flows automatically through TimingMetrics
+- No API changes required for existing trial execution code
+- Backward compatible (violation_breakdown can be None)
+
+## CODE QUALITY
+
+- **Type hints** on all new functions and classes
+- **Comprehensive docstrings** explaining classification logic
+- **16 new tests**, all passing (1012 total tests)
+- **No breaking changes** to existing APIs
+- **Full backward compatibility** with existing parsing code
+- **Best practices**: dataclasses, type safety, clear separation of concerns
+
+## TEST RESULTS
+
+```
+tests/test_timing_violations.py::test_execute_sta_with_report_checks PASSED
+tests/test_timing_violations.py::test_parse_timing_paths_and_identify_violations PASSED
+tests/test_timing_violations.py::test_classify_setup_violations PASSED
+tests/test_timing_violations.py::test_classify_setup_violations_without_path_type PASSED
+tests/test_timing_violations.py::test_classify_hold_violations PASSED
+tests/test_timing_violations.py::test_classify_mixed_violations PASSED
+tests/test_timing_violations.py::test_emit_violation_breakdown_to_telemetry PASSED
+tests/test_timing_violations.py::test_violation_breakdown_only_when_paths_extracted PASSED
+tests/test_timing_violations.py::test_violation_classification_for_eco_targeting PASSED
+tests/test_timing_violations.py::test_no_violations PASSED
+tests/test_timing_violations.py::test_empty_paths PASSED
+tests/test_timing_violations.py::test_case_insensitive_path_type PASSED
+tests/test_timing_violations.py::test_only_setup_violations PASSED
+tests/test_timing_violations.py::test_only_hold_violations PASSED
+tests/test_timing_violations.py::test_worst_slack_tracking PASSED
+tests/test_timing_violations.py::test_end_to_end_violation_classification PASSED
+```
+
+All 16 tests pass. Full test suite: **1012 passing, 1 skipped**.
+
+## NEXT STEPS
+
+Suggested features to implement next:
+1. **ECO effectiveness leaderboard** (Feature #12): Aggregate ECO performance across trials
+2. **Per-stage performance summary** (Feature #22): Track trials/sec and compute time per stage
+3. **Custom metric extractors** (Feature #19): Support project-specific KPIs
+4. **Diff report vs baseline** (Feature #16): Compare Case metrics to baseline
+
+All prerequisites (timing parsing, path extraction, violation detection) are now in place
+for advanced ECO analysis and targeting features.
+
+---
+
 # Session 42 - Resource Utilization Tracking
 **Date:** 2026-01-08
 **Status:** 89/200 features passing (44.5%)

@@ -1,5 +1,251 @@
 # Noodle 2 - Progress Tracker
 
+## Session 13 - Trial Ranking and Survivor Selection
+**Date:** 2026-01-07
+**Status:** 37/200 features passing (18.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **comprehensive trial ranking and survivor selection**,
+enabling multi-objective optimization across timing and congestion metrics. The
+system now supports WNS-based, congestion-based, and combined multi-objective
+ranking with customizable weights.
+
+#### ✅ Feature #43: Rank Trials by Timing Improvement (WNS Delta)
+
+**Implementation:**
+- Created `ranking.py` module with complete ranking infrastructure
+- Implemented `rank_by_wns_delta()` function for timing-based ranking
+- Computes WNS delta (improvement) from baseline for each trial
+- Ranks trials in descending order of improvement (higher WNS = better)
+- Filters failed trials and trials without timing metrics
+- Selects top N survivors based on trial budget
+
+**Algorithm:**
+```python
+delta = current_wns_ps - baseline_wns_ps
+# Higher delta = better improvement
+# Example: -500 - (-1000) = +500 improvement
+```
+
+**Test Coverage:**
+- 6 tests validating WNS-based ranking
+- Tests negative slack, positive slack, and mixed scenarios
+- Tests filtering of failed trials
+- Tests survivor count limits
+
+**Why This Matters:**
+Timing-driven survivor selection is the core ranking strategy for most PD workflows.
+ECOs that improve WNS should be prioritized for subsequent stages.
+
+#### ✅ Feature #44: Rank Trials by Congestion Reduction (hot_ratio Delta)
+
+**Implementation:**
+- Implemented `rank_by_congestion_delta()` function
+- Computes hot_ratio delta (reduction) from baseline for each trial
+- Ranks trials by congestion reduction (lower hot_ratio = better)
+- Filters trials without congestion metrics
+- Selects top N survivors
+
+**Algorithm:**
+```python
+delta = baseline_hot_ratio - current_hot_ratio
+# Higher delta = better reduction
+# Example: 0.8 - 0.5 = +0.3 reduction (30% fewer hot bins)
+```
+
+**Test Coverage:**
+- 4 tests validating congestion-based ranking
+- Tests improvement and regression scenarios
+- Tests filtering of trials without metrics
+
+**Why This Matters:**
+For routing-heavy designs, congestion may be more critical than timing in early
+stages. Enables congestion-first ranking strategies.
+
+#### ✅ Feature #45: Support Multi-Objective Ranking (Timing + Congestion)
+
+**Implementation:**
+- Implemented `rank_multi_objective()` function
+- Combines WNS improvement and congestion reduction via weighted scoring
+- Normalizes deltas to [0, 1] range before combining
+- Default weights: 60% timing, 40% congestion (configurable)
+- Created `RankingWeights` dataclass with validation
+
+**Algorithm:**
+```python
+# Normalize both metrics to [0, 1]
+wns_score = (wns_delta - wns_min) / wns_range
+congestion_score = (congestion_delta - congestion_min) / congestion_range
+
+# Weighted combination
+combined_score = (
+    timing_weight * wns_score +
+    congestion_weight * congestion_score
+)
+```
+
+**Test Coverage:**
+- 5 tests validating multi-objective ranking
+- Tests default and custom weights
+- Tests normalization and balanced scoring
+- Tests edge cases (equal performance, missing metrics)
+
+**Why This Matters:**
+Real-world PD requires balancing multiple objectives. Multi-objective ranking
+enables intelligent trade-offs between timing and congestion.
+
+### ADDITIONAL INFRASTRUCTURE
+
+**RankingPolicy Enum:**
+- `WNS_DELTA`: Rank by timing improvement
+- `CONGESTION_DELTA`: Rank by congestion reduction
+- `MULTI_OBJECTIVE`: Combine both metrics
+
+**RankingWeights Dataclass:**
+- Validates weights are in [0.0, 1.0] range
+- Enforces weights sum to 1.0
+- Default: 60% timing, 40% congestion
+
+**create_survivor_selector() Factory:**
+- Creates survivor selector function for StudyExecutor
+- Takes ranking policy, baseline metrics, optional weights
+- Returns function compatible with StudyExecutor interface
+- Validates required parameters (e.g., hot_ratio for congestion ranking)
+
+**Circular Import Fix:**
+- Used TYPE_CHECKING to avoid circular import
+- Added `from __future__ import annotations` for string type hints
+- Maintains type safety without runtime import cycles
+
+### CODE QUALITY METRICS
+
+- **New Code**: ranking.py (335 lines), test_trial_ranking.py (541 lines)
+- **Test Count**: 332 tests total (305 existing + 27 new), all passing
+- **New Tests This Session**: 27 (all in test_trial_ranking.py)
+- **Test Execution Time**: ~6.8 seconds (all tests)
+- **Type Safety**: Full type hints with TYPE_CHECKING
+- **Error Handling**: Comprehensive validation and error messages
+- **Documentation**: Complete docstrings on all public APIs
+- **No Regressions**: All existing 305 tests still passing
+
+### TEST CATEGORIES
+
+**TestRankingWeights** (4 tests):
+- Default weights validation
+- Custom weights validation
+- Range validation
+- Sum-to-one validation
+
+**TestRankByWNSDelta** (6 tests):
+- WNS improvement ranking
+- Negative slack handling
+- Positive slack handling
+- Failed trial filtering
+- Empty result handling
+- Survivor count limits
+
+**TestRankByCongestionDelta** (4 tests):
+- Congestion reduction ranking
+- Regression handling
+- Missing metrics filtering
+- Empty result handling
+
+**TestRankMultiObjective** (5 tests):
+- Balanced metric ranking
+- Custom weight handling
+- Equal performance handling
+- Missing metrics handling
+- Normalization correctness
+
+**TestCreateSurvivorSelector** (6 tests):
+- WNS selector creation
+- Congestion selector creation
+- Multi-objective selector creation
+- Required parameter validation
+- Custom weights integration
+
+**TestDeterministicRanking** (2 tests):
+- WNS ranking determinism
+- Multi-objective ranking determinism
+
+### VALIDATION LADDER STATUS
+
+- ✅ **Gate 0 - Baseline Viability**: **COMPLETE** (100%)
+
+- ✅ **Gate 1 - Full Output Contract**: **COMPLETE** (100%)
+
+- ✅ **Gate 2 - Controlled Regression**: **COMPLETE** (100%)
+
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
+
+### NEXT SESSION PRIORITIES
+
+With trial ranking complete, the next focus areas are:
+
+1. **Execution Modes (STA-only vs STA+congestion)** (High Priority)
+   - Add execution_mode field to StageConfig (already exists!)
+   - Implement STA-only mode (skip congestion analysis)
+   - Implement STA+congestion mode (full analysis)
+   - Generate appropriate TCL scripts per mode
+
+2. **Congestion Report Parsing** (High Priority)
+   - Parse global_route -congestion_report_file output
+   - Extract bins_total, bins_hot, hot_ratio
+   - Integrate with metrics parsing
+   - Add congestion failure classification
+
+3. **Integrate Ranking with StudyExecutor** (Medium Priority)
+   - Replace _default_survivor_selector with rank_by_wns_delta
+   - Add ranking_policy parameter to StudyExecutor
+   - Extract baseline metrics from base case verification
+   - Pass ranking function to StudyExecutor
+
+4. **ECO Application Integration** (Medium Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs before running OpenROAD
+   - Track which ECOs were applied in each trial
+   - Update ECOClassTracker based on trial outcomes
+
+### GIT HISTORY THIS SESSION
+
+```
+0f4a578 Implement trial ranking and survivor selection - Features #43, #44, #45 passing
+```
+
+### FILES CREATED/MODIFIED THIS SESSION
+
+**Created:**
+- src/controller/ranking.py (335 lines)
+- tests/test_trial_ranking.py (541 lines)
+
+**Modified:**
+- src/controller/__init__.py (+7 lines: exported ranking classes and functions)
+- feature_list.json (3 features marked passing: #43, #44, #45)
+
+### SESSION SUMMARY
+
+**Major Achievement:** Implemented **complete trial ranking and survivor selection**
+infrastructure, enabling multi-objective optimization across timing and congestion.
+
+✅ **3 Features COMPLETE**: WNS-based ranking, congestion-based ranking, multi-objective ranking
+
+**Architecture Advancement:** Noodle 2 can now intelligently select survivors based on:
+- Timing improvement (WNS delta)
+- Congestion reduction (hot_ratio delta)
+- Balanced multi-objective scores with configurable weights
+
+**Deterministic Guarantees:** All ranking algorithms are deterministic - given the same
+trial results, rankings are identical across runs.
+
+**Test Coverage:** All 332 tests passing (305 existing + 27 new), zero regressions.
+
+**Next Milestone:** Implement execution modes (STA-only vs STA+congestion) and integrate
+congestion report parsing.
+
+---
+
 ## Session 12 - Artifact Indexing and Trial Output Cataloging
 **Date:** 2026-01-07
 **Status:** 34/200 features passing (17%)

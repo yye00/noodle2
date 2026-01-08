@@ -676,7 +676,7 @@
       "Step 5: Parse timing report successfully",
       "Step 6: Mark sky130 as supported target"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

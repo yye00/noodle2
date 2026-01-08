@@ -197,6 +197,7 @@ def _generate_sta_congestion_script(
     seed_comment = f"# OpenROAD Seed: {openroad_seed}" if openroad_seed is not None else "# OpenROAD Seed: default (random)"
     seed_cmd = f"set_random_seed {openroad_seed}" if openroad_seed is not None else ""
     pdk_commands = generate_pdk_specific_commands(pdk)
+    pdk_library_paths = generate_pdk_library_paths(pdk)
 
     return f"""# Noodle 2 - STA+Congestion Execution with Global Routing
 # Design: {design_name}
@@ -222,23 +223,12 @@ set clock_period_ns {clock_period_ns}
 {"" if not seed_cmd else 'puts ""'}
 
 # ============================================================================
-# LIBRARY AND TECHNOLOGY SETUP (Nangate45)
+# LIBRARY AND TECHNOLOGY SETUP ({pdk.upper()})
 # ============================================================================
 
-puts "Loading Nangate45 libraries..."
+puts "Loading {pdk} libraries..."
 
-# PDK paths inside the efabless/openlane container
-set liberty_file "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
-set tech_lef "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef"
-set std_cell_lef "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef"
-
-# For Nangate45, use paths if available in container
-# Note: This may need adjustment based on actual PDK location in container
-if {{[file exists "/pdk/nangate45/NangateOpenCellLibrary.lib"]}} {{
-    set liberty_file "/pdk/nangate45/NangateOpenCellLibrary.lib"
-    set tech_lef "/pdk/nangate45/NangateOpenCellLibrary.tech.lef"
-    set std_cell_lef "/pdk/nangate45/NangateOpenCellLibrary.macro.lef"
-}}
+{pdk_library_paths}
 
 # ============================================================================
 # SYNTHESIS (Yosys)
@@ -599,3 +589,44 @@ def generate_pdk_specific_commands(pdk: str) -> str:
     else:
         # Nangate45, Sky130, and others don't require special workarounds
         return ""
+
+
+def generate_pdk_library_paths(pdk: str) -> str:
+    """
+    Generate PDK-specific library and technology file paths.
+
+    Args:
+        pdk: PDK name ('nangate45', 'asap7', 'sky130')
+
+    Returns:
+        TCL commands that set liberty_file, tech_lef, and std_cell_lef variables
+    """
+    pdk_lower = pdk.lower()
+
+    if pdk_lower == "nangate45":
+        return """# PDK paths for Nangate45 (inside efabless/openlane container)
+set liberty_file "/pdk/nangate45/NangateOpenCellLibrary.lib"
+set tech_lef "/pdk/nangate45/NangateOpenCellLibrary.tech.lef"
+set std_cell_lef "/pdk/nangate45/NangateOpenCellLibrary.macro.lef"
+"""
+    elif pdk_lower == "sky130":
+        return """# PDK paths for Sky130A (inside efabless/openlane container)
+set liberty_file "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib"
+set tech_lef "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/techlef/sky130_fd_sc_hd__nom.tlef"
+set std_cell_lef "/pdk/sky130A/libs.ref/sky130_fd_sc_hd/lef/sky130_fd_sc_hd.lef"
+"""
+    elif pdk_lower == "asap7":
+        return """# PDK paths for ASAP7 (inside efabless/openlane container)
+# Note: ASAP7 paths may vary depending on container configuration
+set liberty_file "/pdk/asap7/asap7sc7p5t_28/LIB/CCS/asap7sc7p5t_28_AO_RVT_TT_nldm_201020.lib"
+set tech_lef "/pdk/asap7/asap7sc7p5t_28/techlef_misc/asap7_tech_4x_201209.lef"
+set std_cell_lef "/pdk/asap7/asap7sc7p5t_28/LEF/scaled/asap7sc7p5t_28_R_4x_201211.lef"
+"""
+    else:
+        # Unknown PDK - provide a template for error detection
+        return f"""# Unknown PDK: {pdk}
+# Please configure library paths manually
+set liberty_file "/pdk/{pdk}/lib/example.lib"
+set tech_lef "/pdk/{pdk}/lef/example.tech.lef"
+set std_cell_lef "/pdk/{pdk}/lef/example.lef"
+"""

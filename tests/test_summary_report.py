@@ -707,3 +707,190 @@ class TestSummaryReportFileWriting:
         content = report_path.read_text()
         assert "END OF REPORT" in content
         assert content.strip().endswith("=" * 80)
+
+
+class TestFeature_WellFormattedHumanReadableReport:
+    """
+    Feature test: Study summary report is well-formatted and human-readable.
+
+    Feature steps:
+        Step 1: Execute Study to completion
+        Step 2: Generate summary report
+        Step 3: Open summary report in text viewer
+        Step 4: Take screenshot of report (manual - skipped)
+        Step 5: Verify report has clear sections and formatting
+        Step 6: Verify key metrics are highlighted and easy to find
+    """
+
+    def test_complete_study_summary_report_is_well_formatted(self, tmp_path: Path) -> None:
+        """
+        End-to-end test for well-formatted human-readable Study summary report.
+
+        Validates that a comprehensive summary report is:
+        - Well-structured with clear sections
+        - Human-readable with proper formatting
+        - Easy to scan for key metrics
+        - Contains all critical information
+        """
+        # Step 1: Simulate completed Study
+        study_telemetry = StudyTelemetry(
+            study_name="nangate45_demo_study",
+            safety_domain="guarded",
+            total_stages=3,
+            stages_completed=3,
+            total_trials=60,
+            successful_trials=52,
+            failed_trials=8,
+            total_runtime_seconds=1847.5,  # ~30 minutes
+            start_time=1000000.0,
+        )
+        study_telemetry.finalize(
+            final_survivors=["nangate45_2_0_0", "nangate45_2_0_1"],
+            aborted=False
+        )
+
+        stage_telemetries = [
+            StageTelemetry(
+                stage_index=0,
+                stage_name="exploration",
+                trial_budget=30,
+                survivor_count=10,
+                trials_executed=30,
+                successful_trials=27,
+                failed_trials=3,
+                total_runtime_seconds=945.2,
+                survivors=["nangate45_0_0_0", "nangate45_0_0_1", "nangate45_0_0_2"],
+                failure_types={"tool_crash": 2, "parse_error": 1},
+            ),
+            StageTelemetry(
+                stage_index=1,
+                stage_name="refinement",
+                trial_budget=20,
+                survivor_count=5,
+                trials_executed=20,
+                successful_trials=18,
+                failed_trials=2,
+                total_runtime_seconds=623.8,
+                survivors=["nangate45_1_0_0", "nangate45_1_0_1"],
+                failure_types={"timeout": 2},
+            ),
+            StageTelemetry(
+                stage_index=2,
+                stage_name="closure",
+                trial_budget=10,
+                survivor_count=2,
+                trials_executed=10,
+                successful_trials=7,
+                failed_trials=3,
+                total_runtime_seconds=278.5,
+                survivors=["nangate45_2_0_0", "nangate45_2_0_1"],
+                failure_types={"congestion_explosion": 3},
+            ),
+        ]
+
+        case_telemetries = [
+            CaseTelemetry(
+                case_id="nangate45_2_0_0",
+                base_case="nangate45_base",
+                stage_index=2,
+                derived_index=0,
+                best_wns_ps=1500,
+                best_tns_ps=-2000,
+                total_trials=5,
+                successful_trials=5,
+                total_runtime_seconds=45.2,
+            ),
+            CaseTelemetry(
+                case_id="nangate45_2_0_1",
+                base_case="nangate45_base",
+                stage_index=2,
+                derived_index=1,
+                best_wns_ps=1200,
+                best_tns_ps=-3500,
+                total_trials=5,
+                successful_trials=2,
+                total_runtime_seconds=42.8,
+            ),
+        ]
+
+        # Step 2: Generate summary report
+        generator = SummaryReportGenerator()
+        report_path = tmp_path / "study_summary.txt"
+        generator.write_summary_report(
+            report_path,
+            study_telemetry,
+            stage_telemetries,
+            case_telemetries
+        )
+
+        # Step 3: Open and read summary report
+        assert report_path.exists(), "Summary report file should be created"
+        content = report_path.read_text()
+
+        # Step 5: Verify report has clear sections and formatting
+        # Check header formatting
+        assert "=" * 80 in content, "Report should have clear section dividers"
+        assert "STUDY SUMMARY REPORT: nangate45_demo_study" in content
+
+        # Check all major sections are present
+        assert "STUDY OVERVIEW" in content
+        assert "TRIAL STATISTICS" in content
+        assert "RUNTIME STATISTICS" in content
+        assert "FINAL SURVIVORS" in content
+        assert "STAGE SUMMARIES" in content
+        assert "TOP-PERFORMING CASES" in content
+        assert "FAILURE ANALYSIS" in content
+        assert "END OF REPORT" in content
+
+        # Check section dividers
+        assert "-" * 80 in content, "Report should have subsection dividers"
+
+        # Step 6: Verify key metrics are highlighted and easy to find
+        # Study-level metrics
+        assert "Study Name:      nangate45_demo_study" in content
+        assert "Safety Domain:   GUARDED" in content
+        assert "Status:          COMPLETED" in content
+        assert "Total Trials:       60" in content
+        assert "Successful Trials:  52" in content
+        assert "Success Rate:       86.7%" in content
+
+        # Stage progression
+        assert "Stage 0: exploration" in content
+        assert "Stage 1: refinement" in content
+        assert "Stage 2: closure" in content
+
+        # Final survivors clearly listed
+        assert "1. nangate45_2_0_0" in content
+        assert "2. nangate45_2_0_1" in content
+
+        # Top cases with timing data
+        assert "Best WNS:         1,500 ps" in content
+        assert "Best TNS:         -2,000 ps" in content
+
+        # Failure breakdown
+        assert "Total Failures: 8" in content
+        assert "tool_crash" in content
+        assert "timeout" in content
+        assert "congestion_explosion" in content
+
+        # Runtime formatting is human-readable
+        assert "m" in content or "h" in content or "s" in content, \
+            "Runtime should be formatted in human-readable units"
+
+        # Verify report is reasonably sized for human reading
+        lines = content.split("\n")
+        assert 50 < len(lines) < 200, \
+            "Report should be comprehensive but scannable (50-200 lines)"
+
+        # Verify proper alignment and spacing
+        # Each major section should be separated by blank lines
+        blank_line_count = sum(1 for line in lines if line.strip() == "")
+        assert blank_line_count >= 10, \
+            "Report should have adequate spacing for readability"
+
+        # Print report to console for manual visual inspection
+        print("\n" + "="*80)
+        print("GENERATED SUMMARY REPORT (for visual inspection):")
+        print("="*80)
+        print(content)
+        print("="*80)

@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
+from src.controller.eco import ECOEffectiveness
+from src.controller.eco_leaderboard import ECOLeaderboardGenerator
 from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.safety_trace import SafetyTrace
 from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
@@ -149,6 +151,10 @@ class StudyExecutor:
 
         # Store baseline WNS for abort threshold checks
         self.baseline_wns_ps: int | None = None
+
+        # Track ECO effectiveness across all trials
+        self.eco_effectiveness_map: dict[str, ECOEffectiveness] = {}
+        self.eco_class_map: dict[str, str] = {}  # Map ECO name to ECO class
 
     def verify_base_case(self) -> tuple[bool, str]:
         """
@@ -647,6 +653,22 @@ class StudyExecutor:
             case_telemetries,
         )
         print(f"\nStudy Summary Report saved to: {summary_path}")
+
+        # Generate ECO effectiveness leaderboard
+        if self.eco_effectiveness_map:
+            leaderboard_generator = ECOLeaderboardGenerator()
+            leaderboard = leaderboard_generator.generate_leaderboard(
+                study_name=self.config.name,
+                eco_effectiveness_map=self.eco_effectiveness_map,
+                eco_class_map=self.eco_class_map,
+            )
+
+            json_path, text_path = leaderboard_generator.save_leaderboard(
+                leaderboard, report_dir
+            )
+            print(f"\nECO Effectiveness Leaderboard saved to:")
+            print(f"  JSON: {json_path}")
+            print(f"  TXT: {text_path}")
 
         # Emit study complete event
         self.event_stream.emit_study_complete(

@@ -1680,7 +1680,7 @@
       "Step 11: Generate Study summary report",
       "Step 12: Confirm Study is reproducible by re-running"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

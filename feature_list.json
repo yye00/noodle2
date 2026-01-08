@@ -1344,7 +1344,7 @@
       "Step 5: Emit violation breakdown to telemetry",
       "Step 6: Use violation classification for ECO targeting"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

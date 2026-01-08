@@ -3,7 +3,7 @@
 import re
 from pathlib import Path
 
-from src.controller.types import TimingMetrics, TimingPath
+from src.controller.types import TimingMetrics, TimingPath, TimingViolationBreakdown
 
 
 def parse_timing_report(report_path: str | Path) -> TimingMetrics:
@@ -31,6 +31,58 @@ def parse_timing_report(report_path: str | Path) -> TimingMetrics:
 
     content = report_path.read_text()
     return parse_timing_report_content(content)
+
+
+def classify_timing_violations(paths: list[TimingPath]) -> TimingViolationBreakdown:
+    """
+    Classify timing violations by type (setup vs hold).
+
+    Setup violations: negative slack on max paths (path_type == "max")
+    Hold violations: negative slack on min paths (path_type == "min")
+
+    Args:
+        paths: List of timing paths to classify
+
+    Returns:
+        TimingViolationBreakdown with violation counts and worst slacks
+    """
+    setup_violations = 0
+    hold_violations = 0
+    worst_setup_slack_ps: int | None = None
+    worst_hold_slack_ps: int | None = None
+
+    for path in paths:
+        # Skip paths without violations
+        if path.slack_ps >= 0:
+            continue
+
+        # Classify by path type
+        if path.path_type and path.path_type.lower() == "min":
+            # Hold violation (min path)
+            hold_violations += 1
+            if worst_hold_slack_ps is None or path.slack_ps < worst_hold_slack_ps:
+                worst_hold_slack_ps = path.slack_ps
+        elif path.path_type and path.path_type.lower() == "max":
+            # Setup violation (max path)
+            setup_violations += 1
+            if worst_setup_slack_ps is None or path.slack_ps < worst_setup_slack_ps:
+                worst_setup_slack_ps = path.slack_ps
+        else:
+            # If path_type is not specified, assume max (setup) as default
+            # This is a common default in timing analysis
+            setup_violations += 1
+            if worst_setup_slack_ps is None or path.slack_ps < worst_setup_slack_ps:
+                worst_setup_slack_ps = path.slack_ps
+
+    total_violations = setup_violations + hold_violations
+
+    return TimingViolationBreakdown(
+        setup_violations=setup_violations,
+        hold_violations=hold_violations,
+        total_violations=total_violations,
+        worst_setup_slack_ps=worst_setup_slack_ps,
+        worst_hold_slack_ps=worst_hold_slack_ps,
+    )
 
 
 def parse_timing_paths(content: str, max_paths: int = 10) -> list[TimingPath]:
@@ -191,14 +243,19 @@ def parse_timing_report_content(content: str, extract_paths: bool = True, max_pa
 
     # Extract detailed paths if requested
     top_paths = []
+    violation_breakdown = None
     if extract_paths:
         top_paths = parse_timing_paths(content, max_paths=max_paths)
+        # Classify violations from extracted paths
+        if top_paths:
+            violation_breakdown = classify_timing_violations(top_paths)
 
     return TimingMetrics(
         wns_ps=wns_ps,
         tns_ps=tns_ps,
         failing_endpoints=failing_endpoints,
         top_paths=top_paths,
+        violation_breakdown=violation_breakdown,
     )
 
 

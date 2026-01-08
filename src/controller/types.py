@@ -143,6 +143,17 @@ class TimingPath:
 
 
 @dataclass
+class TimingViolationBreakdown:
+    """Breakdown of timing violations by type."""
+
+    setup_violations: int = 0  # Number of setup (max path) violations
+    hold_violations: int = 0  # Number of hold (min path) violations
+    total_violations: int = 0  # Total number of violations
+    worst_setup_slack_ps: int | None = None  # Worst setup path slack
+    worst_hold_slack_ps: int | None = None  # Worst hold path slack
+
+
+@dataclass
 class TimingMetrics:
     """Timing analysis results."""
 
@@ -151,6 +162,7 @@ class TimingMetrics:
     failing_endpoints: int | None = None
     critical_path_delay_ps: int | None = None
     top_paths: list[TimingPath] = field(default_factory=list)  # Top N critical paths
+    violation_breakdown: TimingViolationBreakdown | None = None  # Violation classification
 
 
 @dataclass

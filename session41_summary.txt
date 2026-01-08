@@ -1,0 +1,71 @@
+# Session 41 Summary
+**Date:** 2026-01-08
+**Feature Completed:** ECO Effectiveness Comparison Across Multiple Cases (Feature #72)
+**Progress:** 88/200 features passing (44.0%)
+
+## What Was Accomplished
+
+### Feature #72: Compare ECO Effectiveness Across Multiple Cases ✅
+
+Implemented comprehensive ECO comparison functionality that enables data-driven
+ECO selection by aggregating effectiveness data across multiple Cases within a Study.
+
+## Implementation Details
+
+### 1. Core Module (src/controller/eco_comparison.py)
+
+Created three main classes:
+
+**ECOComparisonMetrics**:
+- Aggregates ECO data across multiple Cases
+- Tracks applications, successes, failures
+- Calculates WNS improvement statistics
+- Classifies Cases as improved/degraded/neutral
+
+**ECOComparator**:
+- Central comparison engine
+- Supports ranking by multiple criteria
+- Generates comparative reports
+- Exports to JSON
+
+**ECOClassComparison**:
+- Aggregates ECOs by class
+- Enables class-level analysis
+
+### 2. Test Suite (tests/test_eco_comparison.py)
+
+- 20 comprehensive tests
+- 4 test classes covering all functionality
+- All tests passing
+- Test execution time: ~0.04 seconds
+
+## Key Capabilities
+
+1. **Multi-Case Aggregation**: Collect data from multiple Cases
+2. **Flexible Ranking**: Rank by WNS improvement, success rate, impact rate
+3. **ECO Class Analysis**: Compare performance across ECO classes
+4. **Report Generation**: Human-readable comparison reports
+5. **JSON Export**: Programmatic access to all comparison data
+
+## Files Changed
+
+- **New**: src/controller/eco_comparison.py (412 lines)
+- **New**: tests/test_eco_comparison.py (556 lines, 20 tests)
+- **Modified**: feature_list.json (marked #72 as passing)
+
+## Test Results
+
+- 20/20 tests passing in test_eco_comparison.py
+- No regressions in existing tests
+- Full type safety with comprehensive docstrings
+
+## Next Steps
+
+1. **Reproducible Demo Study** (Feature #73)
+2. **CI Regression Safety Checks** (Feature #71)
+3. **Prior Sharing Across Studies** (Feature #67)
+4. **ASAP7-Specific Failure Modes** (Feature #79)
+
+## Completion Status
+
+**88/200 features passing (44.0% complete)**

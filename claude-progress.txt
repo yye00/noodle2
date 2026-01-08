@@ -6342,3 +6342,151 @@ correct behavior from basic bring-up through extreme demo scenarios.
 **Completion Progress:** 87/200 features passing (43.5% complete)
 
 ---
+
+---
+
+# Session 41 - ECO Effectiveness Comparison Across Multiple Cases
+**Date:** 2026-01-08
+**Status:** 88/200 features passing (44.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **Feature #72: Compare ECO effectiveness across multiple Cases 
+in comparative study**. This feature enables data-driven ECO selection by aggregating 
+effectiveness data across Cases and providing ranking and comparison functionality.
+
+### Feature Completed: ECO Effectiveness Comparison (Feature #72)
+
+**Feature #72: Compare ECO effectiveness across multiple Cases in comparative study** ✅
+
+## IMPLEMENTATION
+
+**1. Core Module** (src/controller/eco_comparison.py):
+Created comprehensive ECO comparison module with 3 main components:
+
+**ECOComparisonMetrics**:
+- Aggregates ECO effectiveness across multiple Cases
+- Tracks total applications, success rate, WNS improvement
+- Classifies Cases as improved/degraded/neutral
+- Maintains per-case effectiveness tracking
+
+**ECOComparator**:
+- Collects ECO effectiveness data from multiple Cases
+- Ranks ECOs by multiple criteria:
+  - Average WNS improvement
+  - Success rate
+  - Improvement rate (% of Cases improved)
+  - Total applications
+- Aggregates ECO class-level statistics
+- Generates human-readable comparison reports
+- Exports to JSON for programmatic analysis
+
+**ECOClassComparison**:
+- Aggregates all ECOs within an ECO class
+- Compares effectiveness across ECO classes
+- Identifies best-performing ECO classes
+
+**2. Test Suite** (tests/test_eco_comparison.py):
+Created comprehensive test suite with 20 tests organized in 4 test classes:
+
+**TestECOComparisonMetrics** (6 tests):
+- Empty metrics creation
+- Single Case data aggregation
+- Multiple Case data aggregation
+- Case impact classification (improved/degraded/neutral)
+- Best/worst improvement tracking
+- Dictionary serialization
+
+**TestECOComparator** (10 tests):
+- Comparator creation
+- Single Case ECO data addition
+- Multiple Cases ECO data aggregation
+- Ranking by WNS improvement
+- Ranking by success rate
+- Minimum applications filtering
+- ECO class comparison
+- Report generation
+- File I/O
+- JSON serialization
+
+**TestECOClassComparison** (2 tests):
+- ECO class comparison creation
+- Dictionary serialization
+
+**TestECOComparisonEndToEnd** (2 tests):
+- Multi-Case Study comparison workflow
+- Ranking criteria consistency validation
+
+## KEY CAPABILITIES
+
+The ECO comparison module enables:
+
+1. **Cross-Case Aggregation**: Collect effectiveness data from multiple Cases
+2. **Multi-Criteria Ranking**: Rank ECOs by WNS improvement, success rate, or impact
+3. **ECO Class Analysis**: Identify which ECO classes perform best overall
+4. **Data-Driven Selection**: Support informed ECO selection for future trials
+5. **Comparative Reporting**: Generate human-readable reports for operators
+6. **Programmatic Access**: Export to JSON for automated analysis
+
+## USE CASE EXAMPLE
+
+```python
+from src.controller.eco_comparison import ECOComparator
+
+# Create comparator
+comparator = ECOComparator()
+
+# Add effectiveness data from multiple Cases
+for case_id in ["case1", "case2", "case3"]:
+    comparator.add_case_eco_data(
+        case_id=case_id,
+        eco_effectiveness_map=effectiveness_map,
+        eco_class_map=eco_class_map
+    )
+
+# Rank ECOs by average WNS improvement
+ranked_ecos = comparator.get_ranked_ecos(sort_by="average_wns_improvement")
+
+# Generate comparison report
+report = comparator.generate_comparison_report(top_n=10)
+```
+
+## CODE QUALITY
+
+- **New Files**: 
+  - src/controller/eco_comparison.py (412 lines)
+  - tests/test_eco_comparison.py (556 lines, 20 tests)
+- **Modified Files**: feature_list.json (1 feature marked passing: #72)
+- **Test Count**: 20 new tests, all passing
+- **Test Execution Time**: ~0.04 seconds (test_eco_comparison.py)
+- **No Regressions**: All existing tests still passing
+- **Type Safety**: Full type hints throughout
+- **Documentation**: Comprehensive docstrings
+
+**Completion Progress:** 88/200 features passing (44.0% complete)
+
+## NEXT PRIORITIES
+
+After completing ECO effectiveness comparison, the next priorities are:
+
+1. **Reproducible Demo Study** (Feature #73, High Priority)
+   - Create nangate45_demo Study with fixed configuration
+   - Execute on multiple machines
+   - Verify deterministic outcomes
+
+2. **CI Regression Safety Checks** (Feature #71, High Priority)
+   - Use Noodle 2 in CI pipelines
+   - Configure LOCKED safety domain
+   - Fail builds on safety violations
+
+3. **Prior Sharing Across Studies** (Feature #67, Medium Priority)
+   - Enable optional prior sharing with explicit config
+   - Export/import prior repositories
+   - Audit prior provenance
+
+4. **ASAP7-Specific Failure Modes** (Feature #79, Medium Priority)
+   - Detect ASAP7-specific issues
+   - Apply ASAP7-specific workarounds
+   - Validate ASAP7 bring-up stability
+
+---

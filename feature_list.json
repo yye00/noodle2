@@ -175,7 +175,7 @@
       "Step 4: Confirm other ECOs continue execution",
       "Step 5: Verify failure is logged in ECO-specific telemetry"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -199,7 +199,7 @@
       "Step 4: Confirm downstream stages are not executed",
       "Step 5: Verify Study is marked as blocked"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

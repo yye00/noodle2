@@ -4,6 +4,18 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+from .exceptions import (
+    ECOBlacklistWhitelistConflictError,
+    InvalidCaseIdentifierError,
+    NoStagesError,
+    SnapshotPathError,
+    StudyNameError,
+    SurvivorBudgetMismatchError,
+    SurvivorCountError,
+    TimeoutConfigError,
+    TrialBudgetError,
+)
+
 
 class SafetyDomain(str, Enum):
     """Safety domain for a Study."""
@@ -69,9 +81,9 @@ class StageConfig:
         """Validate timeout configuration."""
         if self.soft_timeout_seconds is not None:
             if self.soft_timeout_seconds <= 0:
-                raise ValueError("soft_timeout_seconds must be positive")
+                raise TimeoutConfigError("soft_timeout_seconds must be positive")
             if self.soft_timeout_seconds >= self.timeout_seconds:
-                raise ValueError("soft_timeout_seconds must be less than timeout_seconds (hard timeout)")
+                raise TimeoutConfigError("soft_timeout_seconds must be less than timeout_seconds (hard timeout)")
 
 
 @dataclass
@@ -104,22 +116,21 @@ class StudyConfig:
     def validate(self) -> None:
         """Validate Study configuration."""
         if not self.name:
-            raise ValueError("Study name cannot be empty")
+            raise StudyNameError()
         if not self.stages:
-            raise ValueError("Study must have at least one stage")
+            raise NoStagesError()
         if not self.snapshot_path:
-            raise ValueError("Study must specify a snapshot_path")
+            raise SnapshotPathError()
 
         # Validate stage indices are sequential
         for idx, stage in enumerate(self.stages):
             if stage.trial_budget <= 0:
-                raise ValueError(f"Stage {idx} trial_budget must be positive")
+                raise TrialBudgetError(idx)
             if stage.survivor_count <= 0:
-                raise ValueError(f"Stage {idx} survivor_count must be positive")
+                raise SurvivorCountError(idx)
             if stage.survivor_count > stage.trial_budget:
-                raise ValueError(
-                    f"Stage {idx} survivor_count ({stage.survivor_count}) "
-                    f"cannot exceed trial_budget ({stage.trial_budget})"
+                raise SurvivorBudgetMismatchError(
+                    idx, stage.survivor_count, stage.trial_budget
                 )
 
         # Validate ECO blacklist and whitelist are mutually sensible
@@ -127,9 +138,7 @@ class StudyConfig:
             # Check for overlap between blacklist and whitelist
             overlap = set(self.eco_blacklist) & set(self.eco_whitelist)
             if overlap:
-                raise ValueError(
-                    f"ECO(s) cannot be in both blacklist and whitelist: {sorted(overlap)}"
-                )
+                raise ECOBlacklistWhitelistConflictError(sorted(overlap))
 
     def is_eco_allowed(self, eco_name: str) -> tuple[bool, str | None]:
         """Check if an ECO is allowed by this Study's constraints.
@@ -172,13 +181,13 @@ class CaseIdentifier:
         """Parse case identifier from string."""
         parts = case_id.rsplit("_", 2)
         if len(parts) != 3:
-            raise ValueError(f"Invalid case identifier format: {case_id}")
+            raise InvalidCaseIdentifierError(case_id, "must have format <name>_<stage>_<derived>")
         case_name, stage_str, derived_str = parts
         try:
             stage_index = int(stage_str)
             derived_index = int(derived_str)
         except ValueError as e:
-            raise ValueError(f"Invalid case identifier format: {case_id}") from e
+            raise InvalidCaseIdentifierError(case_id, "stage and derived indices must be integers") from e
         return cls(case_name=case_name, stage_index=stage_index, derived_index=derived_index)
 
 

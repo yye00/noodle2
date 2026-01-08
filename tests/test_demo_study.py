@@ -16,6 +16,7 @@ from src.controller.demo_study import (
     get_demo_study_expected_metrics,
     save_demo_study_config,
 )
+from src.controller.exceptions import NoStagesError
 from src.controller.types import (
     ECOClass,
     ExecutionMode,
@@ -475,7 +476,7 @@ class TestDemoStudyEdgeCases:
         demo.stages = []  # Remove all stages
 
         # Validation should fail
-        with pytest.raises(ValueError, match="at least one stage"):
+        with pytest.raises(NoStagesError, match=r"\[N2-E-002\].*at least one stage"):
             demo.validate()
 
     def test_minimal_demo_uses_sandbox_safety_domain(self) -> None:

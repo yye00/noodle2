@@ -4,6 +4,12 @@ import pytest
 
 from controller.case import Case, CaseGraph, CaseLineage
 from controller.types import CaseIdentifier
+from controller.exceptions import (
+    CaseNotFoundError,
+    DuplicateCaseError,
+    InvalidCaseIdentifierError,
+    ParentCaseNotFoundError,
+)
 
 
 class TestCaseIdentifier:
@@ -47,12 +53,12 @@ class TestCaseIdentifier:
 
     def test_case_identifier_from_string_invalid(self):
         """Test parsing invalid case ID raises error."""
-        with pytest.raises(ValueError, match="Invalid case identifier format"):
+        with pytest.raises(InvalidCaseIdentifierError, match=r"\[N2-E-100\].*Invalid case identifier format"):
             CaseIdentifier.from_string("invalid_name")
 
     def test_case_identifier_from_string_non_numeric(self):
         """Test parsing case ID with non-numeric indices."""
-        with pytest.raises(ValueError, match="Invalid case identifier format"):
+        with pytest.raises(InvalidCaseIdentifierError, match=r"\[N2-E-100\].*Invalid case identifier format"):
             CaseIdentifier.from_string("nangate45_base_0_abc")
 
     def test_case_identifier_roundtrip(self):
@@ -240,7 +246,7 @@ class TestCaseGraph:
         graph.add_case(base)
 
         # Try to add same case again
-        with pytest.raises(ValueError, match="already exists"):
+        with pytest.raises(DuplicateCaseError, match=r"\[N2-E-101\].*already exists"):
             graph.add_case(base)
 
     def test_add_case_without_parent_raises_error(self):
@@ -259,7 +265,7 @@ class TestCaseGraph:
             snapshot_path="/path/to/derived",
         )
 
-        with pytest.raises(ValueError, match="Parent case.*not found"):
+        with pytest.raises(ParentCaseNotFoundError, match=r"\[N2-E-102\].*Parent case.*not found"):
             graph.add_case(derived)
 
     def test_get_cases_by_stage(self):
@@ -401,7 +407,7 @@ class TestCaseGraph:
         """Test lineage for nonexistent case raises error."""
         graph = CaseGraph()
 
-        with pytest.raises(ValueError, match="not found in graph"):
+        with pytest.raises(CaseNotFoundError, match=r"\[N2-E-103\].*not found in case graph"):
             graph.get_lineage("nonexistent_0_0")
 
     def test_lineage_str_base_case(self):

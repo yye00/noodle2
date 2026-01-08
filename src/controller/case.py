@@ -6,6 +6,11 @@ import subprocess
 from typing import Optional
 
 from .types import CaseIdentifier
+from .exceptions import (
+    CaseNotFoundError,
+    DuplicateCaseError,
+    ParentCaseNotFoundError,
+)
 
 
 @dataclass
@@ -168,19 +173,17 @@ class CaseGraph:
             case: Case to add
 
         Raises:
-            ValueError: If case ID already exists
-            ValueError: If parent case doesn't exist
+            DuplicateCaseError: If case ID already exists
+            ParentCaseNotFoundError: If parent case doesn't exist
         """
         case_id = case.case_id
 
         if case_id in self.cases:
-            raise ValueError(f"Case {case_id} already exists in graph")
+            raise DuplicateCaseError(case_id)
 
         # Validate parent exists (except for base case)
         if case.parent_id is not None and case.parent_id not in self.cases:
-            raise ValueError(
-                f"Parent case {case.parent_id} not found for case {case_id}"
-            )
+            raise ParentCaseNotFoundError(case_id, case.parent_id)
 
         self.cases[case_id] = case
 
@@ -199,11 +202,11 @@ class CaseGraph:
             CaseLineage with ancestors and ECOs
 
         Raises:
-            ValueError: If case not found
+            CaseNotFoundError: If case not found
         """
         case = self.cases.get(case_id)
         if case is None:
-            raise ValueError(f"Case {case_id} not found in graph")
+            raise CaseNotFoundError(case_id)
 
         ancestors = []
         ecos = []

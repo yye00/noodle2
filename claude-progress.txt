@@ -4975,3 +4975,294 @@ Implement timing path parsing for detailed ECO targeting and verify per-layer co
 
 **Quality Bar Met:** All criteria satisfied
 
+
+---
+
+## Session 31 — 2026-01-08
+
+### OBJECTIVE
+
+Implement human-readable summary report generation to complement JSON telemetry.
+
+### ACCOMPLISHMENTS
+
+#### Feature #88: Support human-readable summary reports in addition to JSON telemetry ✅
+
+**Status:** COMPLETE - Feature marked as passing
+
+**Implementation:**
+
+Created a comprehensive summary report generation system that produces scannable, text-based
+overviews of Study execution. This complements the existing JSON telemetry with operator-friendly
+reports.
+
+**1. SummaryReportGenerator Class (summary_report.py):**
+
+Core report generation with configurable sections:
+
+```python
+@dataclass
+class SummaryReportConfig:
+    include_top_cases: int = 5
+    include_stage_details: bool = True
+    include_failure_analysis: bool = True
+    include_timing_details: bool = True
+```
+
+**2. Report Sections:**
+
+The generator produces comprehensive reports with the following sections:
+
+**STUDY OVERVIEW:**
+- Study name and safety domain (uppercase for visibility)
+- Total stages and stages completed
+- Status (COMPLETED, ABORTED, IN PROGRESS)
+- Final survivors list
+
+**TRIAL STATISTICS:**
+- Total trials executed
+- Successful vs. failed trial counts
+- Success rate percentage
+
+**RUNTIME STATISTICS:**
+- Wall clock time (start to end)
+- Total trial time (sum of all trial runtimes)
+- Average trial time
+- Human-readable duration formatting (5.7s, 2m 6s, 1h 3m 4s)
+
+**STAGE SUMMARIES:**
+- Per-stage trial budgets and execution counts
+- Success/failure statistics per stage
+- Survivor counts (configured vs. actual)
+- Stage runtime and average trial time
+- Failure type breakdown per stage
+
+**TOP-PERFORMING CASES:**
+- Sorted by best WNS (higher is better)
+- Shows WNS and TNS values with thousands separators
+- Trial success rate per case
+- Total runtime per case
+- Configurable limit (default: 5 cases)
+
+**FAILURE ANALYSIS:**
+- Aggregated failure types across all stages
+- Count and percentage for each failure type
+- Sorted by count (descending)
+- Total failure count
+
+**3. Integration with StudyExecutor:**
+
+Summary report generation is automatically integrated into Study execution:
+
+```python
+# In StudyExecutor.execute() after telemetry emission:
+summary_generator = SummaryReportGenerator()
+summary_path = report_dir / "study_summary.txt"
+summary_generator.write_summary_report(
+    summary_path,
+    study_telemetry,
+    stage_telemetries,
+    case_telemetries,
+)
+print(f"\nStudy Summary Report saved to: {summary_path}")
+```
+
+**4. File Output:**
+
+Reports written to: `artifacts/{study_name}/study_summary.txt`
+
+This places summary reports alongside:
+- `study_telemetry.json` (machine-readable)
+- `safety_trace.json` / `safety_trace.txt` (audit trail)
+- `run_legality_report.txt` (safety gate documentation)
+
+**5. Report Formatting:**
+
+The report uses clear visual separators for scannability:
+- `===` for major section headers
+- `---` for subsection dividers
+- Proper alignment of labels and values
+- Consistent indentation
+- Footer with "END OF REPORT"
+
+**TEST COVERAGE:**
+
+Created `test_summary_report.py` with **30 comprehensive tests** organized in 6 test classes:
+
+**TestSummaryReportGeneration** (9 tests):
+- Generator initialization with default config
+- Generator with custom config
+- Report has proper header
+- Safety domain included and formatted
+- Trial statistics displayed correctly
+- Runtime statistics included
+- Final survivors listed
+- Aborted status shown with reason
+- Completed status shown
+
+**TestStageDetailsSummary** (4 tests):
+- All stages included in report
+- Trial statistics per stage
+- Failure types per stage
+- Stage details can be disabled
+
+**TestTopCasesSummary** (5 tests):
+- Cases sorted by WNS (descending)
+- Respects top N limit from config
+- Shows WNS and TNS when available
+- Shows trial success rate
+- Handles cases without WNS data
+
+**TestFailureAnalysisSummary** (6 tests):
+- Aggregates across all stages
+- Shows percentages correctly
+- Sorted by count (descending)
+- Handles no failures gracefully
+- Can be disabled via config
+
+**TestDurationFormatting** (3 tests):
+- Seconds format (< 60s)
+- Minutes format (60s - 3600s)
+- Hours format (>= 3600s)
+
+**TestSummaryReportFileWriting** (3 tests):
+- Creates file successfully
+- Creates parent directories
+- Written content matches generated content
+
+**ALL 6 FEATURE STEPS VALIDATED:**
+
+✅ **Step 1: Execute Study to completion**
+   - Integrated into StudyExecutor.execute()
+   - Report generated after completion or abort
+
+✅ **Step 2: Generate human-readable summary report**
+   - SummaryReportGenerator.generate_study_summary() implemented
+   - Clear, scannable text format
+
+✅ **Step 3: Include Study name, safety domain, stage count**
+   - STUDY OVERVIEW section includes all key metadata
+   - Safety domain in uppercase for visibility
+
+✅ **Step 4: Summarize trial success/failure statistics**
+   - TRIAL STATISTICS section shows counts and success rate
+   - Per-stage breakdowns in STAGE SUMMARIES
+
+✅ **Step 5: List top-performing Cases**
+   - TOP-PERFORMING CASES section sorted by WNS
+   - Shows WNS, TNS, success rate, runtime
+   - Configurable limit (default: 5)
+
+✅ **Step 6: Write summary to text file in Study artifacts**
+   - write_summary_report() writes to artifacts/{study_name}/study_summary.txt
+   - File created automatically on completion
+   - Logged to console
+
+**WHY THIS MATTERS:**
+
+**Operator Experience:**
+- Quick overview without parsing JSON
+- Easy to understand outcomes at a glance
+- Clear formatting with visual separators
+- Can be opened in any text viewer
+
+**Production Confidence:**
+- Complements JSON telemetry
+- Easy to share in emails, bug reports, design reviews
+- Standalone file for archival
+
+**Debugging:**
+- Failure analysis highlights problem areas
+- Top cases show what worked best
+- Runtime statistics identify performance issues
+
+**Auditability:**
+- Complete Study summary in one file
+- Shows safety domain enforcement
+- Documents final survivors and abort reasons
+
+**Operational Efficiency:**
+- No need to write custom parsing scripts
+- Standardized format across all Studies
+- Easy to train operators to read
+
+**CODE QUALITY:**
+
+- **New Files**:
+  - src/controller/summary_report.py (435 lines)
+  - tests/test_summary_report.py (686 lines, 30 tests)
+- **Modified Files**:
+  - src/controller/__init__.py (export new classes)
+  - src/controller/executor.py (integrate summary generation)
+  - feature_list.json (1 feature marked passing: #88)
+- **Test Count**: 794 tests total (764 existing + 30 new), all passing
+- **Test Execution Time**: ~10.6 seconds (all tests)
+- **Type Safety**: Full type hints maintained
+- **Documentation**: Clear docstrings and comprehensive test coverage
+- **No Regressions**: All existing 764 tests still passing
+- **Zero False Positives**: All tests verify real summary report behavior
+
+**GIT HISTORY:**
+
+```
+f0071c5 Implement human-readable summary report generation - Feature #88 passing
+```
+
+**SESSION SUMMARY:**
+
+✅ **1 Feature COMPLETE**: Support human-readable summary reports in addition to JSON telemetry
+
+**Methodology:** This session demonstrates end-to-end feature implementation:
+1. Analyzed existing telemetry infrastructure
+2. Designed SummaryReportGenerator with configurable sections
+3. Implemented comprehensive report generation with 6 major sections
+4. Integrated seamlessly into StudyExecutor
+5. Created 30 focused tests across 6 test classes
+6. Verified all 6 feature steps
+7. Provided clear operator value
+
+The summary report system:
+- Automatically generates on Study completion
+- Produces scannable, text-based overviews
+- Complements JSON telemetry (not replaces)
+- Includes all key Study information
+- Uses human-readable formatting
+- Is configurable for different use cases
+
+**Testing:** All 794 tests passing (764 existing + 30 new), zero regressions.
+
+**Completion Progress:** 74/200 features passing (37.0% complete)
+
+**NEXT PRIORITIES:**
+
+Based on the remaining features and logical progression:
+
+1. **GUI Mode and Visualization** (Medium-High Priority)
+   - X11 passthrough for interactive GUI mode (Feature #57)
+   - Heatmap export: placement density, RUDY, routing congestion (Features #58-60)
+   - PNG preview generation from CSV heatmaps (Feature #61)
+   - Visualization unavailable fallback (Feature #62, #63)
+
+2. **Prior Sharing and CI Integration** (Medium Priority)
+   - Optional prior sharing across Studies (Feature #66)
+   - CI regression safety checks (Feature #70)
+
+3. **Validation Ladder** (High Priority)
+   - Gate 0: Baseline viability (Feature #71)
+   - Gate 1: Full output contract (Feature #72)
+   - Gate 2: Controlled regression/failure injection (Feature #73)
+   - Gate 3: Cross-target parity (Feature #74)
+   - Gate 4: Extreme scenarios (Feature #75)
+
+4. **Advanced Telemetry** (Medium Priority)
+   - Machine-readable JSON stream (Feature #87)
+   - Resource utilization tracking (Feature #91)
+
+**Quality Bar Met:**
+- All tests pass (30 new + 764 existing) ✅
+- Type hints on all functions ✅
+- No regressions ✅
+- Clean, readable code with comprehensive docstrings ✅
+- Integration with existing modules ✅
+- Clear operator value ✅
+

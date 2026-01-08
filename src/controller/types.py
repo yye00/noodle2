@@ -214,11 +214,22 @@ class CongestionMetrics:
 
 
 @dataclass
+class DRVMetrics:
+    """Design Rule Violation (DRV) analysis results."""
+
+    total_violations: int  # Total number of DRC violations
+    violation_types: dict[str, int] = field(default_factory=dict)  # Count by type (spacing, width, etc)
+    critical_violations: int | None = None  # Count of critical/blocking violations
+    warning_violations: int | None = None  # Count of non-critical warnings
+
+
+@dataclass
 class TrialMetrics:
     """Complete metrics for a single trial."""
 
     timing: TimingMetrics
     congestion: CongestionMetrics | None = None
+    drv: DRVMetrics | None = None  # Design rule violations
     runtime_seconds: float = 0.0
     memory_mb: float = 0.0
 

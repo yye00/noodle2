@@ -1521,7 +1521,7 @@
       "Step 5: Emit DRV metrics to telemetry",
       "Step 6: Use DRV count in trial ranking"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

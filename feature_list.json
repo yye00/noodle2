@@ -2624,7 +2624,7 @@
       "Step 5: Suggest memory increase in failure rationale",
       "Step 6: Continue Study with other trials"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

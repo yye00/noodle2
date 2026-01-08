@@ -96,6 +96,8 @@ class FailureClassifier:
         stderr: str,
         artifacts_dir: Path,
         expected_outputs: list[str] | None = None,
+        peak_memory_mb: float | None = None,
+        memory_limit_mb: float | None = None,
     ) -> FailureClassification | None:
         """
         Classify a trial failure deterministically.
@@ -106,6 +108,8 @@ class FailureClassifier:
             stderr: Standard error
             artifacts_dir: Directory where artifacts should be
             expected_outputs: List of expected output files
+            peak_memory_mb: Peak memory usage in MB (for OOM diagnostics)
+            memory_limit_mb: Memory limit in MB (for OOM suggestions)
 
         Returns:
             FailureClassification if failure detected, None if success
@@ -133,15 +137,41 @@ class FailureClassifier:
             combined_output = (stderr + "\n" + stdout).lower()
 
             # OOM detection
-            if any(
+            # Exit code 137 = 128 + 9 (SIGKILL from Docker OOM killer)
+            # Also check for text markers in logs
+            if return_code == 137 or any(
                 marker in combined_output
                 for marker in ["out of memory", "oom", "killed", "signal 9"]
             ):
+                # Build memory context for diagnosis
+                memory_info = {}
+                reason_parts = ["Out of memory error"]
+
+                if peak_memory_mb is not None:
+                    memory_info["peak_memory_mb"] = peak_memory_mb
+                    reason_parts.append(f"(peak usage: {peak_memory_mb:.1f} MB)")
+
+                if memory_limit_mb is not None:
+                    memory_info["memory_limit_mb"] = memory_limit_mb
+                    reason_parts.append(f"(limit: {memory_limit_mb:.1f} MB)")
+
+                    # Suggest memory increase
+                    if peak_memory_mb and peak_memory_mb >= memory_limit_mb * 0.95:
+                        suggested_mb = memory_limit_mb * 1.5
+                        reason_parts.append(f"Suggest increasing memory limit to {suggested_mb:.0f} MB")
+                    elif not peak_memory_mb:
+                        # If we don't have peak memory, suggest a conservative increase
+                        suggested_mb = memory_limit_mb * 1.5
+                        reason_parts.append(f"Consider increasing memory limit to {suggested_mb:.0f} MB")
+
+                reason = ". ".join(reason_parts)
+
                 return FailureClassification(
                     failure_type=FailureType.OOM,
                     severity=FailureSeverity.CRITICAL,
-                    reason=f"Out of memory error (exit code {return_code})",
+                    reason=reason,
                     log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    metrics=memory_info if memory_info else None,
                     recoverable=False,
                 )
 

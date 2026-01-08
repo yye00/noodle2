@@ -317,12 +317,25 @@ class Trial:
         if not exec_result.success:
             # Classify the failure deterministically
             expected_outputs = ["timing_report.txt", "metrics.json"]  # Basic expectations
+
+            # Extract memory limit from Docker config for OOM diagnostics
+            memory_limit_mb = None
+            if self.docker_runner.config.memory_limit:
+                limit_str = self.docker_runner.config.memory_limit
+                # Parse "8g" -> 8192 MB, "4096m" -> 4096 MB
+                if limit_str.endswith('g'):
+                    memory_limit_mb = float(limit_str[:-1]) * 1024
+                elif limit_str.endswith('m'):
+                    memory_limit_mb = float(limit_str[:-1])
+
             failure_classification = FailureClassifier.classify_trial_failure(
                 return_code=exec_result.return_code,
                 stdout=exec_result.stdout,
                 stderr=exec_result.stderr,
                 artifacts_dir=self.trial_dir,
                 expected_outputs=expected_outputs if exec_result.return_code == 0 else None,
+                peak_memory_mb=exec_result.peak_memory_mb,
+                memory_limit_mb=memory_limit_mb,
             )
 
         # Create provenance record for reproducibility

@@ -126,16 +126,29 @@ def parse_openroad_metrics_json(content: str) -> TimingMetrics:
     data = json.loads(content)
 
     # Extract timing metrics from JSON
-    # Common keys: "wns", "tns", "worst_slack", etc.
-    wns = data.get("wns") or data.get("worst_slack")
-    tns = data.get("tns") or data.get("total_negative_slack")
+    # Common keys: "wns", "tns", "worst_slack", "wns_ps", "tns_ps", etc.
+    wns = data.get("wns") or data.get("worst_slack") or data.get("wns_ps")
+    tns = data.get("tns") or data.get("total_negative_slack") or data.get("tns_ps")
 
     if wns is None:
         raise ValueError("Could not extract WNS from metrics JSON")
 
-    # Values might be in ns or ps, check for unit hints
-    wns_ps = int(float(wns) * 1000) if abs(float(wns)) < 10000 else int(float(wns))
-    tns_ps = int(float(tns) * 1000) if tns and abs(float(tns)) < 10000 else int(float(tns)) if tns else None
+    # Values might be in ns or ps
+    # If the key is "wns_ps" or "tns_ps", values are already in picoseconds
+    # Otherwise, assume nanoseconds and convert
+    if "wns_ps" in data:
+        wns_ps = int(float(wns))
+    else:
+        # Convert from ns to ps, or assume ps if value is already large
+        wns_ps = int(float(wns) * 1000) if abs(float(wns)) < 10000 else int(float(wns))
+
+    if tns is not None:
+        if "tns_ps" in data:
+            tns_ps = int(float(tns))
+        else:
+            tns_ps = int(float(tns) * 1000) if abs(float(tns)) < 10000 else int(float(tns))
+    else:
+        tns_ps = None
 
     return TimingMetrics(
         wns_ps=wns_ps,

@@ -33,7 +33,7 @@
       "Step 5: Parse timing report and extract wns_ps value",
       "Step 6: Verify artifact directory contains required files"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

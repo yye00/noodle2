@@ -60,6 +60,10 @@ from src.controller.safety_trace import (
     SafetyGateType,
     SafetyTrace,
 )
+from src.controller.summary_report import (
+    SummaryReportConfig,
+    SummaryReportGenerator,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -107,4 +111,6 @@ __all__ = [
     "SafetyGateEvaluation",
     "SafetyGateType",
     "SafetyGateStatus",
+    "SummaryReportConfig",
+    "SummaryReportGenerator",
 ]

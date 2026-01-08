@@ -1105,7 +1105,7 @@
       "Step 5: List top-performing Cases",
       "Step 6: Write summary to text file in Study artifacts"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

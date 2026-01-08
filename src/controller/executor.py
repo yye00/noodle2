@@ -10,6 +10,7 @@ from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.safety_trace import SafetyTrace
 from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
 from src.controller.study import StudyConfig
+from src.controller.summary_report import SummaryReportGenerator
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
 from src.controller.types import ECOClass, ExecutionMode, StageConfig
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
@@ -519,6 +520,47 @@ class StudyExecutor:
         print(f"\nSafety Trace saved to:")
         print(f"  JSON: {trace_path}")
         print(f"  TXT: {trace_txt_path}")
+
+        # Generate human-readable summary report
+        summary_generator = SummaryReportGenerator()
+
+        # Collect stage telemetries from emitted files
+        stage_telemetries: list[StageTelemetry] = []
+        for stage_idx in range(len(stage_results)):
+            stage_file = self.telemetry_emitter.study_dir / f"stage_{stage_idx}_telemetry.json"
+            if stage_file.exists():
+                import json
+                with stage_file.open("r") as f:
+                    stage_data = json.load(f)
+                # Reconstruct StageTelemetry from dict
+                stage_telem = StageTelemetry(
+                    stage_index=stage_data["stage_index"],
+                    stage_name=stage_data["stage_name"],
+                    trial_budget=stage_data["trial_budget"],
+                    survivor_count=stage_data["survivor_count"],
+                    trials_executed=stage_data["trials_executed"],
+                    successful_trials=stage_data["successful_trials"],
+                    failed_trials=stage_data["failed_trials"],
+                    survivors=stage_data["survivors"],
+                    total_runtime_seconds=stage_data["total_runtime_seconds"],
+                    cases_processed=stage_data["cases_processed"],
+                    failure_types=stage_data["failure_types"],
+                    metadata=stage_data.get("metadata", {}),
+                )
+                stage_telemetries.append(stage_telem)
+
+        # Collect case telemetries
+        case_telemetries = list(self.telemetry_emitter.case_telemetry.values())
+
+        # Write summary report
+        summary_path = report_dir / "study_summary.txt"
+        summary_generator.write_summary_report(
+            summary_path,
+            study_telemetry,
+            stage_telemetries,
+            case_telemetries,
+        )
+        print(f"\nStudy Summary Report saved to: {summary_path}")
 
         return StudyResult(
             study_name=self.config.name,

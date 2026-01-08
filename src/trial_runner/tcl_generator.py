@@ -15,6 +15,7 @@ def generate_trial_script(
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
     visualization_enabled: bool = False,
+    utilization: float | None = None,
 ) -> str:
     """
     Generate TCL script for trial execution based on execution mode.
@@ -28,6 +29,7 @@ def generate_trial_script(
         openroad_seed: Optional fixed seed for deterministic placement/routing
         pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
         visualization_enabled: Enable heatmap exports (requires GUI mode)
+        utilization: Floorplan utilization (0.0-1.0). If None, uses PDK-specific default.
 
     Returns:
         TCL script content as string
@@ -36,11 +38,11 @@ def generate_trial_script(
         ValueError: If execution_mode is not supported
     """
     if execution_mode == ExecutionMode.STA_ONLY:
-        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
+        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled, utilization)
     elif execution_mode == ExecutionMode.STA_CONGESTION:
-        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
+        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled, utilization)
     elif execution_mode == ExecutionMode.FULL_ROUTE:
-        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
+        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled, utilization)
     else:
         raise ValueError(f"Unsupported execution_mode: {execution_mode}")
 
@@ -53,6 +55,7 @@ def _generate_sta_only_script(
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
     visualization_enabled: bool = False,
+    utilization: float | None = None,
 ) -> str:
     """
     Generate STA-only script that performs timing analysis without congestion analysis.
@@ -184,6 +187,7 @@ def _generate_sta_congestion_script(
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
     visualization_enabled: bool = False,
+    utilization: float | None = None,
 ) -> str:
     r"""
     Generate STA+congestion script that performs both timing and congestion analysis.
@@ -301,9 +305,9 @@ puts "Generated netlist: $netlist_file"
 puts "Initializing floorplan..."
 
 # Initialize floorplan with utilization target
-# For this small design, use low utilization
+# Utilization is PDK-specific: ASAP7 uses 0.55, Nangate45 uses 0.70
 set die_area_um 100
-set core_utilization 0.4
+set core_utilization {utilization if utilization is not None else get_pdk_default_utilization(pdk)}
 
 puts "Die area: ${{die_area_um}}um x ${{die_area_um}}um"
 puts "Core utilization: [expr {{$core_utilization * 100}}]%"
@@ -444,6 +448,7 @@ def _generate_full_route_script(
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
     visualization_enabled: bool = False,
+    utilization: float | None = None,
 ) -> str:
     """
     Generate full-route script (placeholder for future implementation).
@@ -452,7 +457,7 @@ def _generate_full_route_script(
     """
     # For now, delegate to STA+congestion mode
     # Full routing implementation deferred
-    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
+    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled, utilization)
 
 
 def write_trial_script(
@@ -465,6 +470,7 @@ def write_trial_script(
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
     visualization_enabled: bool = False,
+    utilization: float | None = None,
 ) -> Path:
     """
     Generate and write TCL script to file.
@@ -479,6 +485,7 @@ def write_trial_script(
         openroad_seed: Optional fixed seed for deterministic placement/routing
         pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
         visualization_enabled: Enable heatmap exports (requires GUI mode)
+        utilization: Floorplan utilization (0.0-1.0). If None, uses PDK-specific default.
 
     Returns:
         Path to written script file
@@ -496,6 +503,7 @@ def write_trial_script(
         openroad_seed=openroad_seed,
         pdk=pdk,
         visualization_enabled=visualization_enabled,
+        utilization=utilization,
     )
 
     # Ensure parent directory exists
@@ -510,6 +518,36 @@ def write_trial_script(
 # ============================================================================
 # PDK-Specific TCL Generation Helpers
 # ============================================================================
+
+
+def get_pdk_default_utilization(pdk: str) -> float:
+    """
+    Get the default floorplan utilization for a given PDK.
+
+    ASAP7 requires lower utilization (0.50-0.55) to prevent routing explosion.
+    Other PDKs use higher utilization for efficiency.
+
+    Args:
+        pdk: PDK name ('nangate45', 'asap7', 'sky130')
+
+    Returns:
+        Default utilization value (0.0-1.0)
+    """
+    pdk_lower = pdk.lower()
+
+    if pdk_lower == "asap7":
+        # ASAP7 requires lower utilization to prevent routing congestion explosion
+        # Recommended: 0.50-0.55
+        return 0.55
+    elif pdk_lower == "nangate45":
+        # Nangate45 can handle higher utilization
+        return 0.70
+    elif pdk_lower == "sky130":
+        # Sky130 uses moderate utilization
+        return 0.65
+    else:
+        # Conservative default for unknown PDKs
+        return 0.60
 
 
 def generate_asap7_routing_constraints() -> str:

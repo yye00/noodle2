@@ -11515,3 +11515,64 @@ Remaining high-priority features (top 5):
 - Next: ASAP7 configuration best practices and parallel execution
 
 ---
+
+================================================================================
+SESSION 72 - 2026-01-08
+================================================================================
+
+## OBJECTIVE
+Implement ASAP7 utilization configuration to prevent routing explosion.
+
+## STARTING STATUS
+- 129/200 features passing (64.5%)
+- All core tests passing
+- ASAP7 workarounds already in place (routing constraints, site, pins)
+
+## WORK COMPLETED
+
+### Feature Implemented: Use Lower Utilization for ASAP7 to Prevent Routing Explosion
+
+**What it does:**
+Adds configurable floorplan utilization with PDK-specific defaults. ASAP7 defaults 
+to 0.55 (low) to prevent routing congestion explosion, while other PDKs use higher 
+values appropriate for their characteristics.
+
+**Implementation Details:**
+
+1. **New Function: get_pdk_default_utilization()**
+   - Returns PDK-specific default utilization values
+   - ASAP7: 0.55 (low, prevents routing explosion)
+   - Nangate45: 0.70 (can handle higher utilization)
+   - Sky130: 0.65 (moderate utilization)
+   - Unknown PDKs: 0.60 (conservative default)
+   - Case-insensitive PDK name matching
+
+2. **Updated Script Generation Functions**
+   - Added utilization parameter to all generation functions
+   - Utilization parameter is optional (None = use PDK default)
+   - Explicit utilization overrides PDK defaults
+
+3. **TCL Script Updates**
+   - Floorplan section now uses configurable utilization
+   - Comments explain PDK-specific choices
+   - Utilization value printed during execution for observability
+
+**All 5 Feature Steps Validated:**
+- Step 1: Configure ASAP7 floorplan with utilization 0.50-0.55 ✅
+- Step 2: Execute placement ✅
+- Step 3: Execute global routing ✅
+- Step 4: Verify routing converges successfully ✅
+- Step 5: Confirm no congestion explosion occurs ✅
+
+**Testing:**
+- 21 new tests, all passing (1,908 total tests)
+- No regressions in existing 1,887 tests
+
+## CURRENT STATUS
+- **130/200 features passing (65.0%)**
+- 70 features remaining
+- All tests passing (1,908 total)
+- ASAP7 support complete (workarounds + utilization + failure detection)
+
+---
+

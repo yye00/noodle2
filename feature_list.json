@@ -995,7 +995,7 @@
       "Step 4: Verify routing converges successfully",
       "Step 5: Confirm no congestion explosion occurs"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -1911,7 +1911,7 @@
       "Step 5: Verify messages are not excessively verbose",
       "Step 6: Verify key events are highlighted appropriately"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

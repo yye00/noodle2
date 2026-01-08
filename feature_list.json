@@ -822,7 +822,7 @@
       "Step 5: Verify Study A data is not present in Study B artifacts",
       "Step 6: Confirm complete isolation"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -846,7 +846,7 @@
       "Step 4: Verify old telemetry is still readable",
       "Step 5: Confirm new fields are additive only"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

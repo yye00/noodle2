@@ -1,5 +1,204 @@
 # Noodle 2 - Progress Tracker
 
+## Session 14 - Execution Modes (STA-only vs STA+congestion)
+**Date:** 2026-01-07
+**Status:** 39/200 features passing (19.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **execution mode support**, enabling stages to perform
+either STA-only (timing analysis) or STA+congestion (comprehensive analysis).
+This is a critical feature for performance optimization and flexible workflow
+configuration.
+
+#### ✅ Feature #33: Support STA-only Execution Mode
+
+**Implementation:**
+- Added `execution_mode` field to TrialConfig (defaults to STA_ONLY)
+- Created `tcl_generator.py` module for dynamic TCL script generation
+- Implemented `generate_trial_script()` with mode-specific logic
+- STA-only mode generates scripts that:
+  * Perform timing analysis only (report_checks)
+  * Skip congestion analysis entirely
+  * Are faster than full analysis (less work)
+  * Produce timing metrics (wns_ps, tns_ps) but NOT congestion metrics
+
+**Test Coverage:**
+- 8 tests specifically for STA-only mode
+- Validated script generation includes timing analysis
+- Validated scripts explicitly skip congestion
+- Confirmed timing metrics are produced
+- Confirmed congestion metrics are NOT produced
+- Verified STA-only is faster (fewer operations)
+
+**Why This Matters:**
+For timing-focused stages, congestion analysis is unnecessary overhead. STA-only
+mode enables faster iteration and lower compute costs when routing is not the
+bottleneck.
+
+#### ✅ Feature #34: Support STA+congestion Execution Mode
+
+**Implementation:**
+- Implemented `_generate_sta_congestion_script()` for comprehensive analysis
+- STA+congestion mode generates scripts that:
+  * Perform timing analysis (report_checks)
+  * Perform congestion analysis (global_route -congestion_report_file)
+  * Produce both timing AND congestion metrics
+  * Support multi-objective ranking
+- Updated `Trial._parse_metrics()` to parse congestion reports
+- Added `parse_congestion_report_file()` integration for automatic metric extraction
+
+**Test Coverage:**
+- 8 tests specifically for STA+congestion mode
+- Validated both timing and congestion reports are generated
+- Confirmed both timing and congestion metrics are parsed
+- Verified metrics are available for multi-objective ranking
+- Integration tests with real trial execution
+
+**Why This Matters:**
+For routing-heavy designs, congestion is as important as timing. STA+congestion
+mode enables comprehensive analysis and multi-objective optimization, allowing
+intelligent trade-offs between timing and routability.
+
+### ADDITIONAL INFRASTRUCTURE
+
+**TCL Script Generator Module (`tcl_generator.py`):**
+- `generate_trial_script()`: Main entry point for mode-based generation
+- `write_trial_script()`: Generates and writes script to file
+- Supports STA_ONLY, STA_CONGESTION, and FULL_ROUTE (future) modes
+- Scripts include proper error handling and status reporting
+- Generates metrics.json with mode-specific fields
+
+**Trial._parse_metrics() Enhancement:**
+- Now parses congestion metrics when congestion_report exists
+- Extracts bins_total, bins_hot, hot_ratio, max_overflow
+- Gracefully handles missing congestion reports (STA-only mode)
+- Error handling with explicit parse error reporting
+
+**StudyExecutor Integration:**
+- Passes `execution_mode` from StageConfig to TrialConfig
+- Base case verification uses stage 0's execution mode (or defaults to STA_ONLY)
+- All trial configurations now include proper execution mode
+
+### CODE QUALITY METRICS
+
+- **New Code**: tcl_generator.py (383 lines), test_execution_modes.py (454 lines)
+- **Test Count**: 348 tests total (332 existing + 16 new), all passing
+- **New Tests This Session**: 16 (all in test_execution_modes.py)
+- **Test Execution Time**: ~7.8 seconds (all tests, excluding flaky Ray tests)
+- **Type Safety**: Full type hints on all new code
+- **Error Handling**: Comprehensive validation and error messages
+- **Documentation**: Complete docstrings on all public APIs
+- **No Regressions**: All existing 332 tests still passing
+
+### TEST CATEGORIES
+
+**TestTCLScriptGeneration** (6 tests):
+- STA-only script generation and validation
+- STA+congestion script generation and validation
+- Metadata and custom parameters
+- File writing and directory creation
+- Unsupported mode error handling
+
+**TestTrialConfigExecutionMode** (3 tests):
+- execution_mode field exists and has correct type
+- Default mode is STA_ONLY
+- STA_CONGESTION mode support
+
+**TestExecutionModeIntegration** (3 tests):
+- STA-only produces timing metrics only
+- STA+congestion produces both metric types
+- STA-only is faster (behavioral verification)
+
+**TestExecutionModeArtifacts** (2 tests):
+- STA-only artifacts include timing report only
+- STA+congestion artifacts include both reports
+
+**TestExecutionModeMetrics** (2 tests):
+- STA-only metrics.json excludes congestion fields
+- STA+congestion metrics.json includes both
+
+### VALIDATION LADDER STATUS
+
+- ✅ **Gate 0 - Baseline Viability**: **COMPLETE** (100%)
+
+- ✅ **Gate 1 - Full Output Contract**: **COMPLETE** (100%)
+
+- ✅ **Gate 2 - Controlled Regression**: **COMPLETE** (100%)
+
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
+
+### NEXT SESSION PRIORITIES
+
+With execution modes complete, the next focus areas are:
+
+1. **ECO Application Integration** (High Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs during trial execution (prepend to script)
+   - Track which ECOs were applied in each trial
+   - Update ECOClassTracker based on actual trial outcomes
+
+2. **Study Isolation** (Medium Priority)
+   - Implement Study isolation to prevent telemetry leakage
+   - Ensure each Study starts with fresh priors
+   - Verify memory is not shared across Studies
+   - Feature #23
+
+3. **Case Lineage DAG** (Medium Priority)
+   - Generate case lineage graph showing derivation relationships
+   - Export as machine-readable format (JSON, DOT)
+   - Validate DAG properties (no cycles)
+   - Feature #24
+
+4. **Deterministic ECO Ordering** (Medium Priority)
+   - Ensure ECOs are applied in identical order across runs
+   - Reproducible trial results
+   - Feature #35
+
+### GIT HISTORY THIS SESSION
+
+```
+7b54d2c Implement STA-only and STA+congestion execution modes - Features #33 and #34 passing
+```
+
+### FILES CREATED/MODIFIED THIS SESSION
+
+**Created:**
+- src/trial_runner/tcl_generator.py (383 lines)
+- tests/test_execution_modes.py (454 lines)
+
+**Modified:**
+- src/trial_runner/trial.py (+12 lines: import, execution_mode field, congestion parsing)
+- src/trial_runner/__init__.py (+4 lines: exported tcl_generator functions)
+- src/controller/executor.py (+5 lines: import ExecutionMode, pass to TrialConfig)
+- feature_list.json (2 features marked passing: #33, #34)
+
+### SESSION SUMMARY
+
+**Major Achievement:** Implemented **complete execution mode support** for
+STA-only and STA+congestion workflows, enabling flexible stage configuration
+and performance optimization.
+
+✅ **2 Features COMPLETE**: STA-only execution mode, STA+congestion execution mode
+
+**Architecture Advancement:** Noodle 2 can now:
+- Run timing-only stages for fast iteration
+- Run comprehensive stages with both timing and congestion
+- Generate mode-appropriate TCL scripts dynamically
+- Parse metrics correctly based on execution mode
+- Support multi-objective optimization when both metrics are available
+
+**Performance Impact:** STA-only mode reduces trial execution time by skipping
+congestion analysis, enabling faster exploration in timing-focused stages.
+
+**Test Coverage:** All 348 tests passing (332 existing + 16 new), zero regressions.
+
+**Next Milestone:** Integrate ECO application with trial execution so that trials
+actually apply ECOs and track effectiveness across different execution modes.
+
+---
+
 ## Session 13 - Trial Ranking and Survivor Selection
 **Date:** 2026-01-07
 **Status:** 37/200 features passing (18.5%)

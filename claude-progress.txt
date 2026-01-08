@@ -2445,3 +2445,90 @@ advancing Noodle 2's reproducibility and auditability guarantees.
 
 **Next Milestone:** Implement Study isolation and case lineage DAG to support
 multi-study experiments and derived case tracking.
+
+
+---
+
+## Session 16 - Study Isolation and Case Lineage DAG
+**Date:** 2026-01-08
+**Status:** 43/200 features passing (21.5%)
+
+### SESSION ACCOMPLISHMENTS
+
+This session implemented **Study isolation** and **case lineage DAG generation**,
+enabling independent multi-study experiments and comprehensive lineage tracking
+for complex branching derivations.
+
+#### Feature #22: Ensure Study Isolation - Telemetry Does Not Leak Across Studies
+
+**Implementation:**
+- Verified existing TelemetryEmitter provides complete Study isolation
+- Each Study has independent telemetry directory (telemetry/{study_name}/)
+- Studies cannot access each other's telemetry files
+- In-memory state (case_telemetry dict) fully isolated per Study instance
+- No priors or learned information leak between concurrent Studies
+- Study names serve as unique namespace identifiers
+
+**Test Coverage:** 11 comprehensive tests
+
+Test Classes:
+- TestStudyTelemetryIsolation: Telemetry directory and file isolation (4 tests)
+- TestStudyPriorIsolation: Prior and learned information isolation (2 tests)
+- TestStudyNamespaceIsolation: Study namespace uniqueness (3 tests)
+- TestStudyMemoryIsolation: In-memory state isolation (2 tests)
+
+**Why This Matters:** Study isolation is critical for running multiple concurrent
+experiments without cross-contamination. Ensures that Study A's ECO outcomes,
+telemetry, and priors do not influence Study B's execution, maintaining scientific
+validity and reproducibility.
+
+#### Feature #23: Generate Case Lineage DAG Showing Derivation Relationships
+
+**Implementation:**
+- Implemented CaseGraph.export_dag() for machine-readable DAG export
+- Implemented CaseGraph.verify_dag_integrity() for cycle detection using DFS
+- Implemented CaseGraph.get_dag_depth() for lineage depth calculation
+- Implemented CaseGraph.get_leaf_cases() for identifying terminal cases
+
+**Test Coverage:** 24 comprehensive tests
+
+Test Classes:
+- TestCaseLineageDAGGeneration: DAG generation for various scenarios (6 tests)
+- TestDAGIntegrityVerification: Cycle detection and validation (4 tests)
+- TestDAGDepthCalculation: Depth calculation for lineage paths (5 tests)
+- TestDAGLeafCases: Terminal case identification (4 tests)
+- TestDAGStatistics: Statistics calculation (2 tests)
+- TestDAGMachineReadableExport: JSON export format validation (3 tests)
+
+**Why This Matters:** Case lineage DAG provides complete traceability for complex
+multi-stage experiments with branching derivations. Enables visualization of
+case relationships, debugging of derivation chains, and machine-readable export
+for external tooling integration.
+
+### CODE QUALITY METRICS
+
+- **Modified Code**: src/controller/case.py (+149 lines of new methods)
+- **New Tests**: test_study_isolation.py (11 tests), test_case_lineage_dag.py (24 tests)
+- **Test Count**: 430 tests total (395 existing + 35 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **No Regressions**: All existing 395 tests still passing
+
+### GIT HISTORY THIS SESSION
+
+```
+59df0a3 Implement Study isolation and case lineage DAG - Features #22 and #23 passing
+4d1ced1 Update Session 15 progress notes - Provenance and snapshot integrity complete
+```
+
+### SESSION SUMMARY
+
+**Major Achievement:** Implemented complete Study isolation and comprehensive
+case lineage DAG generation, enabling multi-study experiments and full
+derivation traceability.
+
+**Features Complete:** 2 (Study isolation, Case lineage DAG)
+
+**Completion Progress:** 43/200 features passing (21.5% complete)
+
+**Next Milestone:** Continue implementing remaining features to reach 25%
+completion milestone.

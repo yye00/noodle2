@@ -1,3 +1,55 @@
+# Session 37 - Machine-Readable JSON Event Stream Telemetry
+**Date:** 2026-01-08
+**Status:** 84/200 features passing (42.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **machine-readable JSON event stream telemetry**,
+providing real-time event emission as Study execution progresses. This
+complements the existing aggregated telemetry system with a streaming
+interface for monitoring and analysis.
+
+### Feature Completed: Emit Machine-Readable JSON Telemetry for All Study Events
+
+**Feature #87: Emit machine-readable JSON telemetry for all Study events** ✅
+
+## IMPLEMENTATION
+
+**1. EventStreamEmitter Class** (src/telemetry/event_stream.py):
+- Emits events as newline-delimited JSON (NDJSON) for streaming analysis
+- Supports 11 event types covering Study, Stage, Trial, and Safety events
+- Every event includes ISO 8601 timestamp with microsecond precision
+- Convenience methods for each event type with proper parameters
+- read_events() and validate_json_format() for analysis
+
+**2. StudyExecutor Integration** (src/controller/executor.py):
+- Event stream initialized alongside aggregated telemetry
+- Emits events at all major execution points
+- Event stream saved to telemetry/{study_name}/event_stream.ndjson
+
+**3. Test Coverage**: 28 comprehensive tests covering all functionality
+
+## WHY THIS MATTERS
+
+**Real-time Monitoring:** Events emitted as they happen, not post-hoc
+**Streaming Analysis:** NDJSON format enables tail -f and stream processing
+**Programmatic Access:** Easy to parse, filter, and analyze events
+**Complementary:** Works alongside aggregated telemetry
+**Auditability:** Complete event log with microsecond-precision timestamps
+
+## CODE QUALITY
+
+- **New Files**: event_stream.py (381 lines), test_event_stream.py (617 lines, 28 tests)
+- **Modified Files**: executor.py (+100 lines), telemetry/__init__.py
+- **Test Count**: 925 tests total, all passing
+- **No Regressions**: All existing tests still passing
+
+## COMPLETION PROGRESS
+
+84/200 features passing (42.0% complete)
+
+---
+
 # Session 35 - Case Lineage Graph DOT Export
 **Date:** 2026-01-08
 **Status:** 82/200 features passing (41.0%)

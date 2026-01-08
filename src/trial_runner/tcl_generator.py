@@ -14,6 +14,7 @@ def generate_trial_script(
     metadata: dict[str, Any] | None = None,
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
+    visualization_enabled: bool = False,
 ) -> str:
     """
     Generate TCL script for trial execution based on execution mode.
@@ -26,6 +27,7 @@ def generate_trial_script(
         metadata: Optional metadata to include in script
         openroad_seed: Optional fixed seed for deterministic placement/routing
         pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
+        visualization_enabled: Enable heatmap exports (requires GUI mode)
 
     Returns:
         TCL script content as string
@@ -34,11 +36,11 @@ def generate_trial_script(
         ValueError: If execution_mode is not supported
     """
     if execution_mode == ExecutionMode.STA_ONLY:
-        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
+        return _generate_sta_only_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
     elif execution_mode == ExecutionMode.STA_CONGESTION:
-        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
+        return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
     elif execution_mode == ExecutionMode.FULL_ROUTE:
-        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
+        return _generate_full_route_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
     else:
         raise ValueError(f"Unsupported execution_mode: {execution_mode}")
 
@@ -50,6 +52,7 @@ def _generate_sta_only_script(
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
+    visualization_enabled: bool = False,
 ) -> str:
     """
     Generate STA-only script that performs timing analysis without congestion analysis.
@@ -163,7 +166,7 @@ puts $fp "}}"
 close $fp
 
 puts "Generated metrics: $metrics_file"
-
+{generate_heatmap_export_commands(output_dir) if visualization_enabled else ""}
 puts ""
 puts "=== STA-Only Execution Complete ==="
 puts "Mode: STA_ONLY (timing analysis only, congestion skipped)"
@@ -180,6 +183,7 @@ def _generate_sta_congestion_script(
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
+    visualization_enabled: bool = False,
 ) -> str:
     r"""
     Generate STA+congestion script that performs both timing and congestion analysis.
@@ -418,7 +422,7 @@ puts $fp "}}"
 close $fp
 
 puts "Generated metrics: $metrics_file"
-
+{generate_heatmap_export_commands(output_dir) if visualization_enabled else ""}
 puts ""
 puts "=== STA+Congestion Execution Complete ==="
 puts "Mode: STA_CONGESTION (timing + global routing + congestion analysis)"
@@ -439,6 +443,7 @@ def _generate_full_route_script(
     metadata: dict[str, Any] | None,
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
+    visualization_enabled: bool = False,
 ) -> str:
     """
     Generate full-route script (placeholder for future implementation).
@@ -447,7 +452,7 @@ def _generate_full_route_script(
     """
     # For now, delegate to STA+congestion mode
     # Full routing implementation deferred
-    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk)
+    return _generate_sta_congestion_script(design_name, output_dir, clock_period_ns, metadata, openroad_seed, pdk, visualization_enabled)
 
 
 def write_trial_script(
@@ -459,6 +464,7 @@ def write_trial_script(
     metadata: dict[str, Any] | None = None,
     openroad_seed: int | None = None,
     pdk: str = "nangate45",
+    visualization_enabled: bool = False,
 ) -> Path:
     """
     Generate and write TCL script to file.
@@ -472,6 +478,7 @@ def write_trial_script(
         metadata: Optional metadata to include in script
         openroad_seed: Optional fixed seed for deterministic placement/routing
         pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
+        visualization_enabled: Enable heatmap exports (requires GUI mode)
 
     Returns:
         Path to written script file
@@ -488,6 +495,7 @@ def write_trial_script(
         metadata=metadata,
         openroad_seed=openroad_seed,
         pdk=pdk,
+        visualization_enabled=visualization_enabled,
     )
 
     # Ensure parent directory exists
@@ -629,4 +637,41 @@ set std_cell_lef "/pdk/asap7/asap7sc7p5t_28/LEF/scaled/asap7sc7p5t_28_R_4x_20121
 set liberty_file "/pdk/{pdk}/lib/example.lib"
 set tech_lef "/pdk/{pdk}/lef/example.tech.lef"
 set std_cell_lef "/pdk/{pdk}/lef/example.lef"
+"""
+
+
+def generate_heatmap_export_commands(output_dir: str | Path = "/work") -> str:
+    """
+    Generate TCL commands to export heatmaps using gui::dump_heatmap.
+
+    This requires GUI mode (openroad -gui) to be enabled.
+
+    Args:
+        output_dir: Directory where heatmap CSVs will be saved
+
+    Returns:
+        TCL commands for heatmap export
+    """
+    output_dir = str(output_dir)
+    return f"""
+# ============================================================================
+# HEATMAP EXPORT (requires GUI mode)
+# ============================================================================
+
+# Create heatmaps directory
+file mkdir "{output_dir}/heatmaps"
+
+# Export placement density heatmap
+puts "Exporting placement density heatmap..."
+gui::dump_heatmap "{output_dir}/heatmaps/placement_density.csv" -type placement_density
+
+# Export RUDY congestion heatmap (Rectangular Uniform wire Density)
+puts "Exporting RUDY congestion heatmap..."
+gui::dump_heatmap "{output_dir}/heatmaps/rudy.csv" -type rudy
+
+# Export routing congestion heatmap
+puts "Exporting routing congestion heatmap..."
+gui::dump_heatmap "{output_dir}/heatmaps/routing_congestion.csv" -type routing_congestion
+
+puts "Heatmap exports complete."
 """

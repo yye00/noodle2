@@ -723,7 +723,7 @@
       "Step 4: Verify GUI starts successfully",
       "Step 5: Test gui::dump_heatmap command availability"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -735,7 +735,7 @@
       "Step 4: Parse CSV to validate format",
       "Step 5: Confirm heatmap data is spatially reasonable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -747,7 +747,7 @@
       "Step 4: Parse CSV to validate format",
       "Step 5: Confirm RUDY estimates are reasonable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -759,7 +759,7 @@
       "Step 4: Parse CSV to validate format",
       "Step 5: Confirm congestion hotspots align with scalar metrics"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -771,7 +771,7 @@
       "Step 4: Save PNG thumbnail to artifact directory",
       "Step 5: Link both CSV and PNG in artifact index"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

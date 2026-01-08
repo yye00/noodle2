@@ -21,6 +21,7 @@ class DockerRunConfig:
     memory_limit: str = "8g"
     cpu_count: int | None = None
     environment: dict[str, str] | None = None
+    gui_mode: bool = False  # Enable GUI mode with X11 passthrough
 
 
 @dataclass
@@ -112,12 +113,27 @@ class DockerTrialRunner:
             if snapshot_dir.exists():
                 volumes[str(snapshot_dir.absolute())] = {"bind": "/snapshot", "mode": "ro"}
 
+        # Add X11 socket for GUI mode
+        if self.config.gui_mode:
+            # Mount X11 unix socket for display passthrough
+            volumes["/tmp/.X11-unix"] = {"bind": "/tmp/.X11-unix", "mode": "rw"}
+
         # Build command
         script_name = script_path.name
-        command = f"openroad -exit /scripts/{script_name}"
+        if self.config.gui_mode:
+            # GUI mode: use openroad -gui (requires X11)
+            command = f"openroad -gui -exit /scripts/{script_name}"
+        else:
+            # Non-GUI mode: standard batch execution
+            command = f"openroad -exit /scripts/{script_name}"
 
         # Merge environment variables
         env = self.config.environment or {}
+
+        # Add DISPLAY for GUI mode
+        if self.config.gui_mode:
+            # Use host DISPLAY or default to :0
+            env["DISPLAY"] = os.environ.get("DISPLAY", ":0")
 
         # Set timeout
         timeout = timeout_seconds or self.config.timeout_seconds
@@ -246,3 +262,24 @@ class DockerTrialRunner:
             }
         except docker.errors.ImageNotFound:
             return {}
+
+    def check_gui_available(self) -> bool:
+        """
+        Check if GUI mode is available (X11 socket exists and DISPLAY is set).
+
+        Returns:
+            True if GUI mode prerequisites are met
+        """
+        import os
+        from pathlib import Path
+
+        # Check if X11 socket exists
+        x11_socket = Path("/tmp/.X11-unix")
+        if not x11_socket.exists():
+            return False
+
+        # Check if DISPLAY is set
+        if "DISPLAY" not in os.environ:
+            return False
+
+        return True

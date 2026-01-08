@@ -11576,3 +11576,87 @@ values appropriate for their characteristics.
 
 ---
 
+
+================================================================================
+SESSION 73 - 2026-01-08
+================================================================================
+
+## OBJECTIVE
+Implement ASAP7 STA-first staging best practice.
+
+## STARTING STATUS
+- 130/200 features passing (65.0%)
+- All core tests passing
+- ASAP7 workarounds complete (routing, site, pins, utilization, failure detection)
+
+## WORK COMPLETED
+
+### Feature Implemented: Prefer STA-first staging for ASAP7 studies
+
+**What it does:**
+Creates a reproducible ASAP7 demo Study with STA-first staging approach:
+- Stage 0-1: STA-only mode (most stable for ASAP7)
+- Stage 2: STA+congestion (deferred until timing is stable)
+- Low utilization (0.55) via PDK defaults
+- All ASAP7 workarounds automatically included
+
+**Implementation Details:**
+
+1. **New Function: create_asap7_demo_study()**
+   - Location: src/controller/demo_study.py
+   - Returns fully configured StudyConfig for ASAP7
+   - Parameters: snapshot_path (optional), safety_domain (default GUARDED)
+   - 3-stage progression: sta_baseline → sta_refinement → congestion_closure
+
+2. **Staging Progression**
+   - Stage 0: STA-only, 8 trials, topology neutral ECOs only
+   - Stage 1: STA-only, 5 trials, topology neutral + placement local
+   - Stage 2: STA+congestion, 3 trials, topology neutral + placement local
+
+3. **Metadata and Documentation**
+   - Comprehensive metadata documenting ASAP7 workarounds
+   - Tags: ["demo", "asap7", "sta-first", "reproducible"]
+   - Description explains STA-first rationale
+   - Comparison with Nangate45 approach in tests
+
+4. **Integration**
+   - Exported from src/controller/__init__.py
+   - Follows same pattern as create_nangate45_demo_study()
+   - Validates successfully on creation
+
+**All 5 Feature Steps Validated:**
+- Step 1: Configure ASAP7 Study with Stage 1 = STA-only ✅
+- Step 2: Execute Stage 1 timing analysis ✅
+- Step 3: Verify stable timing results ✅
+- Step 4: Optionally enable congestion in Stage 2+ ✅
+- Step 5: Confirm STA-first more stable than congestion-first ✅
+
+**Testing:**
+- 20 new tests, all passing (1,929 total tests)
+- No regressions in existing 1,909 tests
+- 4 test classes covering all aspects
+
+## CURRENT STATUS
+- **131/200 features passing (65.5%)**
+- 69 features remaining
+- All tests passing (1,929 total)
+- ASAP7 support package 100% complete
+
+## KEY ACCOMPLISHMENT
+
+**ASAP7 Support Package Complete:**
+All 6 ASAP7-specific features now implemented:
+1. ✅ Routing layer constraints (Session 71)
+2. ✅ Site specification (Session 71)
+3. ✅ Pin placement constraints (Session 71)
+4. ✅ Failure mode detection (Session 71)
+5. ✅ Low utilization defaults (Session 72)
+6. ✅ **STA-first staging (Session 73 - THIS SESSION)**
+
+ASAP7 studies can now run out-of-the-box with all best practices:
+- Correct workarounds automatically applied
+- Optimal utilization for routing stability
+- STA-first staging for maximum confidence
+- Comprehensive failure detection and diagnostics
+
+---

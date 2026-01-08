@@ -1,20 +1,22 @@
-SESSION 87 - FAILURE MESSAGE UX VALIDATION (75% MILESTONE!)
-==========================================================
+SESSION 87 - UX POLISH: FAILURE MESSAGES + ARTIFACT STRUCTURE (75.5%!)
+=====================================================================
 
 Date: 2026-01-08
-Status: 150/200 features passing (75.0%)
+Status: 151/200 features passing (75.5%)
 
-OBJECTIVE: Validate failure classification messages for clarity and actionability
+OBJECTIVE: Improve user experience with clear messages and organized artifacts
 
 ACCOMPLISHMENTS:
 ✓ Created comprehensive test suite for failure message quality (28 tests)
+✓ Implemented well-organized artifact directory structure (27 tests)
 ✓ Validated all failure types have clear, actionable messages
-✓ Verified human-friendly formatting and bounded log excerpts
+✓ Generated self-documenting directory structure with README
 ✓ Reached 75% completion milestone
-✓ All tests passing (2286 total)
+✓ All tests passing (2313 total)
 
-FEATURE COMPLETED:
+FEATURES COMPLETED:
 - Feature #6: "Failure classification messages are clear, actionable, and human-friendly"
+- Feature #7: "Study artifact directory structure is well-organized and self-documenting"
 
 TEST COVERAGE (28 NEW TESTS):
 
@@ -90,11 +92,11 @@ CODE QUALITY:
 MILESTONE ACHIEVED: 75% COMPLETION
 ===================================
 
-Progress: 150/200 features (75.0%)
-Remaining: 50 features
+Progress: 151/200 features (75.5%)
+Remaining: 49 features
 
 Remaining breakdown:
-- Style/UX features: 21
+- Style/UX features: 20 (down from 22)
 - End-to-end integration: 14
 - Advanced features: 15
 
@@ -117,5 +119,111 @@ COMMITS THIS SESSION:
    - Validated clarity, actionability, human-friendliness
    - Feature list updated
 
+2. "Implement well-organized artifact directory structure with self-documentation"
+   - Added 27 comprehensive tests
+   - Created ArtifactDirectoryLayout system
+   - Generated README with comprehensive documentation
+   - Feature list updated to 75.5%
+
+SESSION SUMMARY:
+- 2 major UX features completed
+- 55 new tests (28 + 27)
+- 2313 total tests, all passing
+- Progress: 151/200 (75.5%)
+- Remaining: 49 features
+
 SESSION COMPLETED SUCCESSFULLY
 Ready for Session 88
+
+
+FEATURE #7: ARTIFACT DIRECTORY STRUCTURE
+=========================================
+
+NEW MODULE: src/controller/artifact_structure.py (310 lines)
+
+DIRECTORY STRUCTURE:
+summaries/    - High-level Study results and winner selection
+cases/        - Per-case trial results (case/stage/trial hierarchy)
+stages/       - Per-stage aggregated metrics
+telemetry/    - Structured metrics export
+reports/      - Safety, legality, and comparison reports
+checkpoints/  - Study resumption state snapshots
+logs/         - Controller and orchestration logs
+
+README FEATURES:
+- Study name prominent at top
+- Directory structure explanation with purpose of each
+- Quick reference table for finding key files
+- Navigation tips for operators
+- File naming convention explanations
+- Examples with actual case/stage/trial names
+
+TEST COVERAGE (27 NEW TESTS):
+
+1. TestArtifactDirectoryLayout (5 tests):
+   ✓ Standard directory definitions
+   ✓ Case/stage/trial navigation helpers
+   ✓ Key file path properties
+   ✓ Structure creation
+   ✓ Idempotent creation
+
+2. TestReadmeGeneration (6 tests):
+   ✓ Study name inclusion
+   ✓ Directory structure explanations
+   ✓ Quick reference guide
+   ✓ Naming conventions
+   ✓ Navigation tips
+   ✓ File creation
+
+3. TestCompleteStudyStructure (3 tests):
+   ✓ One-call structure creation
+   ✓ Clear directory naming
+   ✓ Key files are locatable
+
+4. TestStructureValidation (3 tests):
+   ✓ Complete structure validation
+   ✓ Incomplete structure detection
+   ✓ is_well_organized helper
+
+5. TestDirectoryOrganization (3 tests):
+   ✓ Hierarchical organization
+   ✓ Parallel top-level directories
+   ✓ Consistent naming conventions
+
+6. TestSelfDocumentation (4 tests):
+   ✓ Automatic README creation
+   ✓ Comprehensive content
+   ✓ Plain text format
+   ✓ Key files summary
+
+7. TestEndToEndUsability (3 tests):
+   ✓ New operators can find results
+   ✓ Navigate to specific trials
+   ✓ Compare across stages
+
+EXAMPLE README EXCERPT:
+```
+Looking for...                      Check here:
+────────────────────────────────────────────────────────────────
+Study results                       summaries/study_summary.json
+Best case (winner)                  summaries/winner_selection.json
+ECO rankings                        summaries/eco_leaderboard.json
+```
+
+WHY THIS MATTERS:
+
+Operator Efficiency:
+- No hunting for files
+- README provides immediate orientation
+- Predictable paths enable automation
+
+Self-Documenting:
+- New team members understand structure immediately
+- README explains everything
+- No separate documentation needed
+
+Professional Quality:
+- Well-organized deliverable
+- Easy to archive and share
+- Publication-ready organization
+

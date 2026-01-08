@@ -9,6 +9,9 @@ from src.controller.failure import (
     FailureType,
 )
 
+# Note: StudyExecutor, StudyResult, and StageResult are not exported here
+# to avoid circular imports. Import them directly from src.controller.executor
+
 __all__ = [
     "FailureType",
     "FailureSeverity",

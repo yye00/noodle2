@@ -37,6 +37,11 @@ class Case:
         return str(self.identifier)
 
     @property
+    def case_name(self) -> str:
+        """Get base case name without stage/derived indices."""
+        return self.identifier.case_name
+
+    @property
     def is_base_case(self) -> bool:
         """Check if this is the base case (no parent)."""
         return self.parent_id is None

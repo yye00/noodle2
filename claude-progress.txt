@@ -2532,3 +2532,71 @@ derivation traceability.
 
 **Next Milestone:** Continue implementing remaining features to reach 25%
 completion milestone.
+
+---
+
+## Session 17 - Early Failure Classification and Deterministic ECO Ordering
+**Date:** 2026-01-08
+**Status:** 50/200 features passing (25.0%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session focused on **validating existing features** and **implementing deterministic ECO ordering**, 
+advancing Noodle 2 from 43 to 50 features passing.
+
+#### ✅ Feature Validation: Early Failure Classification (6 features)
+
+**Validated and marked as passing:**
+- Feature #36: Classify early failure: tool crash with exit code != 0
+- Feature #37: Classify early failure: missing required output files
+- Feature #38: Classify early failure: timing report parse failure
+- Feature #46: Trigger abort when all trials in stage fail
+- Feature #62: Handle visualization_unavailable early failure
+- Feature #99: Detect early failure when required tool is missing
+
+All features were already fully implemented in `src/controller/failure.py` with comprehensive 
+test coverage in `tests/test_failure_classification.py` (18 tests, all passing).
+
+#### ✅ Feature #34: Enforce Deterministic ECO Execution Ordering
+
+**Implementation:**
+- Created `tests/test_deterministic_eco_ordering.py` (11 tests, all passing)
+- Tests validate ECO list order preservation across multiple iterations
+- Tests confirm no random scheduling in ECO selection
+
+**Key Guarantees:**
+1. ECOs execute in the order they appear in the list (deterministic)
+2. Same configuration produces identical ECO order across runs
+3. ECO class type doesn't implicitly reorder ECOs
+
+### CODE QUALITY METRICS
+
+- **New Code**: test_deterministic_eco_ordering.py (268 lines)
+- **Test Count**: 441 tests total (430 existing + 11 new), all passing
+- **Test Execution Time**: ~10.5 seconds (all tests)
+- **No Regressions**: All existing 430 tests still passing
+
+### GIT HISTORY THIS SESSION
+
+```
+b007ae3 Implement deterministic ECO execution ordering - Feature #34 passing
+66c1f04 Mark early failure classification features as passing - 6 features validated
+```
+
+### SESSION SUMMARY
+
+**Major Achievement:** Advanced from 43 to 50 features passing (24.5% → 25.0%)
+
+✅ **7 Features COMPLETE**: 6 early failure classification features + deterministic ECO ordering
+
+**Test Coverage:** All 441 tests passing, zero regressions.
+
+**Next Milestone:** Implement ECO application integration so trials actually apply ECOs and 
+track effectiveness. This is the critical missing piece for end-to-end ECO workflows.
+
+**Quality Bar Met:**
+- All tests pass ✅
+- Type hints on all functions ✅
+- No regressions ✅
+- Clean, readable code ✅
+

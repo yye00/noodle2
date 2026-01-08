@@ -14,6 +14,16 @@ from typing import Any
 from .types import TrialMetrics, TimingMetrics, CongestionMetrics
 
 
+# ANSI color codes for terminal output
+class Colors:
+    """ANSI color codes for terminal formatting."""
+    GREEN = "\033[92m"  # Bright green for improvements
+    RED = "\033[91m"    # Bright red for regressions
+    YELLOW = "\033[93m" # Yellow for neutral/warnings
+    RESET = "\033[0m"   # Reset to default color
+    BOLD = "\033[1m"    # Bold text
+
+
 @dataclass
 class MetricDelta:
     """Delta between baseline and derived metrics for a single metric."""
@@ -194,8 +204,38 @@ class CaseDiffReport:
             "all_deltas": {k: v.to_dict() for k, v in self.all_deltas.items()},
         }
 
-    def to_text(self) -> str:
-        """Generate human-readable text report."""
+    def _format_delta_line(self, label: str, value: Any, improved: bool | None, use_colors: bool = True) -> str:
+        """Format a delta line with optional color coding.
+
+        Args:
+            label: Label for the line (e.g., "Delta:")
+            value: Value to display
+            improved: Whether this represents improvement (True), regression (False), or neutral (None)
+            use_colors: Whether to apply ANSI color codes
+
+        Returns:
+            Formatted line with optional color coding
+        """
+        if not use_colors or improved is None:
+            return f"      {label:10} {value}"
+
+        if improved:
+            color = Colors.GREEN
+        else:
+            color = Colors.RED
+
+        return f"      {label:10} {color}{value}{Colors.RESET}"
+
+    def to_text(self, use_colors: bool = True) -> str:
+        """Generate human-readable text report with optional color-coded deltas.
+
+        Args:
+            use_colors: If True, use ANSI color codes for improvements (green) and regressions (red).
+                       If False, generate plain text without colors (for file output).
+
+        Returns:
+            Formatted diff report string
+        """
         lines = []
         lines.append("=" * 80)
         lines.append("CASE DIFF REPORT")
@@ -211,25 +251,25 @@ class CaseDiffReport:
         if self.wns_delta:
             symbol = "✓" if self.wns_delta.improved else ("✗" if self.wns_delta.improved is False else "•")
             lines.append(f"  {symbol} WNS:")
-            lines.append(f"      Baseline: {self.wns_delta.baseline_value} ps")
-            lines.append(f"      Derived:  {self.wns_delta.derived_value} ps")
-            lines.append(f"      Delta:    {self.wns_delta.delta:+} ps")
+            lines.append(f"      Baseline:  {self.wns_delta.baseline_value} ps")
+            lines.append(f"      Derived:   {self.wns_delta.derived_value} ps")
+            lines.append(self._format_delta_line("Delta:", f"{self.wns_delta.delta:+} ps", self.wns_delta.improved, use_colors))
             if self.wns_delta.delta_percent is not None and self.wns_delta.delta_percent != float('inf'):
-                lines.append(f"      Change:   {self.wns_delta.delta_percent:+.2f}%")
+                lines.append(self._format_delta_line("Change:", f"{self.wns_delta.delta_percent:+.2f}%", self.wns_delta.improved, use_colors))
 
         if self.tns_delta:
             symbol = "✓" if self.tns_delta.improved else ("✗" if self.tns_delta.improved is False else "•")
             lines.append(f"  {symbol} TNS:")
-            lines.append(f"      Baseline: {self.tns_delta.baseline_value} ps")
-            lines.append(f"      Derived:  {self.tns_delta.derived_value} ps")
-            lines.append(f"      Delta:    {self.tns_delta.delta:+} ps")
+            lines.append(f"      Baseline:  {self.tns_delta.baseline_value} ps")
+            lines.append(f"      Derived:   {self.tns_delta.derived_value} ps")
+            lines.append(self._format_delta_line("Delta:", f"{self.tns_delta.delta:+} ps", self.tns_delta.improved, use_colors))
 
         if self.failing_endpoints_delta:
             symbol = "✓" if self.failing_endpoints_delta.improved else ("✗" if self.failing_endpoints_delta.improved is False else "•")
             lines.append(f"  {symbol} Failing Endpoints:")
-            lines.append(f"      Baseline: {self.failing_endpoints_delta.baseline_value}")
-            lines.append(f"      Derived:  {self.failing_endpoints_delta.derived_value}")
-            lines.append(f"      Delta:    {self.failing_endpoints_delta.delta:+}")
+            lines.append(f"      Baseline:  {self.failing_endpoints_delta.baseline_value}")
+            lines.append(f"      Derived:   {self.failing_endpoints_delta.derived_value}")
+            lines.append(self._format_delta_line("Delta:", f"{self.failing_endpoints_delta.delta:+}", self.failing_endpoints_delta.improved, use_colors))
 
         if self.hot_ratio_delta or self.bins_hot_delta or self.max_overflow_delta:
             lines.append("")
@@ -240,29 +280,39 @@ class CaseDiffReport:
             if self.hot_ratio_delta:
                 symbol = "✓" if self.hot_ratio_delta.improved else ("✗" if self.hot_ratio_delta.improved is False else "•")
                 lines.append(f"  {symbol} Hot Ratio:")
-                lines.append(f"      Baseline: {self.hot_ratio_delta.baseline_value:.4f}")
-                lines.append(f"      Derived:  {self.hot_ratio_delta.derived_value:.4f}")
-                lines.append(f"      Delta:    {self.hot_ratio_delta.delta:+.4f}")
+                lines.append(f"      Baseline:  {self.hot_ratio_delta.baseline_value:.4f}")
+                lines.append(f"      Derived:   {self.hot_ratio_delta.derived_value:.4f}")
+                lines.append(self._format_delta_line("Delta:", f"{self.hot_ratio_delta.delta:+.4f}", self.hot_ratio_delta.improved, use_colors))
 
             if self.bins_hot_delta:
                 symbol = "✓" if self.bins_hot_delta.improved else ("✗" if self.bins_hot_delta.improved is False else "•")
                 lines.append(f"  {symbol} Hot Bins:")
-                lines.append(f"      Baseline: {self.bins_hot_delta.baseline_value}")
-                lines.append(f"      Derived:  {self.bins_hot_delta.derived_value}")
-                lines.append(f"      Delta:    {self.bins_hot_delta.delta:+}")
+                lines.append(f"      Baseline:  {self.bins_hot_delta.baseline_value}")
+                lines.append(f"      Derived:   {self.bins_hot_delta.derived_value}")
+                lines.append(self._format_delta_line("Delta:", f"{self.bins_hot_delta.delta:+}", self.bins_hot_delta.improved, use_colors))
 
             if self.max_overflow_delta:
                 symbol = "✓" if self.max_overflow_delta.improved else ("✗" if self.max_overflow_delta.improved is False else "•")
                 lines.append(f"  {symbol} Max Overflow:")
-                lines.append(f"      Baseline: {self.max_overflow_delta.baseline_value}")
-                lines.append(f"      Derived:  {self.max_overflow_delta.derived_value}")
-                lines.append(f"      Delta:    {self.max_overflow_delta.delta:+}")
+                lines.append(f"      Baseline:  {self.max_overflow_delta.baseline_value}")
+                lines.append(f"      Derived:   {self.max_overflow_delta.derived_value}")
+                lines.append(self._format_delta_line("Delta:", f"{self.max_overflow_delta.delta:+}", self.max_overflow_delta.improved, use_colors))
 
         lines.append("")
         lines.append("-" * 80)
         lines.append("OVERALL ASSESSMENT")
         lines.append("-" * 80)
-        lines.append(f"  Overall Improvement: {'YES' if self.overall_improvement else 'NO'}")
+
+        # Color code overall assessment
+        if use_colors:
+            if self.overall_improvement:
+                assessment_text = f"{Colors.GREEN}YES{Colors.RESET}"
+            else:
+                assessment_text = f"{Colors.RED}NO{Colors.RESET}"
+        else:
+            assessment_text = 'YES' if self.overall_improvement else 'NO'
+
+        lines.append(f"  Overall Improvement: {assessment_text}")
         lines.append(f"  Summary: {self.improvement_summary}")
         lines.append("=" * 80)
 
@@ -367,6 +417,10 @@ def save_diff_report(report: CaseDiffReport, output_dir: Path) -> None:
     Args:
         report: Diff report to save
         output_dir: Directory to save reports (typically Case artifact directory)
+
+    Note:
+        Text file is saved without color codes for portability.
+        Use report.to_text(use_colors=True) for terminal display.
     """
     import json
 
@@ -378,7 +432,7 @@ def save_diff_report(report: CaseDiffReport, output_dir: Path) -> None:
     with open(json_path, "w") as f:
         json.dump(report.to_dict(), f, indent=2)
 
-    # Save text format
+    # Save text format (without colors for file portability)
     text_path = output_dir / "diff_report.txt"
     with open(text_path, "w") as f:
-        f.write(report.to_text())
+        f.write(report.to_text(use_colors=False))

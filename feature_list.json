@@ -1848,7 +1848,7 @@
       "Step 5: Verify progress is shown visually (e.g., ASCII progress bar, percentage)",
       "Step 6: Verify summary is concise and scannable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",
@@ -1874,7 +1874,7 @@
       "Step 5: Verify regressions are shown in red",
       "Step 6: Verify neutral changes are shown in default color"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",
@@ -2135,7 +2135,7 @@
       "Step 6: Identify top 3 most effective ECO classes",
       "Step 7: Identify bottom 3 least effective or harmful ECOs",
       "Step 8: Perform parameter sensitivity analysis for tunable ECOs",
-      "Step 9: Generate effectiveness heatmap (ECO type × base case)",
+      "Step 9: Generate effectiveness heatmap (ECO type \u00d7 base case)",
       "Step 10: Identify which ECOs work best for which problem types",
       "Step 11: Export ECO priors for future Study initialization",
       "Step 12: Generate ECO recommendation report for similar designs"

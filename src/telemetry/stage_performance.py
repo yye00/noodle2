@@ -178,8 +178,28 @@ class StagePerformanceSummary:
         with open(output_path, "w") as f:
             f.write(str(self))
 
+    def _generate_progress_bar(self, completed: int, total: int, width: int = 50) -> str:
+        """Generate ASCII progress bar.
+
+        Args:
+            completed: Number of completed items
+            total: Total number of items
+            width: Width of progress bar in characters (default: 50)
+
+        Returns:
+            Formatted progress bar string with percentage
+        """
+        if total == 0:
+            return "[" + " " * width + "] 0.0%"
+
+        percentage = (completed / total) * 100
+        filled = int((completed / total) * width)
+        bar = "█" * filled + "░" * (width - filled)
+
+        return f"[{bar}] {percentage:.1f}%"
+
     def __str__(self) -> str:
-        """Generate human-readable performance summary."""
+        """Generate human-readable performance summary with visual progress indicators."""
         lines = []
 
         # Header
@@ -197,12 +217,21 @@ class StagePerformanceSummary:
             lines.append(f"  Duration: {self.duration_seconds:.2f} seconds")
         lines.append("")
 
-        # Trial Counts
+        # Trial Counts with Visual Progress Bar
         lines.append("Trials:")
         lines.append(f"  Total: {self.trials_total}")
         lines.append(f"  Completed: {self.trials_completed}")
         lines.append(f"  Failed: {self.trials_failed}")
         lines.append(f"  Success Rate: {self.success_rate * 100:.1f}%")
+
+        # Add visual progress bar for trial completion
+        if self.trials_total > 0:
+            lines.append("")
+            lines.append("  Progress:")
+            progress_bar = self._generate_progress_bar(self.trials_completed, self.trials_total)
+            lines.append(f"    {progress_bar}")
+            lines.append(f"    {self.trials_completed}/{self.trials_total} trials completed")
+
         lines.append("")
 
         # Performance Metrics

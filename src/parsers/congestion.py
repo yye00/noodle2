@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from controller.types import CongestionMetrics
+from src.controller.types import CongestionMetrics
 
 
 def parse_congestion_report(report_content: str) -> CongestionMetrics:

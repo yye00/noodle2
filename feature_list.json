@@ -1117,7 +1117,7 @@
       "Step 4: Render DOT file to PNG/SVG using graphviz",
       "Step 5: Include lineage visualization in Study artifacts"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

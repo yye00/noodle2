@@ -394,3 +394,55 @@ class CaseGraph:
             case for case in self.cases.values()
             if case.case_id not in parent_ids
         ]
+
+    def export_to_dot(self) -> str:
+        """
+        Export the case lineage graph in Graphviz DOT format.
+
+        Generates a directed graph with:
+        - Nodes representing cases (with stage and ECO info)
+        - Edges representing parent-child relationships (labeled with ECO names)
+        - Visual styling based on case properties (base case highlighted)
+
+        Returns:
+            String containing DOT format graph specification
+        """
+        lines = []
+        lines.append("digraph CaseLineage {")
+        lines.append("  rankdir=TB;  // Top to bottom layout")
+        lines.append("  node [shape=box, style=rounded];")
+        lines.append("")
+
+        # Add nodes
+        for case in self.cases.values():
+            case_id = case.case_id.replace("-", "_").replace(".", "_")
+
+            # Build node label with case info
+            label_parts = [case.case_id]
+            if case.is_base_case:
+                label_parts.append("(BASE)")
+            else:
+                label_parts.append(f"Stage {case.stage_index}")
+
+            label = "\\n".join(label_parts)
+
+            # Style base case differently
+            if case.is_base_case:
+                style = 'node [shape=box, style="rounded,filled", fillcolor=lightblue];'
+                lines.append(f"  {style}")
+                lines.append(f'  {case_id} [label="{label}"];')
+            else:
+                lines.append(f'  {case_id} [label="{label}"];')
+
+        lines.append("")
+
+        # Add edges
+        for case in self.cases.values():
+            if case.parent_id is not None:
+                source_id = case.parent_id.replace("-", "_").replace(".", "_")
+                target_id = case.case_id.replace("-", "_").replace(".", "_")
+                eco_label = case.eco_applied or "unknown"
+                lines.append(f'  {source_id} -> {target_id} [label="{eco_label}"];')
+
+        lines.append("}")
+        return "\n".join(lines)

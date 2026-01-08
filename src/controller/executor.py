@@ -342,6 +342,11 @@ class StudyExecutor:
             trace_txt_path = report_dir / "safety_trace.txt"
             self.safety_trace.save_to_file(trace_txt_path)
 
+            # Export case lineage graph even when blocked
+            lineage_dot_path = report_dir / "lineage.dot"
+            lineage_dot = self.case_graph.export_to_dot()
+            lineage_dot_path.write_text(lineage_dot)
+
             # Finalize and emit study telemetry for blocked study
             study_telemetry.finalize(
                 final_survivors=[],
@@ -380,6 +385,11 @@ class StudyExecutor:
                 self.safety_trace.save_to_file(trace_path)
                 trace_txt_path = report_dir / "safety_trace.txt"
                 self.safety_trace.save_to_file(trace_txt_path)
+
+                # Export case lineage graph even when base case fails
+                lineage_dot_path = report_dir / "lineage.dot"
+                lineage_dot = self.case_graph.export_to_dot()
+                lineage_dot_path.write_text(lineage_dot)
 
                 # Finalize and emit study telemetry for blocked study
                 study_telemetry.finalize(
@@ -456,6 +466,11 @@ class StudyExecutor:
                 trace_txt_path = report_dir / "safety_trace.txt"
                 self.safety_trace.save_to_file(trace_txt_path)
 
+                # Export case lineage graph even when aborted
+                lineage_dot_path = report_dir / "lineage.dot"
+                lineage_dot = self.case_graph.export_to_dot()
+                lineage_dot_path.write_text(lineage_dot)
+
                 # Finalize and emit study telemetry for aborted study
                 study_telemetry.finalize(
                     final_survivors=[],
@@ -516,6 +531,13 @@ class StudyExecutor:
         print(f"\nSafety Trace saved to:")
         print(f"  JSON: {trace_path}")
         print(f"  TXT: {trace_txt_path}")
+
+        # Export case lineage graph in DOT format
+        lineage_dot_path = report_dir / "lineage.dot"
+        lineage_dot = self.case_graph.export_to_dot()
+        lineage_dot_path.write_text(lineage_dot)
+        print(f"\nCase Lineage Graph saved to:")
+        print(f"  DOT: {lineage_dot_path}")
 
         # Generate human-readable summary report
         summary_generator = SummaryReportGenerator()

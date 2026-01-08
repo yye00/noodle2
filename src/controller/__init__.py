@@ -80,6 +80,13 @@ from src.controller.graceful_shutdown import (
     ShutdownRequest,
     create_shutdown_handler,
 )
+from src.controller.ci_runner import (
+    CIConfig,
+    CIResult,
+    CIRunner,
+    RegressionBaseline,
+    create_ci_config,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -139,4 +146,9 @@ __all__ = [
     "GracefulShutdownHandler",
     "ShutdownRequest",
     "create_shutdown_handler",
+    "CIConfig",
+    "CIResult",
+    "CIRunner",
+    "RegressionBaseline",
+    "create_ci_config",
 ]

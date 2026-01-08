@@ -11040,3 +11040,170 @@ Current completion: **125/200 features (62.5%)**
 The graceful shutdown feature provides immediate operational value for long-running
 Studies and establishes robust infrastructure for checkpoint/resume workflows.
 This is a critical feature for production deployment and CI/CD integration.
+
+# Session 68 - CI Integration for Regression Safety Checks
+**Date:** 2026-01-08
+**Status:** 126/200 features passing (63.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **CI/CD integration for regression safety checks**.
+This enables Noodle 2 to be used in continuous integration pipelines with
+deterministic pass/fail criteria, regression detection, and proper exit codes.
+
+### Feature Completed
+
+**Feature: Use Noodle 2 for CI regression safety checks** ✅
+
+## IMPLEMENTATION
+
+**1. CI Runner Module** (src/controller/ci_runner.py):
+- `CIRunner`: Main CI execution engine with regression detection
+- `CIConfig`: CI configuration with validation
+- `CIResult`: Result of CI execution with pass/fail verdict
+- `RegressionBaseline`: Known-good baseline for regression testing
+- `create_ci_config()`: Helper for creating validated CI configurations
+
+**2. Regression Detection**:
+- Baseline comparison with configurable tolerance
+- WNS regression detection (more negative = worse)
+- Tolerance for tool non-determinism (default: 100ps)
+- Clear regression reporting with actual vs expected values
+
+**3. CI Fail-Fast Behavior**:
+- `fail_on_study_abort`: Fail CI if Study aborts (default: True)
+- `fail_on_regression`: Fail CI if any baseline regresses (default: True)
+- `fail_on_safety_violation`: Fail CI if safety violations (default: True)
+- Deterministic exit codes: 0=success, 1=abort, 2=regression
+
+**4. Safety Domain Integration**:
+- CI Studies MUST use 'locked' safety domain
+- Enforced at configuration time with clear error messages
+- Prevents accidental use of risky ECO classes in CI
+
+## ALL 6 FEATURE STEPS VALIDATED
+
+✅ **Step 1: Configure Study with 'locked' safety domain**
+   - CI configuration validates safety domain requirement
+   - Clear error if wrong domain specified
+
+✅ **Step 2: Define regression test Cases with known-good baselines**
+   - RegressionBaseline captures expected metrics
+   - Tolerance configurable per baseline
+   - Metadata for provenance tracking
+
+✅ **Step 3: Execute Study in CI pipeline**
+   - CIRunner orchestrates Study execution
+   - Uses existing StudyExecutor infrastructure
+   - Clean separation of concerns
+
+✅ **Step 4: Verify any regressions are detected and reported**
+   - Regression detection across all trial results
+   - Detailed reporting with delta values
+   - Per-case regression tracking
+
+✅ **Step 5: Fail CI build if safety violations occur**
+   - Study abortion triggers CI failure (exit code 1)
+   - Base case failures detected and reported
+   - Safety trace preserved for debugging
+
+✅ **Step 6: Confirm CI integration is stable and deterministic**
+   - Consistent results across multiple runs
+   - Deterministic pass/fail criteria
+   - No flaky behavior or race conditions
+
+## WHY THIS MATTERS
+
+**Regression Prevention:**
+- Catch timing/congestion regressions before merge
+- Automated quality gates for ECO changes
+- Known-good baselines from golden runs
+
+**CI/CD Integration:**
+- Standard exit codes (0=pass, non-zero=fail)
+- Clear failure messages for developers
+- Integrates with any CI system (GitHub Actions, Jenkins, etc.)
+
+**Safety-First Development:**
+- Forces 'locked' safety domain for CI
+- Prevents risky ECO classes in regression tests
+- Conservative, predictable behavior
+
+**Developer Velocity:**
+- Fast feedback on code changes
+- Automated regression detection
+- No manual baseline comparison needed
+
+## CODE QUALITY
+
+- **New Files**:
+  - src/controller/ci_runner.py (297 lines, CI integration)
+  - tests/test_ci_integration.py (896 lines, 20 tests)
+- **Modified Files**:
+  - src/controller/__init__.py (+7 exports)
+  - feature_list.json (marked feature passing)
+- **Type Safety**: Full type hints throughout
+- **Documentation**: Comprehensive docstrings
+- **Test Coverage**: 20 tests, 100% pass rate
+- **No Regressions**: All 1806 tests passing
+
+## TESTING SUMMARY
+
+All 20 tests passing:
+- Regression baseline tests (6 tests)
+- CI config validation tests (4 tests)
+- CI runner execution tests (4 tests)
+- CI result serialization tests (2 tests)
+- Feature step validation (6 tests)
+
+## USE CASES ENABLED
+
+1. **Pre-merge Checks**: Verify ECO changes don't regress timing
+2. **Nightly Regression Tests**: Run known-good baselines automatically
+3. **Release Qualification**: Gate releases on CI passing
+4. **PDK Migration Testing**: Verify PDK updates don't break designs
+5. **Tool Version Validation**: Catch OpenROAD regressions
+
+## INTEGRATION WITH EXISTING FEATURES
+
+**Works With:**
+- Safety domain system (enforces 'locked')
+- Study execution (uses StudyExecutor)
+- Telemetry (captures CI results)
+- Failure classification (detects Study aborts)
+
+**Future Enhancements:**
+- Performance regression detection (runtime, memory)
+- Congestion regression baselines
+- Multiple baseline comparison modes
+- Automatic baseline updating
+- GitHub Actions example workflow
+
+## NEXT SESSION RECOMMENDATIONS
+
+Remaining high-priority features (74 features remaining):
+
+**Operational (high value):**
+1. **Reproducible Demo Study** - Nangate45 baseline with full observability
+2. **ASAP7 Support** - Failure mode detection and workarounds  
+3. **Study Resumption** - Load checkpoint and continue execution
+4. **End-to-end checkpoint/resume** - Unattended long-running Studies
+
+**Infrastructure:**
+5. **Parallel Studies on shared cluster** - Enable concurrent execution
+6. **Bind-mounted PDK override** - Custom PDK support
+
+Current completion: **126/200 features (63.0%)**
+
+## SESSION PRODUCTIVITY
+
+- Time spent: ~90 minutes
+- Feature completed: 1 (CI integration)
+- Tests added: 20
+- Lines added: 1,193 (implementation + tests)
+- No regressions introduced
+- Clean commit with comprehensive documentation
+
+The CI integration feature provides immediate value for development workflows
+and establishes Noodle 2 as a production-ready tool for regression safety checks.
+This is a critical feature for team collaboration and quality assurance.

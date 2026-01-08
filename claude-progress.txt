@@ -11397,3 +11397,121 @@ Current completion: **128/200 features (64.0%)**
 
 ---
 
+
+================================================================================
+SESSION 71 - 2026-01-08
+================================================================================
+
+## OBJECTIVE
+Implement ASAP7-specific failure mode detection and classification.
+
+## STARTING STATUS
+- 128/200 features passing (64.0%)
+- All core tests passing
+- ASAP7 support already implemented (workarounds for routing, site, pin constraints)
+- Need to add intelligent failure detection when workarounds are missing
+
+## WORK COMPLETED
+
+### ✅ Feature Implemented: ASAP7-Specific Failure Mode Detection
+
+**What it does:**
+Detects and classifies ASAP7-specific failures when required workarounds are missing,
+providing clear actionable diagnostics instead of generic error messages.
+
+**Implementation Details:**
+
+1. **Routing Track Inference Failure Detection**
+   - Detects patterns: "routing track", "routing layer", "infer routing"
+   - Combined with: "infer", "inference", "cannot determine", "missing"
+   - Classified as CONFIGURATION_ERROR (not generic ROUTING_FAILED)
+   - Diagnostic: Explains need for set_routing_layers with metal2-metal9
+
+2. **Site Specification Failure Detection**
+   - Detects patterns: "floorplan site", "site specification", "site dimensions"
+   - Combined with: "cannot", "missing", "not specified", "unable to infer"
+   - Classified as CONFIGURATION_ERROR
+   - Diagnostic: Explains need for asap7sc7p5t_28_R_24_NP_162NW_34O site
+
+3. **Pin Placement/Access Failure Detection**
+   - Detects patterns: "cannot access pins", "pin access failed", "pin placement failed"
+   - Must also mention "asap7" in output
+   - Classified as CONFIGURATION_ERROR
+   - Diagnostic: Explains need for metal4/metal5 pin layer constraints
+
+4. **Order of Detection Matters**
+   - ASAP7-specific checks run BEFORE generic placement/routing failures
+   - Prevents misclassification as TOOL_CRASH or generic ROUTING_FAILED
+   - Ensures specific, actionable diagnostics are provided
+
+**Why This Matters:**
+
+1. **Actionable Diagnostics**: Users get specific fix instructions instead of generic errors
+2. **Correct Classification**: Configuration errors distinguished from tool crashes
+3. **Deterministic**: Same failure always produces same classification
+4. **Non-recoverable**: Requires manual intervention (adding workarounds)
+5. **HIGH Severity**: Requires attention but not catastrophic like OOM/segfault
+
+**Testing:**
+- 22 new tests, all passing
+- Test routing track inference failure detection
+- Test site specification failure detection
+- Test pin access failure detection
+- Test correct classification as CONFIGURATION_ERROR
+- Test actionable diagnostic messages
+- Test deterministic behavior
+- Test pattern matching for various error formats
+- Test precedence over generic failures
+- No regressions in 18 existing failure classification tests
+- No regressions in 26 existing ASAP7 support tests
+- No regressions in 12 existing ECO failure containment tests
+
+**Code Quality:**
+- Type hints on all functions
+- Clear comments explaining detection logic
+- Integration with existing FailureClassifier
+- Maintains backward compatibility
+- No breaking changes
+
+## CURRENT STATUS
+- **129/200 features passing (64.5%)**
+- 71 features remaining
+- All tests passing (1,887 total)
+- No regressions detected
+
+## NEXT SESSION RECOMMENDATIONS
+
+Remaining high-priority features (top 5):
+
+1. **Use lower utilization for ASAP7 to prevent routing explosion** (#80)
+   - Configure ASAP7 floorplan with utilization 0.50-0.55
+   - Prevent routing congestion explosion
+   - Validate routing convergence
+
+2. **Prefer STA-first staging for ASAP7 studies** (#81)
+   - Configure ASAP7 Study with Stage 1 = STA-only
+   - More stable than congestion-first approach
+   - Document best practices
+
+3. **Enable parallel execution of independent Studies on shared cluster** (#82)
+   - Run multiple Studies concurrently on Ray cluster
+   - Resource isolation and allocation
+   - Study-level parallelism (not just trial-level)
+
+4. **Comprehensive end-to-end test: Execute Nangate45 3-stage Study** (#88)
+   - Full integration test with 20 trials per stage
+   - Multi-stage execution with case lineage
+   - ECO application and survivor selection
+   - Complete artifact validation
+
+5. **Ray Dashboard displays cluster status with clear node health indicators** (#89)
+   - Style validation for dashboard views
+   - Node health visualization
+   - Resource utilization display
+
+**Progress Milestone:**
+- Crossed 64% completion threshold
+- ASAP7 failure detection infrastructure complete
+- Next: ASAP7 configuration best practices and parallel execution
+
+---

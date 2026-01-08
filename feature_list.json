@@ -150,7 +150,7 @@
       "Step 5: Verify exactly top 3 survivors are selected",
       "Step 6: Confirm non-survivors are excluded from next stage"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -224,7 +224,7 @@
       "Step 4: Confirm history is accessible for policy decisions",
       "Step 5: Verify history does not leak across Studies"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -237,7 +237,7 @@
       "Step 5: Update ECO prior to 'suspicious'",
       "Step 6: Verify priors influence future ECO selection"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -512,7 +512,7 @@
       "Step 4: Confirm ECO classification determines safety constraints",
       "Step 5: Verify ECO is comparable across cases and studies"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -524,7 +524,7 @@
       "Step 4: Confirm OpenROAD source code is not modified",
       "Step 5: Verify ECO execution is auditable and traceable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -537,7 +537,7 @@
       "Step 5: Emit all ECO data to trial artifacts",
       "Step 6: Verify ECO telemetry is accessible for analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

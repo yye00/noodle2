@@ -2,6 +2,17 @@
 Controller module - Study orchestration and stage progression logic.
 """
 
+from src.controller.eco import (
+    BufferInsertionECO,
+    ECO,
+    ECOEffectiveness,
+    ECOMetadata,
+    ECOPrior,
+    ECOResult,
+    NoOpECO,
+    PlacementDensityECO,
+    create_eco,
+)
 from src.controller.failure import (
     FailureClassification,
     FailureClassifier,
@@ -27,4 +38,13 @@ __all__ = [
     "StageTelemetry",
     "StudyTelemetry",
     "TelemetryEmitter",
+    "ECO",
+    "ECOMetadata",
+    "ECOResult",
+    "ECOEffectiveness",
+    "ECOPrior",
+    "NoOpECO",
+    "BufferInsertionECO",
+    "PlacementDensityECO",
+    "create_eco",
 ]

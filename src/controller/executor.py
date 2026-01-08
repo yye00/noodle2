@@ -82,6 +82,7 @@ class StudyExecutor:
         artifacts_root: str | Path = "artifacts",
         telemetry_root: str | Path = "telemetry",
         survivor_selector: Callable[[list[TrialResult], int], list[str]] | None = None,
+        skip_base_case_verification: bool = False,
     ) -> None:
         """
         Initialize Study executor.
@@ -92,11 +93,13 @@ class StudyExecutor:
             telemetry_root: Root directory for telemetry
             survivor_selector: Custom survivor selection function (optional)
                              Takes (trial_results, survivor_count) -> list of case_ids
+            skip_base_case_verification: Skip base case verification (for testing only)
         """
         self.config = config
         self.artifacts_root = Path(artifacts_root)
         self.case_graph = CaseGraph()
         self.survivor_selector = survivor_selector or self._default_survivor_selector
+        self.skip_base_case_verification = skip_base_case_verification
 
         # Initialize telemetry emitter
         self.telemetry_emitter = TelemetryEmitter(
@@ -112,9 +115,107 @@ class StudyExecutor:
         )
         self.case_graph.add_case(self.base_case)
 
+    def verify_base_case(self) -> tuple[bool, str]:
+        """
+        Verify base case structural runnability before ECO experimentation.
+
+        Executes the base case with no-op ECO to ensure:
+        - Tool return code rc == 0
+        - Required reports are produced
+        - Parseable metrics can be extracted
+
+        Returns:
+            Tuple of (is_valid, failure_message)
+            - is_valid: True if base case is structurally runnable
+            - failure_message: Empty if valid, error description if invalid
+        """
+        print("\n=== Verifying Base Case Structural Runnability ===")
+        print(f"Base case: {self.base_case.case_name}")
+        print(f"Snapshot: {self.base_case.snapshot_path}")
+
+        # For base case verification, we need to use the STA script from the snapshot
+        # Assume run_sta.tcl exists in the snapshot directory
+        script_path = Path(self.base_case.snapshot_path) / "run_sta.tcl"
+
+        # Create a trial for base case verification
+        trial_config = TrialConfig(
+            study_name=self.config.name,
+            case_name=self.base_case.case_name,
+            stage_index=0,
+            trial_index=0,
+            script_path=str(script_path),
+            snapshot_dir=str(self.base_case.snapshot_path),
+            metadata={"verification": True, "pdk": self.config.pdk},
+        )
+
+        # Execute verification trial
+        trial = Trial(trial_config, artifacts_root=str(self.artifacts_root))
+
+        try:
+            result = trial.execute()
+        except Exception as e:
+            # Any exception during base case execution is a structural failure
+            failure_msg = (
+                f"Base case failed structural runnability check:\n"
+                f"  Exception: {type(e).__name__}\n"
+                f"  Message: {str(e)}"
+            )
+            print(f"\nBASE CASE FAILURE:\n{failure_msg}")
+            return False, failure_msg
+
+        # Check for structural failures
+        if not result.success:
+            failure_msg = (
+                f"Base case failed structural runnability check:\n"
+                f"  Return code: {result.return_code}\n"
+                f"  Failure type: {result.failure_type}\n"
+                f"  Reason: {result.failure_reason}\n"
+                f"  Log excerpt:\n{result.log_excerpt}"
+            )
+            print(f"\nBASE CASE FAILURE:\n{failure_msg}")
+            return False, failure_msg
+
+        # Check that required reports were produced
+        if result.metrics is None:
+            failure_msg = (
+                f"Base case did not produce required metrics.\n"
+                f"  Return code: {result.return_code}\n"
+                f"  Artifact path: {result.artifact_path}"
+            )
+            print(f"\nBASE CASE FAILURE:\n{failure_msg}")
+            return False, failure_msg
+
+        # Base case is valid
+        print(f"✓ Base case verification PASSED")
+        if result.metrics:
+            # Metrics could be a dict or an object
+            if isinstance(result.metrics, dict):
+                if "timing" in result.metrics:
+                    timing = result.metrics["timing"]
+                    if isinstance(timing, dict):
+                        wns = timing.get("wns_ps")
+                        tns = timing.get("tns_ps")
+                    else:
+                        wns = timing.wns_ps
+                        tns = timing.tns_ps if hasattr(timing, "tns_ps") else None
+                    if wns is not None:
+                        print(f"  WNS: {wns} ps")
+                    if tns is not None:
+                        print(f"  TNS: {tns} ps")
+            else:
+                # Object with attributes
+                print(f"  WNS: {result.metrics.timing.wns_ps} ps")
+                if result.metrics.timing.tns_ps is not None:
+                    print(f"  TNS: {result.metrics.timing.tns_ps} ps")
+        print(f"  Return code: {result.return_code}")
+
+        return True, ""
+
     def execute(self) -> StudyResult:
         """
         Execute the entire Study with all stages sequentially.
+
+        SAFETY GATE: Verifies base case before any ECO experimentation.
 
         Returns:
             StudyResult containing complete execution results
@@ -128,6 +229,32 @@ class StudyExecutor:
             safety_domain=self.config.safety_domain.value,
             total_stages=len(self.config.stages),
         )
+
+        # CRITICAL SAFETY CHECK: Verify base case before ECO experimentation
+        if not self.skip_base_case_verification:
+            is_valid, failure_message = self.verify_base_case()
+            if not is_valid:
+                print("\n🚫 STUDY BLOCKED: Base case failed structural runnability")
+                print("No ECO experimentation will be allowed.")
+
+                # Finalize and emit study telemetry for blocked study
+                study_telemetry.finalize(
+                    final_survivors=[],
+                    aborted=True,
+                    abort_reason=f"Base case failed structural runnability: {failure_message}",
+                )
+                self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+
+                return StudyResult(
+                    study_name=self.config.name,
+                    total_stages=len(self.config.stages),
+                    stages_completed=0,
+                    total_runtime_seconds=time.time() - study_start,
+                    stage_results=[],
+                    final_survivors=[],
+                    aborted=True,
+                    abort_reason=f"Base case failed structural runnability: {failure_message}",
+                )
 
         # Start with base case for stage 0
         current_cases = [self.base_case]

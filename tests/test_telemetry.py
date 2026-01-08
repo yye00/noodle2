@@ -576,7 +576,7 @@ class TestTelemetryIntegration:
             config.snapshot_path.mkdir(parents=True, exist_ok=True)
 
             telemetry_root = Path(tmpdir) / "telemetry"
-            executor = StudyExecutor(
+            executor = StudyExecutor(skip_base_case_verification=True, 
                 config=config,
                 artifacts_root=tmpdir,
                 telemetry_root=telemetry_root,
@@ -640,7 +640,7 @@ class TestTelemetryIntegration:
             config.snapshot_path.mkdir(parents=True, exist_ok=True)
 
             telemetry_root = Path(tmpdir) / "telemetry"
-            executor = StudyExecutor(
+            executor = StudyExecutor(skip_base_case_verification=True, 
                 config=config,
                 artifacts_root=tmpdir,
                 telemetry_root=telemetry_root,

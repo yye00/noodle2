@@ -25,7 +25,7 @@ class TestStudyExecutor:
             safety_domain=SafetyDomain.SANDBOX,
         )
 
-        executor = StudyExecutor(config=config)
+        executor = StudyExecutor(config=config, skip_base_case_verification=True)
 
         assert executor.config.name == "test_study"
         assert executor.base_case.case_name == "nangate45_base"
@@ -51,7 +51,7 @@ class TestStudyExecutor:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             assert result.study_name == "single_stage_study"
@@ -97,7 +97,7 @@ class TestStudyExecutor:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             # Verify all three stages executed
@@ -134,7 +134,7 @@ class TestStudyExecutor:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             # Verify exactly trial_budget trials were executed
@@ -161,7 +161,7 @@ class TestStudyExecutor:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             # Verify exactly survivor_count survivors selected
@@ -197,7 +197,7 @@ class TestStudyExecutor:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             # Stage 0 should have 5 survivors
@@ -237,7 +237,7 @@ class TestStudyExecutor:
             stages=stages,
         )
 
-        executor = StudyExecutor(config=config)
+        executor = StudyExecutor(config=config, skip_base_case_verification=True)
 
         # Verify stage configurations
         assert len(executor.config.stages[0].allowed_eco_classes) == 2
@@ -367,7 +367,7 @@ class TestSurvivorSelection:
             snapshot_path="studies/nangate45_base",
         )
 
-        executor = StudyExecutor(config=config)
+        executor = StudyExecutor(config=config, skip_base_case_verification=True)
 
         # Create mock trial results
         trial_results = [
@@ -430,7 +430,7 @@ class TestSurvivorSelection:
             snapshot_path="studies/nangate45_base",
         )
 
-        executor = StudyExecutor(config=config)
+        executor = StudyExecutor(config=config, skip_base_case_verification=True)
 
         # All trials failed
         trial_results = [
@@ -470,7 +470,7 @@ class TestSurvivorSelection:
             snapshot_path="studies/nangate45_base",
         )
 
-        executor = StudyExecutor(config=config, survivor_selector=custom_selector)
+        executor = StudyExecutor(config=config, survivor_selector=custom_selector, skip_base_case_verification=True)
 
         assert executor.survivor_selector == custom_selector
 
@@ -600,7 +600,7 @@ class TestCaseGraphProgression:
         )
 
         with tempfile.TemporaryDirectory() as tmpdir:
-            executor = StudyExecutor(config=config, artifacts_root=tmpdir)
+            executor = StudyExecutor(config=config, artifacts_root=tmpdir, skip_base_case_verification=True)
             result = executor.execute()
 
             # Verify case graph structure

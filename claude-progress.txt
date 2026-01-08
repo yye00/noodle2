@@ -1,5 +1,210 @@
 # Noodle 2 - Progress Tracker
 
+## Session 25 - Stdout/Stderr Capture Verification
+**Date:** 2026-01-08
+**Status:** 61/200 features passing (30.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session verified and documented the existing stdout/stderr capture functionality with comprehensive test coverage. The implementation was already complete from previous sessions but lacked explicit verification tests to mark the feature as passing.
+
+#### ✅ Feature Verified: Capture stdout and stderr from OpenROAD tool invocations (Feature #82)
+
+**Existing Implementation Verified:**
+
+The stdout/stderr capture functionality was already implemented in previous sessions:
+
+**1. Docker-Level Capture** (docker_runner.py):
+- `DockerTrialRunner.execute_trial()` captures stdout/stderr from container execution
+- Uses `container.logs(stdout=True, stderr=False)` and `container.logs(stdout=False, stderr=True)`
+- Handles UTF-8 decoding with error replacement: `decode("utf-8", errors="replace")`
+- Returns separate stdout and stderr strings in `TrialExecutionResult`
+
+**2. Trial-Level Persistence** (trial.py):
+- `Trial.execute()` saves logs to `trial_dir/logs/stdout.txt` and `stderr.txt`
+- Logs written immediately after Docker execution completes (lines 256-260)
+- Logs directory created automatically: `logs_dir.mkdir(exist_ok=True)`
+- Both files always created (empty files if no output)
+
+**3. TrialResult Integration**:
+- `TrialResult` includes `stdout: str` and `stderr: str` fields
+- Fields populated from `TrialExecutionResult` after execution
+- Available for failure classification and debugging
+- Not serialized to telemetry (kept in files to avoid bloating JSON)
+
+**4. Failure Classification Integration**:
+- `FailureClassifier.classify_trial_failure()` receives stdout and stderr as parameters
+- Extracts log excerpts for failure reason and details
+- Searches both streams for error patterns
+- Provides context for debugging failed trials
+
+**5. Artifact Discovery**:
+- `Trial._discover_artifacts()` finds logs directory
+- Logs included in `TrialArtifacts.logs` field
+- Referenced in artifact index for Ray Dashboard navigation
+- Persisted alongside other trial artifacts
+
+**NEW TEST COVERAGE:**
+
+Created `test_stdout_stderr_capture.py` with **24 comprehensive tests**:
+
+**TestStdoutStderrCapture** (3 tests):
+- TrialResult has stdout field
+- TrialResult has stderr field
+- stdout and stderr are separate fields (not mixed)
+
+**TestStdoutStderrFileRedirection** (3 tests):
+- stdout redirected to stdout.txt in logs directory
+- stderr redirected to stderr.txt in logs directory
+- stdout and stderr written to separate files
+
+**TestLogsPreservationInArtifacts** (3 tests):
+- Logs preserved in trial artifacts directory
+- Logs directory follows trial artifact structure
+- Logs accessible from TrialResult artifacts
+
+**TestLogExcerptExtraction** (5 tests):
+- Failure classifier uses stdout for error detection
+- Failure classifier uses stderr for error detection
+- Failure classifier extracts relevant log excerpts
+- Log excerpts limited to reasonable length (not full 10k lines)
+- Both stdout and stderr used for classification
+
+**TestStdoutStderrIntegration** (3 tests):
+- DockerTrialRunner captures stdout/stderr in execution result
+- Trial result serialization (stdout/stderr kept in files)
+- Artifact index references log files
+
+**TestLogFileFormatAndEncoding** (4 tests):
+- stdout saved as UTF-8 text file
+- stderr saved as UTF-8 text file
+- Empty stdout creates empty file (not omitted)
+- Empty stderr creates empty file (not omitted)
+
+**TestLogFileNaming** (3 tests):
+- stdout filename is always "stdout.txt"
+- stderr filename is always "stderr.txt"
+- Log filenames consistent across different trials
+
+**ALL 5 FEATURE STEPS VALIDATED:**
+
+✅ **Step 1: Execute OpenROAD command in trial**
+   - Verified via DockerTrialRunner.execute_trial() tests
+   - Container execution captures stdout/stderr
+
+✅ **Step 2: Redirect stdout to trial log file**
+   - Verified stdout written to `trial_dir/logs/stdout.txt`
+   - File created automatically by Trial.execute()
+
+✅ **Step 3: Redirect stderr to separate error log file**
+   - Verified stderr written to `trial_dir/logs/stderr.txt`
+   - Separate file from stdout (not mixed)
+
+✅ **Step 4: Preserve both logs in trial artifacts**
+   - Verified logs directory included in TrialArtifacts
+   - Logs accessible from artifact discovery
+   - Referenced in artifact index
+
+✅ **Step 5: Extract log excerpts for failure classification**
+   - Verified FailureClassifier uses stdout/stderr
+   - Log excerpts extracted for error detection
+   - Both streams searched for error patterns
+
+**WHY THIS MATTERS:**
+
+**Debugging and Root Cause Analysis:**
+- Full stdout/stderr available for every trial
+- Easy to diagnose why a trial failed
+- Log excerpts surfaced in failure classifications
+- Historical logs preserved for later investigation
+
+**Failure Classification:**
+- Error patterns detected from stdout/stderr
+- Log excerpts provide context for failures
+- Both streams considered (not just return code)
+- Enables deterministic failure typing
+
+**Auditability:**
+- Complete execution logs preserved
+- UTF-8 encoding handles special characters
+- Empty files created even if no output (explicit vs implicit)
+- Consistent naming across all trials
+
+**Observability:**
+- Logs accessible via artifact index
+- Can be linked from Ray Dashboard
+- Standard file format (plain text)
+- Easy to grep/search across trials
+
+**CODE QUALITY:**
+
+- **New Tests**: test_stdout_stderr_capture.py (586 lines, 24 tests)
+- **Test Count**: 633 tests total (609 existing + 24 new), all passing
+- **Test Execution Time**: ~10.7 seconds (all tests)
+- **Type Safety**: Tests verify str types for stdout/stderr
+- **No Regressions**: All existing 609 tests still passing
+- **Zero Implementation Changes**: Feature was already complete
+
+**FILES MODIFIED THIS SESSION:**
+
+**Created:**
+- tests/test_stdout_stderr_capture.py (586 lines, 24 tests)
+
+**Modified:**
+- feature_list.json (1 feature marked passing: #82)
+
+**GIT HISTORY:**
+
+```
+930e581 Verify and document stdout/stderr capture functionality - Feature passing
+```
+
+**SESSION SUMMARY:**
+
+✅ **1 Feature VERIFIED AND MARKED PASSING**: Stdout/stderr capture from OpenROAD
+
+**Methodology:** This session demonstrates the value of comprehensive test coverage for existing features. The stdout/stderr capture was already implemented correctly in previous sessions (Session 24 and earlier), but lacked explicit verification tests. By writing 24 focused tests, we:
+1. Validated all 5 feature steps work as specified
+2. Documented the expected behavior for future maintainers
+3. Ensured no regressions can occur without detection
+4. Provided confidence to mark the feature as passing
+
+**Testing:** All 633 tests passing (609 existing + 24 new), zero regressions.
+
+**Completion Progress:** 61/200 features passing (30.5% complete)
+
+**NEXT PRIORITIES:**
+
+With stdout/stderr capture verified, the next high-priority features are:
+
+1. **PDK Path Validation** (Medium Priority)
+   - Validate PDK paths are resolved inside container (not host)
+   - Prevent implicit PDK replacement without explicit declaration
+   - Test custom container with modified PDK
+   - Features #54-#56 in feature_list.json
+
+2. **Stage-Level Performance Summaries** (Medium Priority)
+   - Aggregate trial timestamps across entire stage
+   - Compute min/max/avg/total stage duration
+   - Identify performance bottlenecks
+   - Enable stage-level resource planning
+
+3. **Unattended Study Execution** (High Priority)
+   - Execute long-running Study without human intervention
+   - Support Study metadata (author, creation date, description)
+   - Generate per-stage performance summaries
+   - Feature #67 in feature_list.json
+
+4. **ECO Application Integration** (High Priority)
+   - Integrate ECO.generate_tcl() with Trial.execute()
+   - Apply ECOs during trial execution (prepend to script)
+   - Track which ECOs were applied in each trial
+   - Generate ECO effectiveness leaderboard
+
+---
+
+# Noodle 2 - Progress Tracker
+
 ## Session 24 - Trial Execution Improvements (Timestamps + Timeout)
 **Date:** 2026-01-08
 **Status:** 60/200 features passing (30.0%)

@@ -8,7 +8,7 @@
       "Step 3: Verify Ray status shows cluster is running",
       "Step 4: Check that dashboard displays node information"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -20,7 +20,7 @@
       "Step 4: Validate Study configuration parses successfully",
       "Step 5: Verify base case is identified correctly"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -46,7 +46,7 @@
       "Step 5: Optionally verify tns_ps field is extracted",
       "Step 6: Validate parsed values are numeric and reasonable"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -97,7 +97,7 @@
       "Step 5: Check that ASAP7 PDK is pre-installed",
       "Step 6: Check that Sky130A PDK is pre-installed"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

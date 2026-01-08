@@ -1547,7 +1547,7 @@
       "Step 5: Verify metal layers match expected naming (metal2-metal9)",
       "Step 6: Fail fast with configuration error if identifiers mismatch"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

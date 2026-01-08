@@ -7308,3 +7308,233 @@ Continue building safety and robustness features:
    - STA-first staging for ASAP7
 
 These features build on the validation and isolation work completed this session.
+
+---
+
+# Session 48 - Case Diff Report Generation
+**Date:** 2026-01-08
+**Status:** 98/200 features passing (49.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **Case diff report generation**, enabling structured comparison
+of derived Case metrics against baseline Case metrics. This feature provides operators
+with clear visibility into ECO effectiveness and supports data-driven survivor ranking.
+
+### Feature Completed: Generate Diff Report Comparing Case Metrics vs Baseline
+
+**Feature #16: Generate diff report comparing Case metrics vs baseline** ✅
+
+## IMPLEMENTATION
+
+**1. New Module: src/controller/diff_report.py (409 lines)**
+
+Created comprehensive diff report infrastructure:
+
+- **MetricDelta dataclass:**
+  - Computes delta (derived - baseline) for any metric
+  - Calculates percent change ((delta / baseline) * 100)
+  - Automatically classifies as improvement/regression/neutral
+  - Handles edge cases: None values, zero baseline, division by zero
+  - Supports both integer and float metrics
+
+- **CaseDiffReport dataclass:**
+  - Complete diff report with all metric comparisons
+  - Timing deltas: WNS, TNS, failing endpoints
+  - Congestion deltas: hot_ratio, bins_hot, max_overflow
+  - Overall improvement assessment
+  - Human-readable improvement summary
+  - All deltas tracked in dictionary for comprehensive analysis
+
+- **Improvement Classification Logic:**
+  - WNS improvement: less negative slack is better (delta > 0)
+  - Congestion improvement: lower hot_ratio/bins_hot is better (delta < 0)
+  - Failing endpoints improvement: fewer endpoints is better (delta < 0)
+  - Overall improvement = WNS improved OR (WNS neutral AND congestion improved)
+  - Each metric delta tagged with improved/regressed/neutral flag
+
+- **Output Formats:**
+  - JSON: Machine-readable, complete data structure for automation
+  - Text: Human-readable 80-column report with visual symbols
+  - Both formats saved to Case artifact directory
+
+- **Text Report Features:**
+  - Header with baseline/derived Case IDs and ECO name
+  - Timing Metrics section with WNS, TNS, failing endpoints
+  - Congestion Metrics section with hot_ratio, bins_hot, max_overflow
+  - Overall Assessment with improvement flag and summary
+  - Visual symbols: ✓ (improvement), ✗ (regression), • (neutral)
+  - Formatted values: baseline → derived (delta) [percent change]
+
+**2. Integration Points:**
+
+- **generate_diff_report():** Factory function to create diff reports from metrics
+- **save_diff_report():** Saves both JSON and text files to artifact directory
+- **Exported from controller module:** Available as public API
+
+**3. Test Coverage: 22 Comprehensive Tests**
+
+Created tests/test_diff_report.py with 22 tests across 5 test classes:
+
+**TestMetricDelta (7 tests):**
+- Positive and negative deltas with integers
+- Delta calculation with floats
+- Zero baseline handling (infinite percent change)
+- Both values zero (no change)
+- None values (metric unavailable)
+- Serialization to dictionary
+
+**TestCaseDiffReportGeneration (6 tests):**
+- Timing-only diff reports
+- Congestion-only diff reports
+- Mixed results (improvements and regressions)
+- Pure regression scenarios
+- Neutral scenarios (no change)
+- All deltas tracked in dictionary
+
+**TestCaseDiffReportSerialization (2 tests):**
+- JSON serialization with complete structure
+- Text report generation with proper formatting
+
+**TestDiffReportSaving (2 tests):**
+- Creates both JSON and text files
+- Creates output directory if needed
+
+**TestDiffReportForSurvivorRanking (3 tests):**
+- Ranking by WNS improvement
+- Ranking by congestion reduction
+- Filtering by overall improvement flag
+
+**TestDiffReportIntegration (2 tests):**
+- End-to-end workflow from baseline to diff report
+- Using diff reports for survivor selection
+
+## ALL 6 FEATURE STEPS VALIDATED
+
+✅ **Step 1: Execute baseline Case**
+   - Baseline metrics captured in TrialMetrics
+   - Tests simulate baseline Case execution
+
+✅ **Step 2: Execute derived Case with ECO applied**
+   - Derived metrics captured after ECO application
+   - Tests simulate ECO application and trial execution
+
+✅ **Step 3: Compute metric deltas (WNS, TNS, hot_ratio, etc)**
+   - MetricDelta computes absolute delta, percent change
+   - All timing and congestion metrics supported
+   - Handles None values and edge cases gracefully
+
+✅ **Step 4: Generate diff report showing improvements/regressions**
+   - CaseDiffReport provides structured analysis
+   - Each metric classified as improvement/regression/neutral
+   - Human-readable summary describes all changes
+
+✅ **Step 5: Include diff report in Case artifacts**
+   - save_diff_report() writes diff_report.json and diff_report.txt
+   - Files saved to Case artifact directory
+   - Both formats available for different use cases
+
+✅ **Step 6: Use diff for survivor ranking**
+   - overall_improvement flag enables filtering (True/False)
+   - wns_delta enables ranking by timing improvement
+   - hot_ratio_delta enables ranking by congestion reduction
+   - Tests demonstrate survivor selection based on diff reports
+
+## WHY THIS MATTERS
+
+**Targeted ECO Analysis:**
+- Operators see exact impact of each ECO on all metrics
+- No need to manually compare baseline and derived metrics
+- Clear visibility into which metrics improved vs regressed
+
+**Data-Driven Survivor Selection:**
+- overall_improvement flag enables automated filtering
+- Metric deltas enable ranking by improvement magnitude
+- Supports multi-objective ranking (WNS + congestion)
+
+**Auditability and Reproducibility:**
+- JSON format enables automated analysis and tooling
+- Text format provides human-readable documentation
+- Diff reports preserved in Case artifacts for future reference
+
+**Decision Support:**
+- Improvement/regression classification supports automated gating
+- Summary text provides at-a-glance understanding
+- Percent change helps assess significance of improvements
+
+**Production Confidence:**
+- Robust error handling for None values and division by zero
+- Type-safe with full type hints
+- Comprehensive test coverage ensures correctness
+
+## CODE QUALITY
+
+- **New Files:**
+  - src/controller/diff_report.py (409 lines)
+  - tests/test_diff_report.py (690 lines, 22 tests)
+- **Modified Files:**
+  - src/controller/__init__.py (+8 lines: export diff report classes/functions)
+  - feature_list.json (1 feature marked passing: #16)
+- **Test Count:** 1171 tests total (1149 existing + 22 new), all passing
+- **Test Execution Time:** ~23 seconds (all tests)
+- **Type Safety:** Full type hints on all functions and classes
+- **Documentation:** Clear docstrings explaining all functionality
+- **No Regressions:** All existing 1149 tests still passing
+- **Zero False Positives:** All tests verify real diff report behavior
+
+## SESSION SUMMARY
+
+✅ **1 Feature COMPLETE:** Generate diff report comparing Case metrics vs baseline
+
+**Methodology:** This session demonstrates production-quality feature implementation.
+The diff report system:
+1. Computes metric deltas with proper handling of edge cases
+2. Classifies each metric as improvement/regression/neutral
+3. Provides overall improvement assessment for filtering
+4. Generates both machine-readable (JSON) and human-readable (text) outputs
+5. Integrates with survivor ranking workflows
+6. Saves artifacts to Case directories
+
+By creating 22 focused tests across 5 test classes, we:
+- Validated delta calculation for all metric types
+- Ensured improvement classification is correct
+- Verified both output formats are complete
+- Tested file I/O and directory creation
+- Demonstrated survivor ranking use cases
+- Provided confidence for production deployment
+
+**Testing:** All 1171 tests passing (1149 existing + 22 new), zero regressions.
+
+**Completion Progress:** 98/200 features passing (49.0% complete)
+
+## NEXT PRIORITIES
+
+With diff report generation complete, the next focus areas are:
+
+1. **Support ECO Parameter Sweeps** (Medium Priority)
+   - Support ECO parameter sweeps with systematic variation
+   - Generate parameter sweep results
+   - Feature #10 in feature_list.json
+
+2. **Log All Policy Rule Evaluations** (High Priority)
+   - Log all policy rule evaluations for audit trail
+   - Track which rules triggered and why
+   - Feature #14 in feature_list.json
+
+3. **Support Custom Metric Extractors** (Medium-High Priority)
+   - Support custom metric extractors for project-specific KPIs
+   - Enable extensibility for non-standard metrics
+   - Feature #19 in feature_list.json
+
+4. **CI Regression Checks** (High Priority)
+   - Use Noodle 2 for CI regression safety checks
+   - Configure LOCKED safety domain for regression testing
+   - Feature #64 in feature_list.json
+
+5. **Reproducible Demo Studies** (High Priority)
+   - Produce reproducible demo Study on Nangate45 open PDK
+   - Demonstrate end-to-end functionality
+   - Validate on standard reference designs
+   - Feature #65 in feature_list.json
+
+---

@@ -12,12 +12,12 @@ from pathlib import Path
 from typing import Any
 
 
-def format_timestamp_iso8601(unix_timestamp: float | None) -> str | None:
+def format_timestamp_iso8601(unix_timestamp: float | str | None) -> str | None:
     """
     Convert Unix timestamp to ISO 8601 format.
 
     Args:
-        unix_timestamp: Unix timestamp (seconds since epoch), or None
+        unix_timestamp: Unix timestamp (seconds since epoch), ISO 8601 string, or None
 
     Returns:
         ISO 8601 formatted timestamp string, or None if input is None
@@ -25,9 +25,14 @@ def format_timestamp_iso8601(unix_timestamp: float | None) -> str | None:
     Examples:
         >>> format_timestamp_iso8601(1704715200.0)
         '2024-01-08T12:00:00Z'
+        >>> format_timestamp_iso8601("2024-01-08T12:00:00Z")
+        '2024-01-08T12:00:00Z'
     """
     if unix_timestamp is None:
         return None
+    # If already a string (ISO format), return as-is
+    if isinstance(unix_timestamp, str):
+        return unix_timestamp
     dt = datetime.fromtimestamp(unix_timestamp, tz=timezone.utc)
     return dt.strftime("%Y-%m-%dT%H:%M:%SZ")
 

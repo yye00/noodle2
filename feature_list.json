@@ -2703,7 +2703,7 @@
       "Step 5: Verify README or index file explains structure",
       "Step 6: Test that new users can navigate artifacts easily"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",
@@ -2716,6 +2716,6 @@
       "Step 5: Verify timestamps use ISO 8601 format",
       "Step 6: Verify all telemetry is easily machine-parseable"
     ],
-    "passes": false
+    "passes": true
   }
 ]

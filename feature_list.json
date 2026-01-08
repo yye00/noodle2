@@ -1396,7 +1396,7 @@
       "Step 5: Shutdown Ray cluster cleanly",
       "Step 6: Enable Study resumption from checkpoint"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

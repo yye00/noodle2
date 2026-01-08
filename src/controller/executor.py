@@ -8,10 +8,22 @@ from typing import Any, Callable
 from src.controller.case import Case, CaseGraph
 from src.controller.eco import ECOEffectiveness
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
+from src.controller.graceful_shutdown import GracefulShutdownHandler
 from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.safety_trace import SafetyTrace
 from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
 from src.controller.study import StudyConfig
+from src.controller.study_resumption import (
+    StudyCheckpoint,
+    create_stage_checkpoint,
+    find_checkpoint,
+    initialize_checkpoint,
+    load_checkpoint,
+    save_checkpoint,
+    should_skip_stage,
+    update_checkpoint_after_stage,
+    validate_resumption,
+)
 from src.controller.summary_report import SummaryReportGenerator
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
 from src.controller.types import ECOClass, ExecutionMode, StageConfig
@@ -106,6 +118,7 @@ class StudyExecutor:
         telemetry_root: str | Path = "telemetry",
         survivor_selector: Callable[[list[TrialResult], int], list[str]] | None = None,
         skip_base_case_verification: bool = False,
+        enable_graceful_shutdown: bool = True,
     ) -> None:
         """
         Initialize Study executor.
@@ -117,6 +130,7 @@ class StudyExecutor:
             survivor_selector: Custom survivor selection function (optional)
                              Takes (trial_results, survivor_count) -> list of case_ids
             skip_base_case_verification: Skip base case verification (for testing only)
+            enable_graceful_shutdown: Enable graceful shutdown on SIGTERM/SIGINT (default: True)
         """
         self.config = config
         self.artifacts_root = Path(artifacts_root)
@@ -155,6 +169,12 @@ class StudyExecutor:
         # Track ECO effectiveness across all trials
         self.eco_effectiveness_map: dict[str, ECOEffectiveness] = {}
         self.eco_class_map: dict[str, str] = {}  # Map ECO name to ECO class
+
+        # Initialize graceful shutdown handler
+        self.shutdown_handler = GracefulShutdownHandler() if enable_graceful_shutdown else None
+
+        # Initialize Study checkpoint tracking
+        self.study_checkpoint: StudyCheckpoint = initialize_checkpoint(config.name)
 
     def verify_base_case(self) -> tuple[bool, str]:
         """
@@ -292,6 +312,24 @@ class StudyExecutor:
         SAFETY GATES:
         1. Safety domain enforcement (ECO class legality)
         2. Base case verification (structural runnability)
+
+        Returns:
+            StudyResult containing complete execution results
+        """
+        # Register graceful shutdown handler
+        if self.shutdown_handler:
+            self.shutdown_handler.register()
+
+        try:
+            return self._execute_internal()
+        finally:
+            # Always unregister shutdown handler
+            if self.shutdown_handler:
+                self.shutdown_handler.unregister()
+
+    def _execute_internal(self) -> StudyResult:
+        """
+        Internal execute method with shutdown handler registered.
 
         Returns:
             StudyResult containing complete execution results
@@ -469,6 +507,18 @@ class StudyExecutor:
         current_cases = [self.base_case]
 
         for stage_index, stage_config in enumerate(self.config.stages):
+            # Check for graceful shutdown request before starting new stage
+            if self.shutdown_handler and self.shutdown_handler.should_shutdown():
+                print(f"\n⚠️  Graceful shutdown requested - stopping before stage {stage_index}")
+                print(f"   Saving checkpoint with {len(stage_results)} completed stages")
+
+                # Save checkpoint
+                self._save_checkpoint(report_dir, stage_results)
+
+                return self._create_shutdown_result(
+                    study_start, stage_results, study_telemetry, report_dir
+                )
+
             print(f"\n=== Executing Stage {stage_index}: {stage_config.name} ===")
             print(f"Input cases: {len(current_cases)}")
             print(f"Trial budget: {stage_config.trial_budget}")
@@ -485,6 +535,23 @@ class StudyExecutor:
 
             # Emit stage telemetry
             self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
+
+            # Save checkpoint after stage completes
+            stage_checkpoint = create_stage_checkpoint(
+                stage_index=stage_index,
+                stage_name=stage_config.name,
+                survivor_case_ids=stage_result.survivors,
+                trials_completed=stage_result.trials_executed,
+                trials_failed=len([t for t in stage_result.trial_results if not t.success]),
+                metadata=stage_result.metadata,
+            )
+            self.study_checkpoint = update_checkpoint_after_stage(
+                self.study_checkpoint, stage_checkpoint
+            )
+
+            # Save checkpoint to disk
+            checkpoint_path = save_checkpoint(self.study_checkpoint, report_dir)
+            print(f"   Checkpoint saved: {checkpoint_path}")
 
             # Record stage abort check in safety trace
             if stage_result.abort_decision:
@@ -930,3 +997,87 @@ class StudyExecutor:
 
         # Update study-level telemetry
         study_telemetry.add_stage_telemetry(stage_telemetry)
+
+    def _save_checkpoint(
+        self, report_dir: Path, stage_results: list[StageResult]
+    ) -> Path:
+        """
+        Save Study checkpoint to disk.
+
+        Args:
+            report_dir: Directory to save checkpoint
+            stage_results: Completed stage results
+
+        Returns:
+            Path to saved checkpoint file
+        """
+        checkpoint_path = save_checkpoint(self.study_checkpoint, report_dir)
+        print(f"   Checkpoint saved to: {checkpoint_path}")
+        return checkpoint_path
+
+    def _create_shutdown_result(
+        self,
+        study_start: float,
+        stage_results: list[StageResult],
+        study_telemetry: StudyTelemetry,
+        report_dir: Path,
+    ) -> StudyResult:
+        """
+        Create StudyResult for graceful shutdown.
+
+        Args:
+            study_start: Study start time
+            stage_results: Completed stage results
+            study_telemetry: Study-level telemetry
+            report_dir: Report directory for artifacts
+
+        Returns:
+            StudyResult indicating graceful shutdown
+        """
+        shutdown_reason = "Graceful shutdown requested (SIGTERM/SIGINT)"
+
+        # Save safety trace
+        trace_path = report_dir / "safety_trace.json"
+        self.safety_trace.save_to_file(trace_path)
+        trace_txt_path = report_dir / "safety_trace.txt"
+        self.safety_trace.save_to_file(trace_txt_path)
+
+        # Export case lineage graph
+        lineage_dot_path = report_dir / "lineage.dot"
+        lineage_dot = self.case_graph.export_to_dot()
+        lineage_dot_path.write_text(lineage_dot)
+
+        # Get final survivors from last completed stage
+        final_survivors = stage_results[-1].survivors if stage_results else []
+
+        # Finalize and emit study telemetry
+        study_telemetry.finalize(
+            final_survivors=final_survivors,
+            aborted=True,
+            abort_reason=shutdown_reason,
+        )
+        self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+        self.telemetry_emitter.flush_all_case_telemetry()
+
+        # Emit study aborted event
+        self.event_stream.emit_study_aborted(
+            study_name=self.config.name,
+            abort_reason=shutdown_reason,
+            stage_index=len(stage_results) - 1 if stage_results else 0,
+        )
+
+        print(f"\n✓ Study checkpoint saved - can resume from stage {len(stage_results)}")
+
+        return StudyResult(
+            study_name=self.config.name,
+            total_stages=len(self.config.stages),
+            stages_completed=len(stage_results),
+            total_runtime_seconds=time.time() - study_start,
+            stage_results=stage_results,
+            final_survivors=final_survivors,
+            aborted=True,
+            abort_reason=shutdown_reason,
+            author=self.config.author,
+            creation_date=self.config.creation_date,
+            description=self.config.description,
+        )

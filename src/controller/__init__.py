@@ -75,6 +75,11 @@ from src.controller.diff_report import (
     generate_diff_report,
     save_diff_report,
 )
+from src.controller.graceful_shutdown import (
+    GracefulShutdownHandler,
+    ShutdownRequest,
+    create_shutdown_handler,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -131,4 +136,7 @@ __all__ = [
     "MetricDelta",
     "generate_diff_report",
     "save_diff_report",
+    "GracefulShutdownHandler",
+    "ShutdownRequest",
+    "create_shutdown_handler",
 ]

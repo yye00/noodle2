@@ -1,5 +1,33 @@
 # Noodle 2 - Progress Tracker
 
+## Session 22 - ASAP7 PDK-Specific Support
+**Date:** 2026-01-08
+**Status:** 57/200 features passing (28.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session implemented **complete ASAP7 PDK-specific support**, adding all three required workarounds from the app spec to enable stable ASAP7 base case execution.
+
+#### ✅ Features Completed: 3 ASAP7 Features
+
+**1. Feature #50**: Support ASAP7 base case with explicit routing layer constraints
+**2. Feature #51**: Support ASAP7 floorplan with explicit site specification
+**3. Feature #52**: Support ASAP7 pin placement on mid-stack metals only
+
+**SESSION SUMMARY:**
+
+✅ **3 Features COMPLETE**: All three ASAP7 workarounds implemented
+
+**Code:** Added PDK parameter to TCL generation, created 4 ASAP7 helper functions
+
+**Tests:** 551 passing (523 existing + 28 new ASAP7 tests), zero regressions
+
+**Features:** 57/200 passing (28.5% complete)
+
+**GIT:** `54711d9 Implement ASAP7 PDK-specific support`
+
+---
+
 ## Session 21 - Global Routing with Congestion Report Generation
 **Date:** 2026-01-08
 **Status:** 54/200 features passing (27.0%)

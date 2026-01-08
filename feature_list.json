@@ -2599,7 +2599,7 @@
       "Step 5: Execute ECO using custom script",
       "Step 6: Document script location in provenance"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

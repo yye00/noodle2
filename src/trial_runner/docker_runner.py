@@ -23,6 +23,7 @@ class DockerRunConfig:
     environment: dict[str, str] | None = None
     gui_mode: bool = False  # Enable GUI mode with X11 passthrough
     readonly_snapshot: bool = True  # Mount snapshot as read-only (recommended for safety)
+    custom_script_mounts: dict[str, str] | None = None  # {host_path: container_path} for custom ECO scripts
 
 
 @dataclass
@@ -40,6 +41,8 @@ class TrialExecutionResult:
     # Resource utilization metrics
     cpu_time_seconds: float | None = None  # Total CPU time consumed
     peak_memory_mb: float | None = None  # Peak memory usage in MB
+    # Provenance: custom script locations
+    custom_script_mounts: dict[str, str] | None = None  # {host_path: container_path} used in this trial
 
 
 class DockerTrialRunner:
@@ -128,6 +131,13 @@ class DockerTrialRunner:
         if self.config.gui_mode:
             # Mount X11 unix socket for display passthrough
             volumes["/tmp/.X11-unix"] = {"bind": "/tmp/.X11-unix", "mode": "rw"}
+
+        # Add custom script mounts
+        if self.config.custom_script_mounts:
+            for host_path, container_path in self.config.custom_script_mounts.items():
+                host_path_obj = Path(host_path)
+                if host_path_obj.exists():
+                    volumes[str(host_path_obj.absolute())] = {"bind": container_path, "mode": "ro"}
 
         # Build command
         script_name = script_path.name
@@ -247,6 +257,7 @@ class DockerTrialRunner:
                 soft_timed_out=soft_timed_out,
                 cpu_time_seconds=cpu_time_seconds,
                 peak_memory_mb=peak_memory_mb,
+                custom_script_mounts=self.config.custom_script_mounts,
             )
 
         except docker.errors.ContainerError as e:
@@ -257,6 +268,7 @@ class DockerTrialRunner:
                 stderr=e.stderr.decode("utf-8", errors="replace") if e.stderr else str(e),
                 runtime_seconds=runtime_seconds,
                 success=False,
+                custom_script_mounts=self.config.custom_script_mounts,
             )
 
     def verify_openroad_available(self) -> bool:

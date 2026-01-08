@@ -59,6 +59,9 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
     # Parse environment variables
     environment = data.get("environment", {})
 
+    # Parse custom script mounts
+    custom_script_mounts = data.get("custom_script_mounts", {})
+
     # Parse notification configuration
     notification_webhook_url = data.get("notification_webhook_url")
     notification_events = data.get("notification_events")
@@ -75,6 +78,7 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         eco_blacklist=eco_blacklist,
         eco_whitelist=eco_whitelist,
         environment=environment,
+        custom_script_mounts=custom_script_mounts,
         notification_webhook_url=notification_webhook_url,
         notification_events=notification_events,
     )

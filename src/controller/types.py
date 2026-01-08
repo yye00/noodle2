@@ -112,6 +112,8 @@ class StudyConfig:
     # Notification configuration
     notification_webhook_url: str | None = None  # URL to send notifications
     notification_events: list[str] | None = None  # Events to notify about (defaults to completion/failure)
+    # Custom script mounting for ECO execution
+    custom_script_mounts: dict[str, str] = field(default_factory=dict)  # {host_path: container_path} for custom ECO scripts
 
     def validate(self) -> None:
         """Validate Study configuration."""

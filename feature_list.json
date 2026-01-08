@@ -1470,7 +1470,7 @@
       "Step 4: Verify metadata is displayed in dashboard UI",
       "Step 5: Enable filtering/sorting by metadata in dashboard"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

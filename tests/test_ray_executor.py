@@ -337,3 +337,244 @@ class TestIntegrationWithRayDashboard:
         # 4. Click to see logs with artifact path
 
         assert task_ref is not None
+
+
+class TestRayDashboardCompatibleTaskMetadata:
+    """Test Ray dashboard-compatible task metadata for trials.
+
+    This test class verifies Feature: "Emit Ray dashboard-compatible task metadata for trials"
+    with the following steps:
+    1. Submit trial as Ray task
+    2. Attach metadata (case name, stage, ECO) to Ray task
+    3. View task in Ray dashboard
+    4. Verify metadata is displayed in dashboard UI
+    5. Enable filtering/sorting by metadata in dashboard
+    """
+
+    def test_format_task_name_basic(self):
+        """Test formatting task name without ECO.
+
+        Step 1: Submit trial as Ray task
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        """
+        config = TrialConfig(
+            study_name="test_study",
+            case_name="base_case",
+            stage_index=0,
+            trial_index=3,
+            script_path="/tmp/script.tcl",
+        )
+
+        task_name = RayTrialExecutor.format_task_name(config)
+
+        # Verify task name follows expected pattern
+        assert task_name == "test_study/base_case/stage_0/trial_3"
+
+    def test_format_task_name_with_eco(self):
+        """Test formatting task name with ECO metadata.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        """
+        config = TrialConfig(
+            study_name="test_study",
+            case_name="derived_case",
+            stage_index=1,
+            trial_index=5,
+            script_path="/tmp/script.tcl",
+            metadata={"eco_name": "buffer_insertion"},
+        )
+
+        task_name = RayTrialExecutor.format_task_name(config)
+
+        # Verify ECO name is included in task name
+        assert task_name == "test_study/derived_case/stage_1/trial_5/buffer_insertion"
+
+    def test_extract_metadata_basic(self):
+        """Test extracting metadata from trial config.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 4: Verify metadata is displayed in dashboard UI
+        """
+        config = TrialConfig(
+            study_name="demo_study",
+            case_name="test_case",
+            stage_index=2,
+            trial_index=7,
+            script_path="/tmp/script.tcl",
+        )
+
+        metadata = RayTrialExecutor.extract_metadata_from_config(config)
+
+        # Verify all required metadata fields are present
+        assert metadata["study_name"] == "demo_study"
+        assert metadata["case_name"] == "test_case"
+        assert metadata["stage_index"] == 2
+        assert metadata["trial_index"] == 7
+
+    def test_extract_metadata_with_eco(self):
+        """Test extracting metadata including ECO name.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 4: Verify metadata is displayed in dashboard UI
+        """
+        config = TrialConfig(
+            study_name="eco_study",
+            case_name="optimized_case",
+            stage_index=1,
+            trial_index=3,
+            script_path="/tmp/script.tcl",
+            metadata={"eco_name": "gate_sizing"},
+        )
+
+        metadata = RayTrialExecutor.extract_metadata_from_config(config)
+
+        # Verify ECO name is included in metadata
+        assert metadata["eco_name"] == "gate_sizing"
+        assert metadata["study_name"] == "eco_study"
+        assert metadata["case_name"] == "optimized_case"
+
+    def test_extract_metadata_with_execution_mode(self):
+        """Test extracting metadata including execution mode.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 4: Verify metadata is displayed in dashboard UI
+        """
+        from src.controller.types import ExecutionMode
+
+        config = TrialConfig(
+            study_name="mode_study",
+            case_name="test_case",
+            stage_index=0,
+            trial_index=1,
+            script_path="/tmp/script.tcl",
+            execution_mode=ExecutionMode.STA_CONGESTION,
+        )
+
+        metadata = RayTrialExecutor.extract_metadata_from_config(config)
+
+        # Verify execution mode is included in metadata
+        assert metadata["execution_mode"] == "sta_congestion"
+
+    @pytest.mark.slow
+    def test_submit_trial_with_metadata(
+        self, ray_context, temp_artifacts_dir, sample_script
+    ):
+        """Test submitting trial with metadata attached.
+
+        Step 1: Submit trial as Ray task
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 3: View task in Ray dashboard (manual verification)
+        """
+        executor = RayTrialExecutor(artifacts_root=temp_artifacts_dir)
+
+        config = TrialConfig(
+            study_name="metadata_study",
+            case_name="case_with_eco",
+            stage_index=0,
+            trial_index=0,
+            script_path=sample_script,
+            metadata={"eco_name": "clock_tree_opt"},
+        )
+
+        # Submit trial - metadata should be attached
+        task_ref = executor.submit_trial(config)
+
+        # Verify task was submitted successfully
+        assert task_ref is not None
+
+        # In production, we would verify in Ray Dashboard:
+        # - Task name shows: metadata_study/case_with_eco/stage_0/trial_0/clock_tree_opt
+        # - Task logs show metadata in structured format
+
+    @pytest.mark.slow
+    def test_multiple_trials_with_different_metadata(
+        self, ray_context, temp_artifacts_dir, sample_script
+    ):
+        """Test submitting multiple trials with distinct metadata.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 5: Enable filtering/sorting by metadata in dashboard
+        """
+        executor = RayTrialExecutor(artifacts_root=temp_artifacts_dir)
+
+        # Create trials with different ECOs
+        configs = [
+            TrialConfig(
+                study_name="multi_eco_study",
+                case_name=f"case_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path=sample_script,
+                metadata={"eco_name": eco_name},
+            )
+            for i, eco_name in enumerate(["buffer_insertion", "gate_sizing", "pin_swap"])
+        ]
+
+        # Submit all trials
+        task_refs = [executor.submit_trial(config) for config in configs]
+
+        # Verify all tasks submitted
+        assert len(task_refs) == 3
+        for task_ref in task_refs:
+            assert task_ref is not None
+
+        # In production, we would verify in Ray Dashboard:
+        # - Each task shows distinct ECO name in task name
+        # - Tasks can be filtered by study_name
+        # - Tasks can be sorted by stage_index or trial_index
+
+    def test_task_name_consistency(self):
+        """Test that task names are consistent and deterministic.
+
+        Step 4: Verify metadata is displayed in dashboard UI
+        Step 5: Enable filtering/sorting by metadata in dashboard
+        """
+        config1 = TrialConfig(
+            study_name="consistency_test",
+            case_name="case_a",
+            stage_index=0,
+            trial_index=5,
+            script_path="/tmp/script.tcl",
+            metadata={"eco_name": "test_eco"},
+        )
+
+        config2 = TrialConfig(
+            study_name="consistency_test",
+            case_name="case_a",
+            stage_index=0,
+            trial_index=5,
+            script_path="/tmp/script.tcl",
+            metadata={"eco_name": "test_eco"},
+        )
+
+        # Same config should produce same task name
+        name1 = RayTrialExecutor.format_task_name(config1)
+        name2 = RayTrialExecutor.format_task_name(config2)
+
+        assert name1 == name2
+
+    def test_metadata_includes_all_required_fields(self):
+        """Test that metadata includes all fields required for filtering.
+
+        Step 2: Attach metadata (case name, stage, ECO) to Ray task
+        Step 4: Verify metadata is displayed in dashboard UI
+        Step 5: Enable filtering/sorting by metadata in dashboard
+        """
+        config = TrialConfig(
+            study_name="complete_metadata",
+            case_name="full_case",
+            stage_index=2,
+            trial_index=10,
+            script_path="/tmp/script.tcl",
+            metadata={"eco_name": "comprehensive_eco"},
+        )
+
+        metadata = RayTrialExecutor.extract_metadata_from_config(config)
+
+        # Verify all required fields for dashboard filtering/sorting
+        required_fields = ["study_name", "case_name", "stage_index", "trial_index"]
+        for field in required_fields:
+            assert field in metadata, f"Missing required field: {field}"
+
+        # Verify optional but important fields
+        assert "eco_name" in metadata

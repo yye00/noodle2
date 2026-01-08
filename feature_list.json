@@ -1179,7 +1179,7 @@
       "Step 5: Verify no telemetry cross-contamination",
       "Step 6: Confirm both Studies complete successfully"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

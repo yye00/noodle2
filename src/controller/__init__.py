@@ -8,6 +8,12 @@ from src.controller.failure import (
     FailureSeverity,
     FailureType,
 )
+from src.controller.telemetry import (
+    CaseTelemetry,
+    StageTelemetry,
+    StudyTelemetry,
+    TelemetryEmitter,
+)
 
 # Note: StudyExecutor, StudyResult, and StageResult are not exported here
 # to avoid circular imports. Import them directly from src.controller.executor
@@ -17,4 +23,8 @@ __all__ = [
     "FailureSeverity",
     "FailureClassification",
     "FailureClassifier",
+    "CaseTelemetry",
+    "StageTelemetry",
+    "StudyTelemetry",
+    "TelemetryEmitter",
 ]

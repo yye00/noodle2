@@ -7,6 +7,7 @@ from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
 from src.controller.study import StudyConfig
+from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
 from src.controller.types import StageConfig
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
@@ -79,6 +80,7 @@ class StudyExecutor:
         self,
         config: StudyConfig,
         artifacts_root: str | Path = "artifacts",
+        telemetry_root: str | Path = "telemetry",
         survivor_selector: Callable[[list[TrialResult], int], list[str]] | None = None,
     ) -> None:
         """
@@ -87,6 +89,7 @@ class StudyExecutor:
         Args:
             config: Study configuration
             artifacts_root: Root directory for artifacts
+            telemetry_root: Root directory for telemetry
             survivor_selector: Custom survivor selection function (optional)
                              Takes (trial_results, survivor_count) -> list of case_ids
         """
@@ -94,6 +97,12 @@ class StudyExecutor:
         self.artifacts_root = Path(artifacts_root)
         self.case_graph = CaseGraph()
         self.survivor_selector = survivor_selector or self._default_survivor_selector
+
+        # Initialize telemetry emitter
+        self.telemetry_emitter = TelemetryEmitter(
+            study_name=config.name,
+            telemetry_root=telemetry_root,
+        )
 
         # Create base case
         self.base_case = Case.create_base_case(
@@ -113,6 +122,13 @@ class StudyExecutor:
         study_start = time.time()
         stage_results: list[StageResult] = []
 
+        # Initialize Study-level telemetry
+        study_telemetry = StudyTelemetry(
+            study_name=self.config.name,
+            safety_domain=self.config.safety_domain.value,
+            total_stages=len(self.config.stages),
+        )
+
         # Start with base case for stage 0
         current_cases = [self.base_case]
 
@@ -131,9 +147,22 @@ class StudyExecutor:
 
             stage_results.append(stage_result)
 
+            # Emit stage telemetry
+            self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
+
             # Check for stage abort conditions
             if len(stage_result.survivors) == 0:
                 print(f"ABORT: Stage {stage_index} produced no survivors")
+
+                # Finalize and emit study telemetry for aborted study
+                study_telemetry.finalize(
+                    final_survivors=[],
+                    aborted=True,
+                    abort_reason=f"Stage {stage_index} produced no survivors",
+                )
+                self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+                self.telemetry_emitter.flush_all_case_telemetry()
+
                 return StudyResult(
                     study_name=self.config.name,
                     total_stages=len(self.config.stages),
@@ -168,13 +197,19 @@ class StudyExecutor:
 
         study_runtime = time.time() - study_start
 
+        # Finalize and emit study telemetry
+        final_survivors = stage_results[-1].survivors if stage_results else []
+        study_telemetry.finalize(final_survivors=final_survivors, aborted=False)
+        self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+        self.telemetry_emitter.flush_all_case_telemetry()
+
         return StudyResult(
             study_name=self.config.name,
             total_stages=len(self.config.stages),
             stages_completed=len(self.config.stages),
             total_runtime_seconds=study_runtime,
             stage_results=stage_results,
-            final_survivors=stage_results[-1].survivors if stage_results else [],
+            final_survivors=final_survivors,
             aborted=False,
         )
 
@@ -328,3 +363,46 @@ class StudyExecutor:
         survivors = sorted_trials[:survivor_count]
 
         return [trial.config.case_name for trial in survivors]
+
+    def _emit_stage_telemetry(
+        self,
+        stage_result: StageResult,
+        stage_config: StageConfig,
+        study_telemetry: StudyTelemetry,
+    ) -> None:
+        """
+        Emit telemetry for a completed stage.
+
+        Args:
+            stage_result: Results from stage execution
+            stage_config: Stage configuration
+            study_telemetry: Study-level telemetry to update
+        """
+        # Create stage-level telemetry
+        stage_telemetry = StageTelemetry(
+            stage_index=stage_result.stage_index,
+            stage_name=stage_result.stage_name,
+            trial_budget=stage_config.trial_budget,
+            survivor_count=stage_config.survivor_count,
+            survivors=stage_result.survivors,
+            total_runtime_seconds=stage_result.total_runtime_seconds,
+        )
+
+        # Aggregate trial results into stage telemetry
+        for trial in stage_result.trial_results:
+            stage_telemetry.add_trial_result(trial)
+
+            # Update case-level telemetry
+            case_telemetry = self.telemetry_emitter.get_or_create_case_telemetry(
+                case_id=trial.config.case_name,
+                base_case=self.config.base_case_name,
+                stage_index=trial.config.stage_index,
+                derived_index=trial.config.trial_index,  # Simplified for now
+            )
+            case_telemetry.add_trial(trial)
+
+        # Emit stage telemetry to disk
+        self.telemetry_emitter.emit_stage_telemetry(stage_telemetry)
+
+        # Update study-level telemetry
+        study_telemetry.add_stage_telemetry(stage_telemetry)

@@ -21,6 +21,7 @@ ray_results/
 # Noodle 2 Artifacts
 artifacts/
 studies/*/artifacts/
+telemetry/
 *.db
 
 # Container volumes

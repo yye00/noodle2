@@ -123,7 +123,7 @@
       "Step 5: Parse all telemetry files and validate JSON schema",
       "Step 6: Confirm telemetry is backward-compatible"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

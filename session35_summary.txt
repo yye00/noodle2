@@ -1,0 +1,75 @@
+# Session 35 - Case Lineage Graph DOT Export
+**Date:** 2026-01-08
+**Status:** 82/200 features passing (41.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **Case lineage graph export in Graphviz DOT format**,
+enabling visualization of the complete case DAG showing ECO applications,
+stage progression, and parent-child relationships.
+
+### Feature Completed: Export Case Lineage Graph in DOT Format
+
+**Feature #1112: Export Case lineage graph in DOT format for visualization** ✅
+
+## IMPLEMENTATION
+
+**1. CaseGraph.export_to_dot() Method** (src/controller/case.py):
+- Generates syntactically valid Graphviz DOT format
+- Nodes represent Cases with metadata
+- Edges represent parent-child relationships labeled with ECO names
+- Base cases highlighted with lightblue fill
+- ID sanitization (dashes/dots to underscores)
+- Top-to-bottom layout (rankdir=TB)
+
+**2. StudyExecutor Integration** (src/controller/executor.py):
+- Exports lineage.dot to Study artifacts directory
+- Generated on all outcomes: success, abort, blocked (legality), blocked (base case)
+- Saved alongside safety trace and summary report
+
+**3. Comprehensive Test Coverage** (21 tests):
+- Basic functionality (empty graph, single case)
+- Node generation (IDs, sanitization, styling)
+- Edge generation (parent-child, ECO labels)
+- Multi-stage cases (linear, branching)
+- Format validity (braces, layout, styling)
+- Integration (file I/O, parsing)
+- Edge cases (50+ cases, 10-stage chains, missing ECO names)
+
+## ALL 5 FEATURE STEPS VALIDATED
+
+✅ Step 1: Execute Study with multiple derived Cases
+✅ Step 2: Build Case DAG
+✅ Step 3: Export graph in Graphviz DOT format
+✅ Step 4: Render DOT file to PNG/SVG using graphviz
+✅ Step 5: Include lineage visualization in Study artifacts
+
+## WHY THIS MATTERS
+
+**Auditability:** Visual case lineage, ECO progression, self-documenting structure
+**Debugging:** Quick identification of ECO applications, branching patterns
+**Documentation:** Renders to PNG/SVG/PDF for reports and presentations
+**Reproducibility:** Complete lineage captures ECO application order
+
+## CODE QUALITY
+
+- **New Files**: tests/test_case_lineage_dot_export.py (445 lines, 21 tests)
+- **Modified Files**:
+  - src/controller/case.py (50 lines: export_to_dot method)
+  - src/controller/executor.py (12 lines: DOT export integration)
+  - feature_list.json (1 feature marked passing)
+- **Test Count**: 870 tests total (849 existing + 21 new), all passing
+- **Test Execution Time**: ~13.7 seconds (all non-Ray tests)
+- **No Regressions**: All existing tests still passing
+
+## COMPLETION PROGRESS
+
+82/200 features passing (41.0% complete)
+
+## NEXT PRIORITIES
+
+1. Machine-Readable JSON Telemetry (Feature #1087)
+2. Track Resource Utilization (Feature #1124)
+3. ECO Effectiveness Leaderboard (Feature #1211)
+4. Enable Optional Prior Sharing (Feature #829)
+5. Staged Validation Ladder: Gates 1-4 (Features #74-77)

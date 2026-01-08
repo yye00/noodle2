@@ -1,0 +1,2019 @@
+[
+  {
+    "category": "functional",
+    "description": "Initialize Ray cluster in single-node mode and verify dashboard starts on port 8265",
+    "steps": [
+      "Step 1: Execute 'ray start --head --dashboard-host=0.0.0.0'",
+      "Step 2: Verify Ray dashboard is accessible at http://localhost:8265",
+      "Step 3: Verify Ray status shows cluster is running",
+      "Step 4: Check that dashboard displays node information"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Create a minimal Study definition with Nangate45 base case",
+    "steps": [
+      "Step 1: Create Study configuration file with Nangate45 PDK reference",
+      "Step 2: Specify safety domain as 'sandbox'",
+      "Step 3: Define single stage with STA-only execution mode",
+      "Step 4: Validate Study configuration parses successfully",
+      "Step 5: Verify base case is identified correctly"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute Nangate45 base case with no-op ECO and verify structural runnability",
+    "steps": [
+      "Step 1: Load Nangate45 base case snapshot",
+      "Step 2: Execute with empty/no-op ECO",
+      "Step 3: Verify tool return code rc == 0",
+      "Step 4: Confirm report_checks timing report is produced",
+      "Step 5: Parse timing report and extract wns_ps value",
+      "Step 6: Verify artifact directory contains required files"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Parse OpenROAD report_checks output and extract WNS correctly",
+    "steps": [
+      "Step 1: Execute STA run that produces report_checks output",
+      "Step 2: Locate timing report file in artifacts",
+      "Step 3: Parse report using timing parser",
+      "Step 4: Verify wns_ps field is extracted",
+      "Step 5: Optionally verify tns_ps field is extracted",
+      "Step 6: Validate parsed values are numeric and reasonable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate Run Legality Report before Study execution",
+    "steps": [
+      "Step 1: Load Study definition with declared safety domain",
+      "Step 2: Identify proposed ECO classes for the Study",
+      "Step 3: Generate Run Legality Report",
+      "Step 4: Verify report contains safety domain declaration",
+      "Step 5: Verify report lists applicable rails and abort criteria",
+      "Step 6: Confirm report is written to Study artifact directory"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Reject illegal Study configuration before consuming compute",
+    "steps": [
+      "Step 1: Create Study with safety domain 'locked'",
+      "Step 2: Attempt to use ECO class 'global_disruptive' in stage 1",
+      "Step 3: Verify Run Legality Report marks this as illegal",
+      "Step 4: Confirm Study execution is blocked",
+      "Step 5: Verify clear error message is emitted"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Create deterministic case naming following <case_name>_<stage_index>_<derived_index> contract",
+    "steps": [
+      "Step 1: Define Study with base case 'nangate45_base'",
+      "Step 2: Create derived case in stage 0",
+      "Step 3: Verify case is named 'nangate45_0_0'",
+      "Step 4: Create second derived case in stage 0",
+      "Step 5: Verify case is named 'nangate45_0_1'",
+      "Step 6: Advance to stage 1 and verify naming includes stage index"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Verify Docker container execution with efabless/openlane:ci2504-dev-amd64 image",
+    "steps": [
+      "Step 1: Pull efabless/openlane:ci2504-dev-amd64 image",
+      "Step 2: Verify OpenROAD is available on PATH inside container",
+      "Step 3: Verify OpenSTA is available on PATH inside container",
+      "Step 4: Check that Nangate45 PDK is pre-installed",
+      "Step 5: Check that ASAP7 PDK is pre-installed",
+      "Step 6: Check that Sky130A PDK is pre-installed"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute trial in isolated working directory with immutable snapshot",
+    "steps": [
+      "Step 1: Create trial working directory",
+      "Step 2: Copy immutable snapshot to trial directory",
+      "Step 3: Execute OpenROAD commands inside container",
+      "Step 4: Verify base snapshot is not modified",
+      "Step 5: Verify artifacts are written only to trial directory",
+      "Step 6: Confirm trial is side-effect free"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Emit structured telemetry with Study, Stage, and Case axes",
+    "steps": [
+      "Step 1: Execute multi-stage Study",
+      "Step 2: Verify Study-level telemetry file exists",
+      "Step 3: Verify Stage-level telemetry files exist for each stage",
+      "Step 4: Verify Case-level telemetry files exist for each case",
+      "Step 5: Parse all telemetry files and validate JSON schema",
+      "Step 6: Confirm telemetry is backward-compatible"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute multi-stage Study with sequential stage progression",
+    "steps": [
+      "Step 1: Define 3-stage Study (exploration, refinement, closure)",
+      "Step 2: Execute stage 0 with specified trial budget",
+      "Step 3: Verify only surviving cases advance to stage 1",
+      "Step 4: Execute stage 1 with different ECO classes allowed",
+      "Step 5: Verify only survivors advance to stage 2",
+      "Step 6: Execute stage 2 and produce final results",
+      "Step 7: Verify stages executed sequentially not in parallel"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Apply trial budget and survivor count limits per stage",
+    "steps": [
+      "Step 1: Configure stage with trial_budget=10 and survivor_count=3",
+      "Step 2: Execute stage and track number of trials launched",
+      "Step 3: Verify exactly 10 trials are executed",
+      "Step 4: Rank trials by configured metric",
+      "Step 5: Verify exactly top 3 survivors are selected",
+      "Step 6: Confirm non-survivors are excluded from next stage"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Classify trial failure deterministically with type, severity, and reason",
+    "steps": [
+      "Step 1: Execute trial that will fail (e.g., invalid ECO)",
+      "Step 2: Capture failure immediately after execution",
+      "Step 3: Verify failure type is classified (e.g., 'tool_error')",
+      "Step 4: Verify severity is assigned (e.g., 'critical')",
+      "Step 5: Verify human-readable rationale is generated",
+      "Step 6: Confirm failure classification is deterministic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Contain failures at appropriate scope: individual ECO level",
+    "steps": [
+      "Step 1: Execute study with multiple ECOs",
+      "Step 2: Trigger failure in single ECO instance",
+      "Step 3: Verify failure is contained to that ECO only",
+      "Step 4: Confirm other ECOs continue execution",
+      "Step 5: Verify failure is logged in ECO-specific telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Contain failures at ECO class scope when multiple instances fail",
+    "steps": [
+      "Step 1: Execute study with ECO class containing multiple instances",
+      "Step 2: Trigger systematic failure across class",
+      "Step 3: Verify entire ECO class is marked as suspicious",
+      "Step 4: Confirm future trials avoid this ECO class",
+      "Step 5: Verify other ECO classes remain available"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Contain failures at stage scope when stage-level failure detected",
+    "steps": [
+      "Step 1: Execute multi-stage Study",
+      "Step 2: Trigger stage-level failure condition (e.g., all trials fail)",
+      "Step 3: Verify current stage is aborted",
+      "Step 4: Confirm downstream stages are not executed",
+      "Step 5: Verify Study is marked as blocked"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Abort entire Study when base case fails structural runnability",
+    "steps": [
+      "Step 1: Load Study with broken base case snapshot",
+      "Step 2: Attempt to execute base case with no-op ECO",
+      "Step 3: Detect base case failure (rc != 0 or missing reports)",
+      "Step 4: Verify Study is immediately marked as blocked",
+      "Step 5: Confirm no ECO experimentation is allowed",
+      "Step 6: Verify clear failure message is emitted"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Maintain ECO effectiveness history within Study memory",
+    "steps": [
+      "Step 1: Execute Study with multiple trials using same ECO",
+      "Step 2: Track ECO effectiveness across trials",
+      "Step 3: Verify effectiveness history is updated after each trial",
+      "Step 4: Confirm history is accessible for policy decisions",
+      "Step 5: Verify history does not leak across Studies"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Update ECO priors based on trial outcomes (trusted, mixed, suspicious, unknown)",
+    "steps": [
+      "Step 1: Initialize ECO with 'unknown' prior",
+      "Step 2: Execute trial with successful outcome",
+      "Step 3: Update ECO prior to 'trusted' or 'mixed' based on policy",
+      "Step 4: Execute trial with failure outcome",
+      "Step 5: Update ECO prior to 'suspicious'",
+      "Step 6: Verify priors influence future ECO selection"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Enforce safety domain constraints on allowed ECO classes",
+    "steps": [
+      "Step 1: Create Study with safety domain 'guarded'",
+      "Step 2: Define ECO classes with different blast radii",
+      "Step 3: Verify 'global_disruptive' ECOs are prohibited in early stages",
+      "Step 4: Verify 'topology_neutral' ECOs are always allowed",
+      "Step 5: Attempt to use prohibited ECO and verify rejection"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support sandbox safety domain for exploratory work",
+    "steps": [
+      "Step 1: Create Study with safety domain 'sandbox'",
+      "Step 2: Verify all ECO classes are permitted",
+      "Step 3: Verify abort sensitivity is relaxed",
+      "Step 4: Execute aggressive ECO experimentation",
+      "Step 5: Confirm results are clearly marked as sandbox-origin"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support locked safety domain for conservative regression-only work",
+    "steps": [
+      "Step 1: Create Study with safety domain 'locked'",
+      "Step 2: Verify only regression-safe ECO classes are allowed",
+      "Step 3: Verify abort criteria are strict",
+      "Step 4: Attempt exploratory ECO and verify rejection",
+      "Step 5: Confirm only proven, conservative changes are permitted"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Ensure Study isolation: telemetry does not leak across Studies",
+    "steps": [
+      "Step 1: Execute Study A with specific ECO outcomes",
+      "Step 2: Execute Study B with same ECO classes",
+      "Step 3: Verify Study B starts with fresh priors",
+      "Step 4: Confirm Study A telemetry is not accessible to Study B",
+      "Step 5: Verify Studies maintain independent memory"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate case lineage DAG showing derivation relationships",
+    "steps": [
+      "Step 1: Execute multi-stage Study with branching derivations",
+      "Step 2: Apply multiple ECOs creating derived cases",
+      "Step 3: Generate case lineage graph",
+      "Step 4: Verify graph shows parent-child relationships",
+      "Step 5: Verify graph is a valid DAG (no cycles)",
+      "Step 6: Export graph in machine-readable format"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Submit trials as Ray tasks with explicit resource requirements",
+    "steps": [
+      "Step 1: Define trial with CPU and memory requirements",
+      "Step 2: Submit trial as Ray task with resource specs",
+      "Step 3: Verify Ray scheduler respects resource requirements",
+      "Step 4: Monitor task execution in Ray dashboard",
+      "Step 5: Confirm task completes with expected resources"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute parallel trials within single stage using Ray",
+    "steps": [
+      "Step 1: Configure stage with trial_budget > 1",
+      "Step 2: Submit multiple trials as Ray tasks",
+      "Step 3: Verify trials execute in parallel",
+      "Step 4: Monitor Ray dashboard showing concurrent tasks",
+      "Step 5: Confirm all trials complete",
+      "Step 6: Verify parallelism improves stage execution time"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Use Ray object store for lightweight metadata only",
+    "steps": [
+      "Step 1: Execute trial producing heavy artifacts",
+      "Step 2: Verify artifacts are written to disk not Ray object store",
+      "Step 3: Store only lightweight metadata in Ray object store",
+      "Step 4: Retrieve metadata from object store",
+      "Step 5: Verify heavy files remain on filesystem"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute global routing with congestion report generation",
+    "steps": [
+      "Step 1: Load design snapshot in OpenROAD",
+      "Step 2: Execute global_route -congestion_report_file command",
+      "Step 3: Verify congestion report file is created",
+      "Step 4: Parse congestion report",
+      "Step 5: Extract bins_total, bins_hot, hot_ratio metrics",
+      "Step 6: Verify metrics are reasonable and numeric"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Parse congestion metrics and detect hotspot violations",
+    "steps": [
+      "Step 1: Execute trial with known congestion issues",
+      "Step 2: Parse congestion report file",
+      "Step 3: Calculate hot_ratio from bins_hot/bins_total",
+      "Step 4: Compare hot_ratio against threshold",
+      "Step 5: Classify trial as congestion violation if threshold exceeded",
+      "Step 6: Emit congestion classification in telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Create trial artifact bundle in deterministic location",
+    "steps": [
+      "Step 1: Execute trial for specific case/stage/trial combination",
+      "Step 2: Verify artifact directory follows pattern: study/case/stage/trial",
+      "Step 3: Confirm all trial outputs are written to this directory",
+      "Step 4: Verify directory path is deterministic and reproducible",
+      "Step 5: Check that no artifacts leak outside this directory"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate artifact index JSON for each trial",
+    "steps": [
+      "Step 1: Execute trial producing multiple artifact types",
+      "Step 2: Generate artifact_index.json in trial directory",
+      "Step 3: Verify index contains paths to key files",
+      "Step 4: Verify index includes high-level labels (ECO name, stage, case)",
+      "Step 5: Verify index includes content-type hints",
+      "Step 6: Validate index is valid JSON"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate stage-level artifact summary aggregating trial results",
+    "steps": [
+      "Step 1: Execute stage with multiple trials",
+      "Step 2: Collect trial-level artifact indexes",
+      "Step 3: Generate stage-level summary",
+      "Step 4: Verify summary includes trial count, success/failure stats",
+      "Step 5: Verify summary includes links to individual trial artifacts",
+      "Step 6: Write stage summary to stage artifact directory"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support STA-only execution mode for timing analysis stages",
+    "steps": [
+      "Step 1: Configure stage with execution_mode='STA-only'",
+      "Step 2: Execute stage trials",
+      "Step 3: Verify only timing analysis is performed",
+      "Step 4: Confirm congestion analysis is skipped",
+      "Step 5: Verify wns_ps and tns_ps are computed",
+      "Step 6: Verify execution is faster than full STA+congestion mode"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support STA+congestion execution mode for comprehensive analysis",
+    "steps": [
+      "Step 1: Configure stage with execution_mode='STA+congestion'",
+      "Step 2: Execute stage trials",
+      "Step 3: Verify timing analysis produces wns_ps/tns_ps",
+      "Step 4: Verify congestion analysis produces hot_ratio",
+      "Step 5: Verify both metrics are available for ranking",
+      "Step 6: Confirm artifacts include both timing and congestion reports"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Enforce deterministic ECO execution ordering",
+    "steps": [
+      "Step 1: Define Study with multiple ECOs",
+      "Step 2: Execute Study multiple times with same configuration",
+      "Step 3: Verify ECOs are applied in identical order each time",
+      "Step 4: Verify trial results are reproducible",
+      "Step 5: Confirm no random scheduling in ECO selection"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support fixed OpenROAD seeds for deterministic placement/routing",
+    "steps": [
+      "Step 1: Configure Study with fixed OpenROAD seed value",
+      "Step 2: Execute trial twice with same seed",
+      "Step 3: Verify identical placement results",
+      "Step 4: Verify identical routing results",
+      "Step 5: Confirm timing metrics are reproducible"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Classify early failure: tool crash with exit code != 0",
+    "steps": [
+      "Step 1: Execute trial that triggers OpenROAD crash",
+      "Step 2: Detect non-zero exit code",
+      "Step 3: Classify as early failure type 'tool_crash'",
+      "Step 4: Extract stderr log excerpt",
+      "Step 5: Generate failure rationale",
+      "Step 6: Write failure classification to telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Classify early failure: missing required output files",
+    "steps": [
+      "Step 1: Execute trial expecting report_checks output",
+      "Step 2: Detect missing timing report file",
+      "Step 3: Classify as early failure type 'missing_artifacts'",
+      "Step 4: List expected vs actual files",
+      "Step 5: Generate failure rationale",
+      "Step 6: Mark trial as failed before analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Classify early failure: timing report parse failure",
+    "steps": [
+      "Step 1: Execute trial producing malformed timing report",
+      "Step 2: Attempt to parse report and detect parse error",
+      "Step 3: Classify as early failure type 'parse_error'",
+      "Step 4: Include parse error details in rationale",
+      "Step 5: Mark trial as failed",
+      "Step 6: Preserve unparseable report for debugging"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Print trial artifact root path in Ray task logs",
+    "steps": [
+      "Step 1: Execute trial as Ray task",
+      "Step 2: Emit canonical log line with artifact root path",
+      "Step 3: View task logs in Ray dashboard",
+      "Step 4: Verify artifact path is clearly visible",
+      "Step 5: Confirm path is copy-pasteable for navigation"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Create ECO with stable name and classification",
+    "steps": [
+      "Step 1: Define ECO with unique stable name",
+      "Step 2: Assign ECO to classification (e.g., 'placement_local')",
+      "Step 3: Verify ECO name is consistent across executions",
+      "Step 4: Confirm ECO classification determines safety constraints",
+      "Step 5: Verify ECO is comparable across cases and studies"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute ECO through standardized helper API not by modifying OpenROAD internals",
+    "steps": [
+      "Step 1: Define ECO using helper API",
+      "Step 2: Execute ECO application",
+      "Step 3: Verify ECO is applied via scripted OpenROAD commands",
+      "Step 4: Confirm OpenROAD source code is not modified",
+      "Step 5: Verify ECO execution is auditable and traceable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Emit ECO-level metrics, logs, and failure semantics",
+    "steps": [
+      "Step 1: Execute ECO in trial context",
+      "Step 2: Capture ECO-specific metrics (e.g., runtime, cells affected)",
+      "Step 3: Write ECO log file",
+      "Step 4: Define ECO failure semantics if applicable",
+      "Step 5: Emit all ECO data to trial artifacts",
+      "Step 6: Verify ECO telemetry is accessible for analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Rank trials by timing improvement (WNS delta)",
+    "steps": [
+      "Step 1: Execute stage with multiple trials",
+      "Step 2: Compute WNS for each trial",
+      "Step 3: Calculate WNS delta vs baseline",
+      "Step 4: Rank trials in descending order of WNS improvement",
+      "Step 5: Select top N trials as survivors",
+      "Step 6: Verify ranking is deterministic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Rank trials by congestion reduction (hot_ratio delta)",
+    "steps": [
+      "Step 1: Execute stage with congestion analysis enabled",
+      "Step 2: Compute hot_ratio for each trial",
+      "Step 3: Calculate hot_ratio delta vs baseline",
+      "Step 4: Rank trials in descending order of congestion reduction",
+      "Step 5: Select top N trials as survivors",
+      "Step 6: Verify ranking is deterministic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support multi-objective ranking combining timing and congestion",
+    "steps": [
+      "Step 1: Configure stage with multi-objective ranking policy",
+      "Step 2: Execute trials producing both timing and congestion metrics",
+      "Step 3: Compute weighted score combining WNS and hot_ratio",
+      "Step 4: Rank trials by combined score",
+      "Step 5: Select survivors using multi-objective policy",
+      "Step 6: Verify ranking balances both objectives"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Trigger abort when all trials in stage fail",
+    "steps": [
+      "Step 1: Execute stage where all trials will fail",
+      "Step 2: Detect 100% failure rate",
+      "Step 3: Trigger stage abort",
+      "Step 4: Verify downstream stages are not executed",
+      "Step 5: Mark Study as blocked",
+      "Step 6: Emit clear abort rationale"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Trigger abort when catastrophic failure marker is set",
+    "steps": [
+      "Step 1: Execute trial that sets catastrophic failure marker",
+      "Step 2: Detect catastrophic condition (e.g., segfault, tool crash)",
+      "Step 3: Immediately abort stage",
+      "Step 4: Mark entire ECO class as catastrophically failed",
+      "Step 5: Prevent future use of this ECO class in Study",
+      "Step 6: Emit catastrophic failure telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Record tool version and invocation provenance",
+    "steps": [
+      "Step 1: Execute trial in container",
+      "Step 2: Query OpenROAD version (best-effort)",
+      "Step 3: Record container image tag",
+      "Step 4: Record exact command-line invocation",
+      "Step 5: Write provenance data to trial telemetry",
+      "Step 6: Verify provenance is sufficient for reproducibility"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Compute and record snapshot hash for base case verification",
+    "steps": [
+      "Step 1: Load base case snapshot files",
+      "Step 2: Compute cryptographic hash of snapshot contents",
+      "Step 3: Record snapshot hash in Study metadata",
+      "Step 4: Verify snapshot integrity before each Study execution",
+      "Step 5: Detect snapshot tampering or corruption"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ASAP7 base case with explicit routing layer constraints",
+    "steps": [
+      "Step 1: Load ASAP7 base case",
+      "Step 2: Apply set_routing_layers -signal metal2-metal9 -clock metal6-metal9",
+      "Step 3: Execute global routing",
+      "Step 4: Verify routing uses only specified layers",
+      "Step 5: Confirm stable routing results"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ASAP7 floorplan with explicit site specification",
+    "steps": [
+      "Step 1: Initialize ASAP7 floorplan",
+      "Step 2: Use initialize_floorplan with site asap7sc7p5t_28_R_24_NP_162NW_34O",
+      "Step 3: Verify rows are correctly aligned",
+      "Step 4: Execute placement",
+      "Step 5: Confirm no site mismatch errors"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ASAP7 pin placement on mid-stack metals only",
+    "steps": [
+      "Step 1: Execute ASAP7 floorplan",
+      "Step 2: Place pins using place_pins -random -hor_layers {metal4} -ver_layers {metal5}",
+      "Step 3: Verify pins are only on metal4/metal5",
+      "Step 4: Execute routing",
+      "Step 5: Confirm no pin-access violations"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support Sky130 (sky130A) base case execution",
+    "steps": [
+      "Step 1: Load Sky130A PDK from container",
+      "Step 2: Create sky130_base case snapshot",
+      "Step 3: Execute no-op ECO trial",
+      "Step 4: Verify rc == 0 and reports are produced",
+      "Step 5: Parse timing report successfully",
+      "Step 6: Mark sky130 as supported target"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate PDK paths are resolved inside container not on host",
+    "steps": [
+      "Step 1: Launch container with standard image",
+      "Step 2: Verify PDK paths exist in container filesystem",
+      "Step 3: Execute OpenROAD command referencing PDK path",
+      "Step 4: Confirm command succeeds without host filesystem access",
+      "Step 5: Verify no network access is required for PDK data"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Prevent implicit PDK replacement without explicit declaration",
+    "steps": [
+      "Step 1: Attempt to override PDK without declaring in Study definition",
+      "Step 2: Verify Noodle 2 rejects implicit override",
+      "Step 3: Emit clear error message requiring explicit PDK declaration",
+      "Step 4: Confirm baseline PDK remains unchanged"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support custom container image with modified PDK as explicit override",
+    "steps": [
+      "Step 1: Create derived container with patched PDK",
+      "Step 2: Declare custom image in Study definition",
+      "Step 3: Execute Study using custom image",
+      "Step 4: Verify modified PDK is used",
+      "Step 5: Confirm custom PDK is documented in provenance"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute trial with X11 passthrough for interactive GUI mode",
+    "steps": [
+      "Step 1: Configure host with xhost +local:docker",
+      "Step 2: Launch container with DISPLAY and X11 unix socket mounted",
+      "Step 3: Execute openroad -gui command",
+      "Step 4: Verify GUI starts successfully",
+      "Step 5: Test gui::dump_heatmap command availability"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Export placement density heatmap using gui::dump_heatmap",
+    "steps": [
+      "Step 1: Load design in OpenROAD GUI mode",
+      "Step 2: Execute gui::dump_heatmap for placement_density",
+      "Step 3: Verify CSV heatmap file is created",
+      "Step 4: Parse CSV to validate format",
+      "Step 5: Confirm heatmap data is spatially reasonable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Export RUDY congestion heatmap using gui::dump_heatmap",
+    "steps": [
+      "Step 1: Load design in OpenROAD GUI mode",
+      "Step 2: Execute gui::dump_heatmap for RUDY",
+      "Step 3: Verify CSV heatmap file is created",
+      "Step 4: Parse CSV to validate format",
+      "Step 5: Confirm RUDY estimates are reasonable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Export routing congestion heatmap using gui::dump_heatmap",
+    "steps": [
+      "Step 1: Load routed design in OpenROAD GUI mode",
+      "Step 2: Execute gui::dump_heatmap for routing_congestion",
+      "Step 3: Verify CSV heatmap file is created",
+      "Step 4: Parse CSV to validate format",
+      "Step 5: Confirm congestion hotspots align with scalar metrics"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate PNG preview thumbnail from heatmap CSV as post-processing",
+    "steps": [
+      "Step 1: Obtain heatmap CSV from trial artifact",
+      "Step 2: Parse CSV data into 2D grid",
+      "Step 3: Render grid as PNG with colormap",
+      "Step 4: Save PNG thumbnail to artifact directory",
+      "Step 5: Link both CSV and PNG in artifact index"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Handle visualization_unavailable early failure when GUI mode is not supported",
+    "steps": [
+      "Step 1: Configure stage requiring heatmap export",
+      "Step 2: Execute in environment without GUI support",
+      "Step 3: Detect GUI unavailability",
+      "Step 4: Classify as early failure 'visualization_unavailable'",
+      "Step 5: Verify trial is marked failed with clear rationale"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Fall back to non-GUI congestion reports when visualization is unavailable",
+    "steps": [
+      "Step 1: Configure stage with optional visualization",
+      "Step 2: Execute in environment without GUI support",
+      "Step 3: Detect GUI unavailability",
+      "Step 4: Fall back to global_route -congestion_report_file only",
+      "Step 5: Complete trial successfully with scalar metrics only",
+      "Step 6: Document visualization fallback in telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Index heatmap artifacts in trial artifact index",
+    "steps": [
+      "Step 1: Generate heatmap CSVs during trial",
+      "Step 2: Generate PNG previews from CSVs",
+      "Step 3: Add heatmap entries to artifact_index.json",
+      "Step 4: Include paths to both CSV and PNG",
+      "Step 5: Tag with content-type 'heatmap' and layer info",
+      "Step 6: Validate index JSON structure"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Verify no telemetry leakage across isolated Studies",
+    "steps": [
+      "Step 1: Execute Study A with unique ECO outcomes",
+      "Step 2: Record Study A telemetry artifacts",
+      "Step 3: Execute Study B in isolation",
+      "Step 4: Inspect Study B telemetry directory",
+      "Step 5: Verify Study A data is not present in Study B artifacts",
+      "Step 6: Confirm complete isolation"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Enable optional prior sharing across Studies with explicit configuration",
+    "steps": [
+      "Step 1: Execute Study A with ECO priors accumulated",
+      "Step 2: Export Study A priors to shared repository",
+      "Step 3: Create Study B with explicit prior import enabled",
+      "Step 4: Verify Study B initializes ECOs with imported priors",
+      "Step 5: Confirm import is audited in Study B provenance"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate backward-compatible telemetry schema evolution",
+    "steps": [
+      "Step 1: Execute Study with telemetry schema version N",
+      "Step 2: Upgrade Noodle 2 to schema version N+1",
+      "Step 3: Parse old telemetry with new parser",
+      "Step 4: Verify old telemetry is still readable",
+      "Step 5: Confirm new fields are additive only"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate safety trace showing all safety-gate evaluations during execution",
+    "steps": [
+      "Step 1: Execute Study with multiple safety gates",
+      "Step 2: Record each safety check (legality, abort, ECO class filter)",
+      "Step 3: Generate safety trace document",
+      "Step 4: Verify trace shows all gate evaluations chronologically",
+      "Step 5: Include pass/fail status and rationale for each gate",
+      "Step 6: Write safety trace to Study artifacts"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Execute unattended long-running Study without human intervention",
+    "steps": [
+      "Step 1: Configure multi-stage Study with large trial budget",
+      "Step 2: Launch Study in unattended mode",
+      "Step 3: Verify Study progresses through all stages automatically",
+      "Step 4: Confirm all safety gates are evaluated programmatically",
+      "Step 5: Verify Study completes or aborts without human input",
+      "Step 6: Review telemetry to confirm full automation"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Use Noodle 2 for CI regression safety checks",
+    "steps": [
+      "Step 1: Configure Study with 'locked' safety domain",
+      "Step 2: Define regression test Cases with known-good baselines",
+      "Step 3: Execute Study in CI pipeline",
+      "Step 4: Verify any regressions are detected and reported",
+      "Step 5: Fail CI build if safety violations occur",
+      "Step 6: Confirm CI integration is stable and deterministic"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Compare ECO effectiveness across multiple Cases in comparative study",
+    "steps": [
+      "Step 1: Define Study with multiple Cases using different ECOs",
+      "Step 2: Execute all Cases in parallel stages",
+      "Step 3: Collect metrics for each Case/ECO combination",
+      "Step 4: Generate comparative report showing ECO effectiveness",
+      "Step 5: Rank ECOs by aggregate effectiveness",
+      "Step 6: Identify best-performing ECO classes"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Produce reproducible demo Study on Nangate45 open PDK",
+    "steps": [
+      "Step 1: Create nangate45_demo Study with fixed configuration",
+      "Step 2: Execute Study on multiple different machines",
+      "Step 3: Compare trial outcomes across machines",
+      "Step 4: Verify metrics are identical (within deterministic bounds)",
+      "Step 5: Confirm demo is reproducible and shareable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support staged validation ladder: Gate 0 baseline viability",
+    "steps": [
+      "Step 1: Execute base case for Nangate45, ASAP7, Sky130",
+      "Step 2: Verify each base case runs without crashing",
+      "Step 3: Verify required reports/artifacts are produced",
+      "Step 4: Verify early-failure detection works on base cases",
+      "Step 5: Block Study if any base case fails Gate 0"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support staged validation ladder: Gate 1 full output contract on basic config",
+    "steps": [
+      "Step 1: Execute base case with minimal/default configuration",
+      "Step 2: Verify all monitoring/provenance fields are populated",
+      "Step 3: Verify timing artifacts (wns_ps, tns_ps) are present",
+      "Step 4: Verify congestion artifacts are present when enabled",
+      "Step 5: Verify early-failure classification fields exist",
+      "Step 6: Verify structured telemetry meets schema requirements"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support staged validation ladder: Gate 2 controlled regression/failure injection",
+    "steps": [
+      "Step 1: Introduce controlled stressor (worsening slack) on Nangate45",
+      "Step 2: Verify Noodle 2 detects and classifies the regression",
+      "Step 3: Confirm failure is contained appropriately",
+      "Step 4: Repeat with congestion stressor",
+      "Step 5: Verify all failure modes are handled deterministically"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support staged validation ladder: Gate 3 cross-target parity",
+    "steps": [
+      "Step 1: Execute same validation tests on Nangate45, ASAP7, Sky130",
+      "Step 2: Verify monitoring contract holds across all targets",
+      "Step 3: Verify early-failure classification is consistent",
+      "Step 4: Verify telemetry schema is identical across targets",
+      "Step 5: Confirm audit artifacts are complete for all targets"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support staged validation ladder: Gate 4 extreme scenarios demo-grade",
+    "steps": [
+      "Step 1: Create extreme Study with severe violations",
+      "Step 2: Verify Noodle 2 refuses to proceed when base case is broken",
+      "Step 3: Test pathological ECO containment",
+      "Step 4: Verify reproducibility under extreme conditions",
+      "Step 5: Confirm auditability is preserved even in extreme cases"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect and classify ASAP7-specific failure modes",
+    "steps": [
+      "Step 1: Execute ASAP7 Study without required workarounds",
+      "Step 2: Detect routing track inference failure",
+      "Step 3: Classify as configuration error not tool error",
+      "Step 4: Emit clear diagnostic with required fix",
+      "Step 5: Verify failure is deterministic and reproducible"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Use lower utilization for ASAP7 to prevent routing explosion",
+    "steps": [
+      "Step 1: Configure ASAP7 floorplan with utilization 0.50-0.55",
+      "Step 2: Execute placement",
+      "Step 3: Execute global routing",
+      "Step 4: Verify routing converges successfully",
+      "Step 5: Confirm no congestion explosion occurs"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Prefer STA-first staging for ASAP7 studies",
+    "steps": [
+      "Step 1: Configure ASAP7 Study with Stage 1 = STA-only",
+      "Step 2: Execute Stage 1 timing analysis",
+      "Step 3: Verify stable timing results",
+      "Step 4: Optionally enable congestion analysis in Stage 2+",
+      "Step 5: Confirm STA-first approach is more stable than congestion-first"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Log trial timestamps for execution time tracking",
+    "steps": [
+      "Step 1: Execute trial and record start timestamp",
+      "Step 2: Record end timestamp after completion",
+      "Step 3: Calculate trial duration",
+      "Step 4: Write timestamps to trial telemetry",
+      "Step 5: Use timestamps for performance analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Capture stdout and stderr from OpenROAD tool invocations",
+    "steps": [
+      "Step 1: Execute OpenROAD command in trial",
+      "Step 2: Redirect stdout to trial log file",
+      "Step 3: Redirect stderr to separate error log file",
+      "Step 4: Preserve both logs in trial artifacts",
+      "Step 5: Extract log excerpts for failure classification"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Parse per-layer congestion metrics from detailed reports",
+    "steps": [
+      "Step 1: Execute global routing with detailed congestion output",
+      "Step 2: Parse per-layer hot bin counts",
+      "Step 3: Identify which layers have highest congestion",
+      "Step 4: Emit per-layer metrics to telemetry",
+      "Step 5: Use layer-specific data for ECO targeting"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support inspection of top timing paths from report_checks output",
+    "steps": [
+      "Step 1: Execute report_checks with path limit",
+      "Step 2: Parse top N critical paths",
+      "Step 3: Extract path slack, startpoint, endpoint",
+      "Step 4: Emit top paths to timing analysis artifacts",
+      "Step 5: Enable path-level debugging and ECO targeting"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate Study configuration JSON schema before execution",
+    "steps": [
+      "Step 1: Load Study configuration file",
+      "Step 2: Parse JSON and validate against schema",
+      "Step 3: Check required fields are present",
+      "Step 4: Verify safety domain is valid value",
+      "Step 5: Reject Study with clear error if schema validation fails"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support dry-run mode to validate configuration without executing trials",
+    "steps": [
+      "Step 1: Load Study configuration",
+      "Step 2: Enable dry-run mode",
+      "Step 3: Validate all configuration parameters",
+      "Step 4: Generate Run Legality Report",
+      "Step 5: Exit without executing trials",
+      "Step 6: Report validation results to user"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Emit machine-readable JSON telemetry for all Study events",
+    "steps": [
+      "Step 1: Execute Study with multiple events (trial start, completion, failure)",
+      "Step 2: Write each event to JSON telemetry stream",
+      "Step 3: Validate all JSON is well-formed",
+      "Step 4: Verify events are timestamped",
+      "Step 5: Enable programmatic telemetry analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support human-readable summary reports in addition to JSON telemetry",
+    "steps": [
+      "Step 1: Execute Study to completion",
+      "Step 2: Generate human-readable summary report",
+      "Step 3: Include Study name, safety domain, stage count",
+      "Step 4: Summarize trial success/failure statistics",
+      "Step 5: List top-performing Cases",
+      "Step 6: Write summary to text file in Study artifacts"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Export Case lineage graph in DOT format for visualization",
+    "steps": [
+      "Step 1: Execute Study with multiple derived Cases",
+      "Step 2: Build Case DAG",
+      "Step 3: Export graph in Graphviz DOT format",
+      "Step 4: Render DOT file to PNG/SVG using graphviz",
+      "Step 5: Include lineage visualization in Study artifacts"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Track resource utilization per trial (CPU time, peak memory)",
+    "steps": [
+      "Step 1: Execute trial with resource monitoring enabled",
+      "Step 2: Track CPU time consumed by OpenROAD process",
+      "Step 3: Track peak memory usage",
+      "Step 4: Record resource metrics in trial telemetry",
+      "Step 5: Use metrics for resource budget planning"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support trial timeout to prevent runaway executions",
+    "steps": [
+      "Step 1: Configure stage with trial timeout limit",
+      "Step 2: Execute trial that may run indefinitely",
+      "Step 3: Detect timeout expiration",
+      "Step 4: Terminate trial process",
+      "Step 5: Classify as early failure 'timeout'",
+      "Step 6: Mark trial as failed and continue with next trial"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Prevent trial from modifying shared filesystem outside its working directory",
+    "steps": [
+      "Step 1: Configure trial with isolated working directory",
+      "Step 2: Execute trial with filesystem access monitoring",
+      "Step 3: Verify trial only writes to its working directory",
+      "Step 4: Detect any attempted writes outside working directory",
+      "Step 5: Abort trial if isolation is violated"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support read-only snapshot mounting to prevent accidental modification",
+    "steps": [
+      "Step 1: Mount base snapshot as read-only in container",
+      "Step 2: Execute trial",
+      "Step 3: Verify trial can read snapshot files",
+      "Step 4: Verify trial cannot modify snapshot files",
+      "Step 5: Confirm snapshot integrity is preserved"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Enable parallel execution of independent Studies on shared cluster",
+    "steps": [
+      "Step 1: Launch Study A on Ray cluster",
+      "Step 2: Launch Study B on same Ray cluster",
+      "Step 3: Verify both Studies execute concurrently",
+      "Step 4: Confirm resource isolation between Studies",
+      "Step 5: Verify no telemetry cross-contamination",
+      "Step 6: Confirm both Studies complete successfully"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support bind-mounted versioned PDK override with explicit Study declaration",
+    "steps": [
+      "Step 1: Create versioned PDK directory on host",
+      "Step 2: Declare bind mount in Study configuration",
+      "Step 3: Launch container with volume mount",
+      "Step 4: Verify custom PDK is accessible in container",
+      "Step 5: Execute trial using custom PDK",
+      "Step 6: Document PDK override in Study provenance"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect and report PDK version mismatch between snapshot and runtime",
+    "steps": [
+      "Step 1: Load snapshot created with PDK version X",
+      "Step 2: Attempt execution with PDK version Y",
+      "Step 3: Detect version mismatch",
+      "Step 4: Classify as configuration error",
+      "Step 5: Emit clear warning about version incompatibility"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate ECO effectiveness leaderboard across all trials in Study",
+    "steps": [
+      "Step 1: Execute Study with multiple ECO types",
+      "Step 2: Track effectiveness metrics for each ECO instance",
+      "Step 3: Aggregate effectiveness by ECO class",
+      "Step 4: Rank ECO classes by average improvement",
+      "Step 5: Generate leaderboard report",
+      "Step 6: Include leaderboard in Study summary"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ECO parameter sweeps with systematic variation",
+    "steps": [
+      "Step 1: Define ECO with tunable parameter (e.g., buffer insertion threshold)",
+      "Step 2: Configure parameter sweep range",
+      "Step 3: Generate trials systematically varying parameter",
+      "Step 4: Execute all parameter sweep trials",
+      "Step 5: Identify optimal parameter value",
+      "Step 6: Report parameter sensitivity analysis"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect early failure when required tool is missing from container",
+    "steps": [
+      "Step 1: Execute trial requiring specific tool (e.g., openroad)",
+      "Step 2: Detect tool not found on PATH",
+      "Step 3: Classify as early failure 'missing_tool'",
+      "Step 4: Emit clear diagnostic naming missing tool",
+      "Step 5: Abort trial before wasting compute"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support resumption of interrupted Study from last completed stage",
+    "steps": [
+      "Step 1: Execute multi-stage Study",
+      "Step 2: Interrupt execution after Stage 1 completes",
+      "Step 3: Load Study state from telemetry",
+      "Step 4: Resume execution starting at Stage 2",
+      "Step 5: Verify Stage 1 results are preserved and not re-executed",
+      "Step 6: Complete Study successfully"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate trial artifact completeness before marking trial as successful",
+    "steps": [
+      "Step 1: Define artifact completeness checklist for trial type",
+      "Step 2: Execute trial",
+      "Step 3: Check all required artifacts are present",
+      "Step 4: Verify artifact files are non-empty and parseable",
+      "Step 5: Mark trial as successful only if all artifacts pass validation",
+      "Step 6: Classify as early failure if artifacts are incomplete"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate diff report comparing Case metrics vs baseline",
+    "steps": [
+      "Step 1: Execute baseline Case",
+      "Step 2: Execute derived Case with ECO applied",
+      "Step 3: Compute metric deltas (WNS, TNS, hot_ratio, etc)",
+      "Step 4: Generate diff report showing improvements/regressions",
+      "Step 5: Include diff report in Case artifacts",
+      "Step 6: Use diff for survivor ranking"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support Study metadata including author, creation date, description",
+    "steps": [
+      "Step 1: Create Study configuration with metadata fields",
+      "Step 2: Populate author, creation_date, description",
+      "Step 3: Write metadata to Study artifacts",
+      "Step 4: Display metadata in Study summary reports",
+      "Step 5: Enable Study catalog/search by metadata"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Enforce ECO class risk envelope constraints",
+    "steps": [
+      "Step 1: Define ECO class with risk envelope (max cells affected, max area delta)",
+      "Step 2: Execute ECO",
+      "Step 3: Measure actual cells affected and area delta",
+      "Step 4: Verify actuals are within risk envelope",
+      "Step 5: Classify as ECO violation if envelope is exceeded",
+      "Step 6: Abort ECO or mark as suspicious based on policy"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Log all policy rule evaluations for audit trail",
+    "steps": [
+      "Step 1: Execute Study with active policy rules",
+      "Step 2: Record each policy rule evaluation (inputs, logic, outcome)",
+      "Step 3: Write policy evaluation log to Study artifacts",
+      "Step 4: Enable post-execution policy audit",
+      "Step 5: Verify policy behavior is fully traceable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support custom metric extractors for project-specific KPIs",
+    "steps": [
+      "Step 1: Define custom metric extractor function",
+      "Step 2: Register extractor with Noodle 2 metric system",
+      "Step 3: Execute trial",
+      "Step 4: Invoke custom extractor on trial artifacts",
+      "Step 5: Emit custom metrics to telemetry",
+      "Step 6: Use custom metrics in ranking and policy"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect and classify timing violations (setup, hold)",
+    "steps": [
+      "Step 1: Execute STA producing report_checks output",
+      "Step 2: Parse timing paths and identify violation types",
+      "Step 3: Classify setup violations (negative WNS on max paths)",
+      "Step 4: Classify hold violations (negative slack on min paths)",
+      "Step 5: Emit violation breakdown to telemetry",
+      "Step 6: Use violation classification for ECO targeting"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support stage-specific abort thresholds (e.g., max WNS regression)",
+    "steps": [
+      "Step 1: Configure stage with abort threshold WNS_delta < -100ps",
+      "Step 2: Execute trial producing WNS regression of -150ps",
+      "Step 3: Detect threshold violation",
+      "Step 4: Trigger stage abort",
+      "Step 5: Emit abort rationale referencing threshold",
+      "Step 6: Prevent downstream stages from executing"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Export structured Study results for integration with external analysis tools",
+    "steps": [
+      "Step 1: Execute Study to completion",
+      "Step 2: Export results in standard format (JSON, CSV)",
+      "Step 3: Include all Case metrics, rankings, and lineage",
+      "Step 4: Write export file to Study artifacts",
+      "Step 5: Validate export can be imported by external tool",
+      "Step 6: Enable integration with Jupyter, Excel, etc"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate per-stage performance summary (trials/sec, total compute time)",
+    "steps": [
+      "Step 1: Execute stage with multiple trials",
+      "Step 2: Track stage start and end time",
+      "Step 3: Count completed trials",
+      "Step 4: Calculate throughput (trials/sec)",
+      "Step 5: Sum total compute time across all trials",
+      "Step 6: Write performance summary to stage artifacts"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support graceful shutdown with checkpoint saving",
+    "steps": [
+      "Step 1: Execute long-running Study",
+      "Step 2: Send graceful shutdown signal (SIGTERM)",
+      "Step 3: Complete current trial",
+      "Step 4: Save Study checkpoint state",
+      "Step 5: Shutdown Ray cluster cleanly",
+      "Step 6: Enable Study resumption from checkpoint"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate snapshot structural integrity before Study execution",
+    "steps": [
+      "Step 1: Load snapshot directory",
+      "Step 2: Check required files are present (DEF, LEF, SDC, etc)",
+      "Step 3: Validate file formats are parseable",
+      "Step 4: Verify snapshot hash matches expected value",
+      "Step 5: Reject Study if snapshot is corrupted",
+      "Step 6: Emit clear diagnostic of missing/invalid files"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support concurrent Stage execution for independent Study branches (advanced)",
+    "steps": [
+      "Step 1: Define Study with branching DAG allowing parallel stages",
+      "Step 2: Identify independent stage branches",
+      "Step 3: Execute independent stages in parallel",
+      "Step 4: Merge results at convergence point",
+      "Step 5: Verify safety gates are evaluated correctly in parallel",
+      "Step 6: Confirm overall Study determinism is preserved"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Log OpenROAD TCL script invocations for reproducibility",
+    "steps": [
+      "Step 1: Generate TCL script for trial execution",
+      "Step 2: Write TCL script to trial artifacts",
+      "Step 3: Execute OpenROAD with logged TCL script",
+      "Step 4: Verify trial is reproducible by re-running logged script",
+      "Step 5: Enable manual reproduction of any trial"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ECO blacklist to exclude known-bad ECOs from Study",
+    "steps": [
+      "Step 1: Identify ECO known to cause catastrophic failures",
+      "Step 2: Add ECO to Study blacklist",
+      "Step 3: Attempt to execute blacklisted ECO",
+      "Step 4: Verify ECO is skipped with clear log message",
+      "Step 5: Confirm other ECOs continue normally"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support ECO whitelist to restrict Study to approved ECOs only",
+    "steps": [
+      "Step 1: Configure Study with ECO whitelist",
+      "Step 2: Attempt to execute ECO not on whitelist",
+      "Step 3: Verify ECO is rejected",
+      "Step 4: Execute whitelisted ECO successfully",
+      "Step 5: Enforce whitelist as hard constraint"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Emit Ray dashboard-compatible task metadata for trials",
+    "steps": [
+      "Step 1: Submit trial as Ray task",
+      "Step 2: Attach metadata (case name, stage, ECO) to Ray task",
+      "Step 3: View task in Ray dashboard",
+      "Step 4: Verify metadata is displayed in dashboard UI",
+      "Step 5: Enable filtering/sorting by metadata in dashboard"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support Ray actor-based controller for stateful Study orchestration",
+    "steps": [
+      "Step 1: Initialize Noodle 2 controller as Ray actor",
+      "Step 2: Maintain Study state in actor",
+      "Step 3: Submit trials from actor to Ray task queue",
+      "Step 4: Handle trial completion callbacks in actor",
+      "Step 5: Update Study state deterministically",
+      "Step 6: Verify actor provides fault-tolerance for controller"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate JSON-LD metadata for Study artifacts to enable semantic search",
+    "steps": [
+      "Step 1: Execute Study",
+      "Step 2: Generate JSON-LD metadata describing Study semantics",
+      "Step 3: Include schema.org Dataset vocabulary",
+      "Step 4: Link to artifact URIs",
+      "Step 5: Write JSON-LD to Study artifacts",
+      "Step 6: Enable discovery and indexing by semantic search engines"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support OpenROAD command logging for debugging failed trials",
+    "steps": [
+      "Step 1: Execute trial with OpenROAD command echo enabled",
+      "Step 2: Log all OpenROAD commands to trial log file",
+      "Step 3: Include command timing information",
+      "Step 4: On failure, review command log to identify failing command",
+      "Step 5: Use command log for debugging and reproduction"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect design rule violations (DRV) and include in trial metrics",
+    "steps": [
+      "Step 1: Execute detailed routing producing DRC report",
+      "Step 2: Parse DRC violations from report",
+      "Step 3: Count total DRV count",
+      "Step 4: Classify violation types (spacing, width, etc)",
+      "Step 5: Emit DRV metrics to telemetry",
+      "Step 6: Use DRV count in trial ranking"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support power analysis integration (optional advanced feature)",
+    "steps": [
+      "Step 1: Execute trial with power-aware flow",
+      "Step 2: Run OpenSTA with power analysis enabled",
+      "Step 3: Extract total power, leakage, dynamic power",
+      "Step 4: Emit power metrics to telemetry",
+      "Step 5: Use power as additional ranking dimension",
+      "Step 6: Support power-timing trade-off studies"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Validate ASAP7 LEF/tech files match expected identifiers",
+    "steps": [
+      "Step 1: Load ASAP7 PDK files from container",
+      "Step 2: Parse LEF to extract site names",
+      "Step 3: Verify site name matches asap7sc7p5t_28_R_24_NP_162NW_34O",
+      "Step 4: Parse tech file to extract metal layer names",
+      "Step 5: Verify metal layers match expected naming (metal2-metal9)",
+      "Step 6: Fail fast with configuration error if identifiers mismatch"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate comparative heatmap showing before/after ECO spatial impact",
+    "steps": [
+      "Step 1: Export baseline heatmap before ECO",
+      "Step 2: Apply ECO and export heatmap after",
+      "Step 3: Compute spatial difference (after - before)",
+      "Step 4: Render diff heatmap showing regions of improvement/degradation",
+      "Step 5: Include diff heatmap in ECO analysis artifacts"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support trial retry with exponential backoff for transient failures",
+    "steps": [
+      "Step 1: Execute trial that fails with transient error (e.g., network timeout)",
+      "Step 2: Classify failure as transient",
+      "Step 3: Schedule retry with exponential backoff",
+      "Step 4: Retry trial up to max retry count",
+      "Step 5: Mark trial as permanently failed if all retries exhausted",
+      "Step 6: Log retry attempts in telemetry"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Track and report Ray cluster resource utilization during Study",
+    "steps": [
+      "Step 1: Query Ray cluster status at Study start",
+      "Step 2: Poll cluster resource usage during execution",
+      "Step 3: Track CPU, memory, node utilization over time",
+      "Step 4: Emit resource utilization timeseries to telemetry",
+      "Step 5: Generate resource utilization report in Study summary",
+      "Step 6: Identify resource bottlenecks"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support container image pinning with SHA256 digest for reproducibility",
+    "steps": [
+      "Step 1: Configure Study with container image specified by SHA256 digest",
+      "Step 2: Verify image digest before execution",
+      "Step 3: Execute trial with pinned image",
+      "Step 4: Ensure exact image version is used across all trials",
+      "Step 5: Document image digest in provenance metadata"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate Pareto frontier of trials for multi-objective optimization",
+    "steps": [
+      "Step 1: Execute stage with multi-objective metrics (WNS, area, power)",
+      "Step 2: Compute Pareto frontier of non-dominated trials",
+      "Step 3: Identify Pareto-optimal Cases",
+      "Step 4: Visualize Pareto frontier in 2D/3D plot",
+      "Step 5: Include Pareto analysis in stage summary"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support trial cancellation when survivor set is already determined",
+    "steps": [
+      "Step 1: Execute stage with early-stopping policy",
+      "Step 2: Determine survivors can be selected before all trials complete",
+      "Step 3: Cancel remaining trials",
+      "Step 4: Verify cancelled trials are logged appropriately",
+      "Step 5: Confirm stage proceeds with selected survivors",
+      "Step 6: Measure compute savings from early stopping"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Detect and report OpenROAD tool version from container",
+    "steps": [
+      "Step 1: Execute 'openroad -version' in container",
+      "Step 2: Parse version string from output",
+      "Step 3: Record OpenROAD version in trial provenance",
+      "Step 4: Verify version matches expected version range",
+      "Step 5: Warn if version is unexpected"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Support Study tags for organization and filtering",
+    "steps": [
+      "Step 1: Add tags to Study configuration (e.g., 'nangate45', 'exploration', 'wip')",
+      "Step 2: Write tags to Study metadata",
+      "Step 3: Enable Study catalog filtering by tags",
+      "Step 4: Generate tag-based Study reports",
+      "Step 5: Support tag-based Study search"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate machine-readable provenance chain for any trial result",
+    "steps": [
+      "Step 1: Execute trial",
+      "Step 2: Record provenance: snapshot hash, container image, tool versions",
+      "Step 3: Record parent case lineage",
+      "Step 4: Record ECO sequence applied",
+      "Step 5: Record configuration and policy state",
+      "Step 6: Export provenance chain as structured document",
+      "Step 7: Enable cryptographic verification of provenance (future)",
+      "Step 8: Support audit and compliance requirements"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Comprehensive end-to-end test: Execute Nangate45 3-stage Study with 20 trials per stage",
+    "steps": [
+      "Step 1: Create nangate45_e2e Study with 3 stages",
+      "Step 2: Configure Stage 0: STA-only, 20 trials, 5 survivors",
+      "Step 3: Configure Stage 1: STA+congestion, 20 trials, 3 survivors",
+      "Step 4: Configure Stage 2: STA+congestion, 10 trials, 1 survivor",
+      "Step 5: Execute entire Study on single-node Ray",
+      "Step 6: Verify all stages complete successfully",
+      "Step 7: Verify survivor selection works at each stage",
+      "Step 8: Verify final winning Case is identified",
+      "Step 9: Verify all telemetry artifacts are complete",
+      "Step 10: Verify Ray dashboard shows all tasks",
+      "Step 11: Generate Study summary report",
+      "Step 12: Confirm Study is reproducible by re-running"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Ray Dashboard displays cluster status with clear node health indicators",
+    "steps": [
+      "Step 1: Launch Ray cluster",
+      "Step 2: Navigate to Ray Dashboard at http://localhost:8265",
+      "Step 3: Verify cluster overview page loads",
+      "Step 4: Take screenshot of cluster status",
+      "Step 5: Verify node count and health status are clearly visible"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Ray Dashboard task list shows trial metadata (case name, stage, ECO) clearly",
+    "steps": [
+      "Step 1: Execute Study with multiple trials",
+      "Step 2: Navigate to Ray Dashboard tasks view",
+      "Step 3: Take screenshot of task list",
+      "Step 4: Verify each task shows case name",
+      "Step 5: Verify stage index is visible",
+      "Step 6: Verify ECO name is displayed"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Trial artifact path is prominently displayed in Ray task logs",
+    "steps": [
+      "Step 1: Execute trial",
+      "Step 2: Open trial task in Ray dashboard",
+      "Step 3: View task logs",
+      "Step 4: Take screenshot showing artifact path line",
+      "Step 5: Verify path is clearly formatted and easy to copy"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Study summary report is well-formatted and human-readable",
+    "steps": [
+      "Step 1: Execute Study to completion",
+      "Step 2: Generate summary report",
+      "Step 3: Open summary report in text viewer",
+      "Step 4: Take screenshot of report",
+      "Step 5: Verify report has clear sections and formatting",
+      "Step 6: Verify key metrics are highlighted and easy to find"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Heatmap PNG previews are rendered with appropriate colormap and scale",
+    "steps": [
+      "Step 1: Generate heatmap CSVs from trial",
+      "Step 2: Render PNG previews with matplotlib/similar",
+      "Step 3: View PNG files",
+      "Step 4: Take screenshots of heatmaps",
+      "Step 5: Verify colormap clearly shows hotspots (e.g., hot colors for congestion)",
+      "Step 6: Verify scale/legend is included and readable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Case lineage graph visualization is clear and shows DAG structure",
+    "steps": [
+      "Step 1: Execute Study with branching case derivations",
+      "Step 2: Generate lineage graph DOT file",
+      "Step 3: Render graph to PNG",
+      "Step 4: View lineage visualization",
+      "Step 5: Take screenshot",
+      "Step 6: Verify parent-child relationships are clear",
+      "Step 7: Verify graph layout is readable (no overlapping nodes/edges)"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Run Legality Report is formatted as clear readable document",
+    "steps": [
+      "Step 1: Generate Run Legality Report",
+      "Step 2: Open report file",
+      "Step 3: Take screenshot",
+      "Step 4: Verify report has clear sections: safety domain, ECO classes, rails, abort criteria",
+      "Step 5: Verify pass/fail status is prominently displayed",
+      "Step 6: Verify illegal conditions are highlighted in red or similar"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Safety trace document shows chronological evaluation log with clear pass/fail indicators",
+    "steps": [
+      "Step 1: Execute Study generating safety trace",
+      "Step 2: Open safety trace document",
+      "Step 3: Take screenshot",
+      "Step 4: Verify events are listed chronologically",
+      "Step 5: Verify each gate evaluation shows pass/fail clearly",
+      "Step 6: Verify rationale is provided for failures"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Failure classification messages are clear, actionable, and human-friendly",
+    "steps": [
+      "Step 1: Trigger various failure types (tool_crash, parse_error, timeout, etc)",
+      "Step 2: Collect failure messages",
+      "Step 3: Review each message",
+      "Step 4: Take screenshots",
+      "Step 5: Verify messages explain what went wrong",
+      "Step 6: Verify messages suggest next steps or workarounds where applicable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Study artifact directory structure is well-organized and self-documenting",
+    "steps": [
+      "Step 1: Execute complete Study",
+      "Step 2: Browse Study artifact directory tree",
+      "Step 3: Take screenshot of directory structure",
+      "Step 4: Verify directory naming follows clear conventions",
+      "Step 5: Verify key files (summary, telemetry, reports) are easy to locate",
+      "Step 6: Verify README or index file explains directory structure"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Artifact index JSON is well-formatted and includes helpful descriptions",
+    "steps": [
+      "Step 1: Generate artifact_index.json",
+      "Step 2: Open in JSON viewer/editor",
+      "Step 3: Take screenshot",
+      "Step 4: Verify JSON is properly indented and readable",
+      "Step 5: Verify each artifact entry includes description and content-type",
+      "Step 6: Verify paths are relative and portable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Telemetry JSON files are human-readable with consistent formatting",
+    "steps": [
+      "Step 1: Execute Study generating telemetry",
+      "Step 2: Open telemetry JSON files",
+      "Step 3: Take screenshots",
+      "Step 4: Verify JSON is pretty-printed with indentation",
+      "Step 5: Verify field names are descriptive and follow naming conventions",
+      "Step 6: Verify timestamps are in ISO 8601 format"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Stage performance summary report includes visual progress indicators",
+    "steps": [
+      "Step 1: Execute stage",
+      "Step 2: Generate performance summary",
+      "Step 3: Open summary report",
+      "Step 4: Take screenshot",
+      "Step 5: Verify progress is shown visually (e.g., ASCII progress bar, percentage)",
+      "Step 6: Verify summary is concise and scannable"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "ECO effectiveness leaderboard is formatted as sortable table",
+    "steps": [
+      "Step 1: Generate ECO leaderboard",
+      "Step 2: Open leaderboard report",
+      "Step 3: Take screenshot",
+      "Step 4: Verify table has clear column headers",
+      "Step 5: Verify ECOs are sorted by effectiveness metric",
+      "Step 6: Verify metrics are aligned and easy to compare"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Diff report comparing case vs baseline uses color-coded deltas",
+    "steps": [
+      "Step 1: Generate case diff report",
+      "Step 2: Open diff report (HTML or terminal output)",
+      "Step 3: Take screenshot",
+      "Step 4: Verify improvements are shown in green",
+      "Step 5: Verify regressions are shown in red",
+      "Step 6: Verify neutral changes are shown in default color"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Command-line tool provides helpful usage messages and examples",
+    "steps": [
+      "Step 1: Run noodle2 --help",
+      "Step 2: Take screenshot of help output",
+      "Step 3: Verify usage message is clear and complete",
+      "Step 4: Verify subcommands are listed with descriptions",
+      "Step 5: Verify examples are provided for common workflows"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Error messages include error codes for programmatic handling",
+    "steps": [
+      "Step 1: Trigger various error conditions",
+      "Step 2: Collect error messages",
+      "Step 3: Review error format",
+      "Step 4: Verify each error includes unique error code (e.g., N2-E-001)",
+      "Step 5: Verify error code documentation is available"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Progress messages during Study execution are informative and not overwhelming",
+    "steps": [
+      "Step 1: Execute Study with verbose logging",
+      "Step 2: Monitor console output",
+      "Step 3: Take screenshots at different execution phases",
+      "Step 4: Verify progress messages are helpful (stage start/end, trial completion)",
+      "Step 5: Verify messages are not excessively verbose",
+      "Step 6: Verify key events are highlighted appropriately"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Pareto frontier visualization clearly shows trade-off between objectives",
+    "steps": [
+      "Step 1: Generate Pareto frontier plot",
+      "Step 2: View plot image",
+      "Step 3: Take screenshot",
+      "Step 4: Verify axes are labeled with objective names and units",
+      "Step 5: Verify Pareto-optimal points are highlighted",
+      "Step 6: Verify plot includes legend and title"
+    ],
+    "passes": false
+  },
+  {
+    "category": "style",
+    "description": "Study catalog/list view presents Studies in organized table format",
+    "steps": [
+      "Step 1: Run command to list all Studies",
+      "Step 2: Take screenshot of catalog output",
+      "Step 3: Verify Studies are shown in table with columns: name, status, creation date, tags",
+      "Step 4: Verify table is sortable by different columns",
+      "Step 5: Verify table is easy to scan visually"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Initialize project with init.sh script successfully starting all required services",
+    "steps": [
+      "Step 1: Execute init.sh script",
+      "Step 2: Verify dependencies are installed",
+      "Step 3: Verify Ray cluster starts successfully",
+      "Step 4: Verify Ray dashboard is accessible",
+      "Step 5: Verify Docker is available and can pull required images",
+      "Step 6: Verify helpful information is printed about accessing services"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "README provides clear setup instructions and project overview",
+    "steps": [
+      "Step 1: Open README.md",
+      "Step 2: Verify project description is present and accurate",
+      "Step 3: Verify prerequisites are listed",
+      "Step 4: Verify setup instructions are step-by-step and complete",
+      "Step 5: Verify examples of basic usage are provided",
+      "Step 6: Verify links to detailed documentation are included"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Git repository is initialized with proper .gitignore for artifacts and caches",
+    "steps": [
+      "Step 1: Verify .git directory exists",
+      "Step 2: Check .gitignore file is present",
+      "Step 3: Verify .gitignore excludes artifact directories",
+      "Step 4: Verify .gitignore excludes Python cache files",
+      "Step 5: Verify .gitignore excludes container volumes",
+      "Step 6: Test that artifacts are not tracked by git"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Feature list is loaded and validated at runtime for test tracking",
+    "steps": [
+      "Step 1: Load feature_list.json at runtime",
+      "Step 2: Parse JSON and validate structure",
+      "Step 3: Count total features",
+      "Step 4: Verify count >= 200",
+      "Step 5: Count features by category (functional vs style)",
+      "Step 6: Verify all features have required fields: category, description, steps, passes"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Test framework can mark individual features as passing",
+    "steps": [
+      "Step 1: Load feature_list.json",
+      "Step 2: Execute test for specific feature",
+      "Step 3: Update feature's passes field to true",
+      "Step 4: Write updated feature_list.json back to disk",
+      "Step 5: Verify feature status persists across runs",
+      "Step 6: Verify other features remain unchanged"
+    ],
+    "passes": false
+  },
+  {
+    "category": "functional",
+    "description": "Generate progress report showing percentage of features passing",
+    "steps": [
+      "Step 1: Load feature_list.json",
+      "Step 2: Count total features",
+      "Step 3: Count features with passes=true",
+      "Step 4: Calculate completion percentage",
+      "Step 5: Generate report showing progress by category",
+      "Step 6: Display report in human-readable format"
+    ],
+    "passes": false
+  }
+]

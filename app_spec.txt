@@ -1,0 +1,893 @@
+# Noodle 2 — Product Description
+
+## Executive Summary
+
+**Noodle 2** is a safety‑aware, policy‑driven orchestration system for large‑scale physical‑design (PD) experimentation built on top of OpenROAD. It is designed to manage *uncertainty, failure, and limited compute budgets* while exploring Engineering Change Orders (ECOs) across complex, multi‑stage design workflows.
+
+Noodle 2 does **not** replace PD tools or algorithms. Instead, it provides a deterministic control plane that enables structured experimentation, auditable decision‑making, and safe automation across multiple studies, stages, and design variants.
+
+---
+
+## Positioning
+
+Noodle 2 occupies the layer **above** physical‑design engines such as OpenROAD:
+
+* OpenROAD solves placement, routing, and timing problems.
+* Noodle 2 decides **what to try, when to stop, and what to trust**.
+
+It acts as a *safety‑critical experiment controller* rather than an optimizer or solver.
+
+---
+
+## Core Concepts
+
+### Study
+
+A **Study** is the top‑level unit of work in Noodle 2.
+
+A Study defines:
+
+* a base design snapshot (e.g., broken ASAP7, Nangate45, Sky130)
+* a safety domain
+* policy and rail configuration
+* one or more multi‑stage experiment graphs
+
+Studies are isolated by default: telemetry, priors, and outcomes do not leak across studies unless explicitly allowed.
+
+---
+
+### Case
+
+A **Case** represents a concrete design state derived from a Study.
+
+* The base Case is the original snapshot.
+* Derived Cases are created by applying one or more ECOs.
+* Cases form a directed acyclic graph (DAG) within a Study.
+
+**Deterministic naming contract**:
+
+```
+<case_name>_<stage_index>_<derived_index>
+```
+
+This guarantees traceable lineage across complex branching experiments.
+
+---
+
+### Stage
+
+A **Stage** is a refinement phase within a Study.
+
+* Studies may define any number of ordered stages (`N ≥ 1`).
+* Each stage specifies:
+
+  * execution mode (e.g., STA‑only, STA+congestion)
+  * trial budget and survivor count
+  * allowed ECO classes
+  * abort and safety thresholds
+
+Stages execute sequentially; only surviving Cases advance.
+
+---
+
+### ECO (Engineering Change Order)
+
+An **ECO** is a first‑class, auditable unit of change.
+
+Each ECO:
+
+* has a stable name and classification
+* emits metrics, logs, and failure semantics
+* is comparable across Cases and Studies
+* belongs to an explicit ECO class with a defined risk envelope
+
+ECOs do not modify OpenROAD internals and are executed through standardized helper APIs.
+
+---
+
+## Safety Model
+
+### Safety Domains
+
+Every Study runs under a declared **Safety Domain**:
+
+* `sandbox` — exploratory, permissive
+* `guarded` — default, production‑like
+* `locked` — conservative, regression‑only
+
+Safety Domains constrain:
+
+* allowed ECO classes
+* abort sensitivity
+* promotion rules
+* use of historical priors
+
+---
+
+### ECO Classes
+
+ECOs are categorized by blast radius:
+
+* `topology_neutral`
+* `placement_local`
+* `routing_affecting`
+* `global_disruptive`
+
+Safety Domains determine which classes are legal at each stage.
+
+---
+
+### Legality & Guardrails
+
+Before execution, Noodle 2 produces a **Run Legality Report** summarizing:
+
+* declared safety domain
+* proposed ECO classes
+* applicable rails
+* abort criteria
+
+Illegal runs are rejected before consuming compute.
+
+---
+
+## Experiment Control
+
+### Multi‑Stage Execution
+
+Noodle 2 supports **arbitrary N‑stage experiment graphs**:
+
+* coarse exploration → focused refinement → conservative closure
+* per‑stage policy binding
+* per‑stage safety evaluation
+
+This generalizes traditional Stage 1 / Stage 2 flows without loss of determinism.
+
+---
+
+### Failure Detection & Containment
+
+Each trial is deterministically classified immediately after execution:
+
+* early failure
+* failure type and severity
+* human‑readable rationale
+
+Failures are contained at the appropriate scope:
+
+* individual ECO
+* ECO class
+* stage
+* entire Study
+
+---
+
+### Adaptive Policy with Memory
+
+Within a Study, Noodle 2 maintains structured memory:
+
+* ECO effectiveness history
+* early‑failure statistics
+* catastrophic failure markers
+
+ECOs accumulate explicit priors:
+
+* trusted
+* mixed
+* suspicious
+* unknown
+
+Policies adapt conservatively based on evidence while remaining inspectable and deterministic.
+
+---
+
+## Telemetry & Auditability
+
+Noodle 2 emits structured telemetry across three axes:
+
+* Study
+* Stage
+* Case
+
+Artifacts include:
+
+* per‑trial metrics and logs
+* stage summaries
+* safety traces
+* case lineage graphs
+
+All schemas are additive and backward‑compatible.
+
+---
+
+## Observability & Visualization (Ray Dashboard + OpenROAD Artifacts)
+
+Noodle 2 treats observability as a first-class product feature. In addition to structured JSON telemetry, Noodle 2 must make it easy to **inspect, compare, and visualize** results across many trials and nodes.
+
+### Feature: Ray Dashboard as the Operator Console
+
+**Capability**
+
+* Noodle 2 runs on Ray and exposes the **Ray Dashboard** as the default operator UI for distributed execution.
+* Operators can observe:
+
+  * cluster health and node status
+  * running / completed trial tasks per stage
+  * per-stage throughput, failures, and resource utilization
+
+**Motivation**
+
+* The dashboard is the fastest path to operational confidence in multi-node runs.
+* It reduces reliance on SSH log spelunking.
+
+### Feature: Trial Artifact Indexing and Deep Links
+
+**Capability**
+
+* Every trial produces an **artifact bundle** in a deterministic location (study/case/stage/trial).
+* Noodle 2 emits an **artifact index** per trial and per stage containing:
+
+  * paths to key files (reports, logs, JSON metrics)
+  * high-level labels (ECO name, stage index, derived case id)
+  * content-type hints (text, CSV, image)
+* The Ray Dashboard experience must include deep links from trial tasks to their artifact bundles.
+
+**Motivation**
+
+* In distributed execution, “the result” is not just a metric—it is the report and context.
+* A clickable artifact index turns the dashboard into a usable experiment console.
+
+### Feature: OpenROAD Heatmap Export (GUI) and Visualization Surfacing
+
+**Capability**
+
+* When enabled by stage configuration, Noodle 2 requests OpenROAD GUI exports for spatial diagnostics via:
+
+  * `gui::dump_heatmap` for:
+
+    * placement density
+    * RUDY (Rectangular Uniform wire Density) congestion proxy
+    * routing congestion heatmaps
+
+* Exports are written into the trial artifact bundle (e.g., `heatmaps/*.csv`).
+
+* Because `gui::dump_heatmap` requires `openroad -gui`, Noodle 2 supports two execution modes:
+
+  * **Interactive GUI mode (X11 passthrough)** — verified working with the standard container by passing the host X11 display into Docker:
+
+    ```bash
+    xhost +local:docker
+    docker run --rm -it \
+      -e DISPLAY=$DISPLAY \
+      -v /tmp/.X11-unix:/tmp/.X11-unix \
+      efabless/openlane:ci2504-dev-amd64 bash
+    ```
+
+    In this mode, `openroad -gui` starts successfully and GUI-driven exports (including `gui::dump_heatmap`) are available.
+
+  * **Headless GUI mode** — using a containerized X server (e.g., Xvfb) to provide a virtual display, producing the same artifacts deterministically. This is the preferred mode for Ray workers and CI environments.
+
+* Noodle 2 must surface these heatmaps in the Ray Dashboard experience by:
+
+  * indexing the CSV artifacts
+  * generating lightweight preview renderings (e.g., PNG thumbnails) as post-processing
+  * linking both raw CSV and rendered previews from the dashboard
+
+**Motivation**
+
+* Timing and congestion scalars are insufficient for convincing analysis; spatial evidence matters.
+* Heatmaps enable rapid diagnosis of *where* an ECO helped or harmed.
+* The Ray Dashboard becomes a practical inspection interface, not just a scheduler UI.
+
+**Capability**
+
+* When enabled by stage configuration, Noodle 2 requests OpenROAD GUI exports for spatial diagnostics via:
+
+  * `gui::dump_heatmap` for:
+
+    * placement density
+    * RUDY (Rectangular Uniform wire Density) congestion proxy
+    * routing congestion heatmaps
+
+* Exports are written into the trial artifact bundle (e.g., `heatmaps/*.csv`).
+
+* Because `gui::dump_heatmap` requires `openroad -gui`, Noodle 2 supports two execution modes:
+
+  * **Interactive GUI mode** (developer workstation with DISPLAY/X11)
+  * **Headless GUI mode** (containerized X server such as Xvfb), producing the same artifacts deterministically
+
+* Noodle 2 must surface these heatmaps in the Ray Dashboard experience by:
+
+  * indexing the CSV artifacts
+  * generating lightweight preview renderings (e.g., PNG thumbnails) as post-processing
+  * linking both raw CSV and rendered previews from the dashboard
+
+**Motivation**
+
+* Timing and congestion scalars are insufficient for convincing analysis; spatial evidence matters.
+* Heatmaps enable rapid diagnosis of *where* an ECO helped or harmed.
+* The Ray Dashboard becomes a practical inspection interface, not just a scheduler UI.
+
+### Feature: Visualization Contract (Minimum Set)
+
+**Capability**
+
+For any stage that enables visualization, the minimum expected set is:
+
+* `placement_density` heatmap export
+* `rudy` heatmap export
+* `routing_congestion` heatmap export
+
+If the environment cannot support GUI exports, the trial must:
+
+* fail with a deterministic early-failure classification (explicitly `visualization_unavailable`), or
+* fall back to non-GUI congestion reports only, depending on Study safety domain and stage policy
+
+**Motivation**
+
+* Avoids silent partial observability.
+* Prevents “it ran but I can’t prove anything” demos.
+
+---
+
+---
+
+## What Noodle 2 Enables
+
+Noodle 2 is designed for:
+
+* unattended, long‑running PD experiments
+* CI and regression safety checks
+* comparative ECO studies
+* reproducible demos on open PDKs
+* controlled integration of future AI planners
+
+It provides **confidence and control**, not just speed.
+
+---
+
+## Implementation & Platform (Noodle 2 vNext)
+
+### Language & Runtime
+
+**Noodle 2 is implemented in Python.**
+
+* Python 3.10+ is the supported runtime.
+* Core responsibilities (policy evaluation, safety logic, telemetry aggregation, case graph management) are pure‑Python and deterministic.
+* No PD algorithms are reimplemented in Python; all physical design computation is delegated to external tools.
+
+This choice optimizes for:
+
+* rapid iteration and testability
+* rich orchestration and policy logic
+* straightforward integration with distributed execution frameworks
+
+---
+
+### EDA Tooling & Container Baseline
+
+### PDK Provenance & Availability
+
+For the default execution path, **PDK files are baked into the container image**, not fetched dynamically by Noodle 2.
+
+Specifically, the authoritative container:
+
+```
+efabless/openlane:ci2504-dev-amd64
+```
+
+includes the following PDKs **pre-installed and version-pinned**:
+
+* **Nangate45** (educational / reference standard-cell library)
+* **ASAP7** (academic advanced-node PDK used for congestion/timing stress)
+* **Sky130** — specifically **sky130A**, as distributed and maintained by the OpenLane / efabless ecosystem
+
+These PDKs are installed under the container’s standard OpenLane/PDK paths and are immediately usable by OpenROAD and OpenSTA without additional downloads.
+
+**Noodle 2 assumptions:**
+
+* PDK paths are resolved *inside the container*, not on the host.
+* No network access is required at runtime to obtain PDK data.
+* PDK versions are treated as part of the container’s semantic contract.
+
+This design choice is intentional:
+
+* guarantees reproducibility across machines and clusters
+* avoids hidden runtime dependencies or flaky downloads
+* aligns with CI and air‑gapped environments
+
+If a Study requires a **non-default or modified PDK** (e.g., patched ASAP7 rules, experimental tech files), it must be introduced explicitly via:
+
+* a custom container image derived from the baseline, or
+* a bind-mounted, versioned PDK override declared in the Study definition
+
+Implicit or ad-hoc PDK replacement is not permitted.
+
+---
+
+Noodle 2 executes all physical‑design work inside a **standardized Docker container**.
+
+**Primary supported image (authoritative):**
+
+```
+efabless/openlane:ci2504-dev-amd64
+```
+
+This image is used because it:
+
+* includes OpenROAD and OpenSTA on PATH
+* supports `report_checks` for timing analysis
+* supports `global_route -congestion_report_file` for congestion metrics
+* is already validated by the project’s existing specifications and smoke tests
+
+Alternate images (e.g., `openroad/flow-ubuntu22.04-dev`, `openroad/orfs:*`) are considered **advanced / experimental** and may require custom entrypoints or wrappers. They are not the default for Noodle 2.
+
+All tool invocations are executed via Docker wrappers; Noodle 2 does **not** require native OpenROAD installations on the host.
+
+---
+
+### Execution Model
+
+Noodle 2 separates concerns cleanly:
+
+* **Controller layer (Python)** — runs outside the container
+* **Trial execution layer (Docker)** — runs OpenROAD/OpenSTA inside the container
+
+Each trial:
+
+* executes in an isolated working directory
+* consumes an immutable snapshot
+* emits structured artifacts (metrics, logs, reports)
+* is side‑effect free with respect to the base snapshot
+
+This guarantees reproducibility and safe parallelism.
+
+---
+
+### Distributed Orchestration (Ray)
+
+Noodle 2 uses **Ray** as its execution and scheduling substrate.
+
+* Ray provides task‑level parallelism for trials within a stage.
+* The controller submits trials as Ray tasks with explicit resource requirements.
+* Ray’s object store is used only for lightweight metadata; all heavy artifacts are written to disk.
+
+**Multi‑node support**:
+
+* Noodle 2 supports Ray clusters spanning multiple nodes.
+* The controller may run on a head node; trial workers execute on remote nodes.
+* A shared filesystem (e.g., NFS, Lustre) or object store is assumed for snapshots and artifacts.
+
+Ray is used strictly as an orchestration engine; it does not participate in policy decisions or safety logic.
+
+---
+
+### Ray Dashboard (Operational Details)
+
+The **Ray Dashboard** is a built‑in component of Ray and requires no separate installation. Noodle 2 relies on it as the default operational UI for distributed runs.
+
+**Startup behavior**:
+
+* When a Ray head node is started, the dashboard is launched automatically.
+* No additional Python packages or plugins are required beyond `ray` itself.
+
+**Typical invocation (single‑node / development):**
+
+```bash
+ray start --head
+```
+
+This prints a URL of the form:
+
+```
+Dashboard URL: http://127.0.0.1:8265
+```
+
+**Development-mode guidance (single node):**
+
+For active development and bring‑up, **Noodle 2 is expected to run Ray locally on a single node with the dashboard enabled**. This mode is intentionally favored because it:
+
+* minimizes operational complexity
+* enables rapid iteration and debugging
+* provides full visibility via the Ray Dashboard
+* exercises the complete Noodle 2 control, telemetry, and visualization stack
+
+Demonstrating correct behavior on a single node with the dashboard is considered **sufficient and correct** for development milestones. Multi‑node scaling is treated as a later validation step and does not block core feature development.
+
+**Containerized controller (Docker):**
+
+When running the Noodle 2 controller inside a container, the dashboard port must be exposed and the dashboard bound to all interfaces:
+
+```bash
+docker run --rm -it \
+  -p 8265:8265 \
+  -p 6379:6379 \
+  <noodle2-controller-image> bash
+
+ray start --head --dashboard-host=0.0.0.0
+```
+
+The dashboard is then reachable from the host at:
+
+```
+http://localhost:8265
+```
+
+**Multi‑node clusters (deferred focus):**
+
+* The dashboard runs **only on the Ray head node**.
+* Worker nodes connect via `ray start --address=<head>:6379`.
+* Multi‑node execution is supported by the architecture but is intentionally **not required for early development or demos**.
+
+**Operational intent**:
+
+* The Ray Dashboard provides visibility into task execution, failures, and resource usage.
+* Noodle 2 augments this with artifact indexing and deep links so operators can navigate from Ray tasks directly to OpenROAD outputs.
+
+This makes the dashboard a first‑class operator surface rather than a debugging afterthought.
+
+---
+
+### Scaling Characteristics
+
+Noodle 2 scales along three independent axes:
+
+1. **Within a stage** — parallel trial execution via Ray
+2. **Across stages** — sequential, safety‑gated progression
+3. **Across studies** — independent, isolated experiment namespaces
+
+This allows:
+
+* small single‑node exploratory runs
+* large multi‑node parameter sweeps
+* concurrent studies on shared infrastructure
+
+---
+
+### Determinism & Reproducibility
+
+Noodle 2 enforces determinism by design:
+
+* no random scheduling decisions in the controller
+* stable policy rule ordering
+* explicit stage and budget configuration
+* optional fixed OpenROAD seeds
+
+Given the same Study definition, snapshot, and configuration, Noodle 2 produces equivalent outcomes.
+
+---
+
+### Extensibility (Forward‑Looking)
+
+The architecture intentionally supports future extensions without redefining the core product:
+
+* additional stage execution modes
+* new ECO helper APIs
+* alternative schedulers beneath the controller
+* optional AI/LLM‑based ranking modules constrained by safety contracts
+
+These extensions remain **pluggable and subordinate** to the safety and policy model.
+
+---
+
+## Supported Reference Studies & Smoke-Test Gates (vNext)
+
+Noodle 2 is required to ship with **deterministic, runnable baseline Studies** that validate the end-to-end toolchain (snapshot → trial runner → parsers → artifacts) before any ECO experimentation begins.
+
+### Development Validation Ladder (Bring-up → Extreme)
+
+From a development and release-engineering standpoint, Noodle 2 follows a strict, staged validation ladder. The intent is to **prove the full observability + safety contract on simple, runnable baselines first**, then progressively introduce controlled failure modes and difficulty until the system can run convincing “extreme” demos.
+
+**Gate 0 — Baseline viability (must pass, else stop):**
+
+For **each** reference target (Nangate45, ASAP7, Sky130/sky130A), the Base Case must:
+
+* run inside the standard container (`efabless/openlane:ci2504-dev-amd64`)
+* produce the required reports/artifacts
+* satisfy the early-failure and telemetry contracts
+
+If any Base Case fails, the Study is blocked and downstream execution is prohibited.
+
+**Gate 1 — Full output contract on “basic config”:**
+
+With a minimal/default configuration (conservative budgets, STA-only or STA+GR as configured), each Base Case must produce all required outputs Noodle 2 depends on for safe automation, including:
+
+* **Monitoring/Provenance**: tool return code, timestamps, tool version (best-effort), snapshot hash
+* **Timing artifacts**: `report_checks` output parsed into canonical `wns_ps` (and optionally `tns_ps`, top path summaries)
+* **Congestion artifacts** (when enabled for any stage): `global_route -congestion_report_file` parsed into hot-bin metrics (e.g., `bins_total`, `bins_hot`, `hot_ratio`, optional per-layer tallies)
+* **Early-failure detection**: deterministic classification fields (type/severity/reason + log excerpt)
+* **Structured telemetry**: stage- and case-indexed aggregates sufficient to drive abort decisions
+* **Audit artifacts**: run legality report + safety trace record
+
+Only after this contract is satisfied do we treat the target as “supported.”
+
+**Gate 2 — Controlled regression/failure injection (incremental difficulty):**
+
+Once basic outputs are reliable, Noodle 2 must demonstrate it can correctly detect, classify, and contain progressively harder conditions—without human babysitting—by introducing controlled stressors, e.g.:
+
+* worsening slack (more negative WNS)
+* localized congestion stripes / pin-access pressure
+* deliberate ECOs that trigger known tool errors (to validate deterministic early-failure typing)
+
+These are introduced first on the fastest target(s) (typically Nangate45 and/or Sky130) for iteration speed.
+
+**Gate 3 — Cross-target parity:**
+
+The same monitoring + early-failure + telemetry + audit contracts must hold across **all** targets, not only the easiest one.
+
+**Gate 4 — Extreme scenarios (demo-grade):**
+
+Only after Gates 0–3 are stable do we introduce “extreme” studies (high routing pressure, severe violations, intentionally adversarial conditions). At this point, Noodle 2 must still:
+
+* refuse to proceed when base cases are structurally broken
+* contain pathological ECOs to the smallest scope possible
+* preserve reproducibility and auditability
+
+This ladder is a product requirement: it prevents wasted time debugging “extreme” demos when the foundation (base-case execution + observability) is not yet correct.
+
+---
+
+### Reference Technology / PDK Targets
+
+Noodle 2 is required to ship with **deterministic, runnable baseline Studies** that validate the end-to-end toolchain (snapshot → trial runner → parsers → artifacts) before any ECO experimentation begins.
+
+### Reference Technology / PDK Targets
+
+Noodle 2 must provide (at minimum) the following reference targets:
+
+* **Nangate45** (commonly written `Nangate45`)
+* **ASAP7**
+* **Sky130** (specifically the **sky130A** variant as used by OpenLane)
+
+> Note: the correct name is **Sky130**, not “Skyline130.”
+
+### Required Base Cases (per target)
+
+For each target above, Noodle 2 must ship a **Base Case** (a known snapshot / starting point) as a Study entry point:
+
+* `nangate45_base` — baseline snapshot suitable for fast bring-up
+* `asap7_base` — baseline snapshot representative of higher routing pressure
+* `sky130_base` — baseline snapshot compatible with OpenLane sky130A
+
+The Base Case may be “broken” (negative slack, congestion, etc.), but it must be **structurally runnable**.
+
+### Smoke Test: Base-Case Must Run or We Stop
+
+**First gate for any Study execution:**
+
+1. Execute the Base Case with a **no-op ECO** (or empty ECO body).
+2. Require:
+
+   * tool return code `rc == 0`
+   * timing report produced via `report_checks`
+   * timing parser returns `wns_ps` (and optionally `tns_ps`)
+3. If the Base Case fails **for any reason** (crash, missing files, parse failure), Noodle 2 must:
+
+   * mark the Study as **blocked**
+   * stop all downstream stages and derived Cases
+   * emit a clear failure classification + log excerpt
+
+This establishes a non-negotiable contract:
+
+* **No base-case pass → no ECO experimentation.**
+
+### Case Identification for Study Execution
+
+Within each Study, all derived Cases follow the deterministic naming contract:
+
+```
+<case_name>_<stage_index>_<derived_index>
+```
+
+Recommended defaults for reference studies:
+
+* `nangate45_<stage>_<i>`
+* `asap7_<stage>_<i>`
+* `sky130_<stage>_<i>`
+
+This ensures that artifacts can be compared across targets and across stages without ambiguity.
+
+---
+
+## Workarounds & Development Notes for Deferred Features
+
+This section documents practical workarounds for features that are intentionally deferred due to infrastructure availability, while still enabling productive development, demos, and regression confidence.
+
+### Deferred: Ray Multi‑Node Execution
+
+**What’s missing (today):** true multi-node Ray execution validation (head + workers), shared filesystem verification across nodes, and end‑to‑end multi-node Studies.
+
+**Workarounds (now):**
+
+* **Single-node Ray as the development baseline**: run Ray locally with the dashboard enabled and treat this as the canonical dev/test mode.
+* **Simulate “multi-node” semantics locally**:
+
+  * run multiple Ray workers on the same machine (separate processes) to exercise scheduling and isolation behavior
+  * keep artifacts on a single local filesystem to validate artifact indexing, lineage, and telemetry contracts
+* **Docker Compose cluster simulation** (optional): use a local compose file to stand up a head + 2 workers and a shared volume, sufficient to test basic connectivity and task distribution.
+
+**Acceptance substitute:**
+
+* Demonstrate that:
+
+  * trials execute in parallel under Ray
+  * artifacts are written deterministically
+  * the dashboard is usable
+  * failure classification/telemetry contracts hold
+
+Multi-node scalability is validated later on real infrastructure.
+
+---
+
+### Deferred: Ray Dashboard “Deep Artifact Views”
+
+**What’s missing (today):** a first-class artifact browser inside the Ray Dashboard.
+
+**Workarounds (now):**
+
+* **Artifact paths in task logs**: every Ray task must print a single canonical line containing the trial artifact root.
+* **Artifact index JSON**: always generate a machine-readable index (`artifact_index.json`) and rely on filesystem navigation for inspection during early development.
+* **Optional local artifact browser**: run a tiny static file server (or Ray Serve later) to provide clickable URLs to artifact roots. For development, an ad-hoc `python -m http.server` in the artifact root is sufficient.
+
+**Acceptance substitute:**
+
+* From the Ray Dashboard task list, an operator can reach artifacts within two steps:
+
+  1. open task logs
+  2. click or copy the artifact path/URL
+
+---
+
+### Deferred: Headless OpenROAD GUI (Xvfb)
+
+**What’s missing (today):** hardened, repeatable Xvfb setup for Ray workers and CI.
+
+**Workarounds (now):**
+
+* **Interactive GUI mode is the development truth source**: validate GUI heatmap export using the proven X11 passthrough invocation.
+* **Development policy**: interactive GUI mode must be exercised at least on:
+
+  * the Base Case for each reference target
+  * a “best-case” (known-good) derived Case after at least one ECO improvement
+
+**Verified interactive command (X11 passthrough):**
+
+```bash
+xhost +local:docker
+docker run --rm -it \
+  -e DISPLAY=$DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  efabless/openlane:ci2504-dev-amd64 bash
+```
+
+**Acceptance substitute:**
+
+* Heatmap CSVs are produced deterministically (placement density, RUDY, routing congestion) and preview PNGs can be rendered from those CSVs.
+
+---
+
+### Deferred: Reference Study Snapshots (ASAP7, Sky130)
+
+**What’s missing (today):** ready-to-run, versioned design snapshots for ASAP7 and Sky130/sky130A.
+
+**Workarounds (now):**
+
+* **Start with Nangate45** as the fast bring-up target while snapshot acquisition is in progress.
+* **Borrow from known OpenLane examples** for Sky130/sky130A by exporting a stable checkpoint from an example design.
+* **Define “snapshot creation” as a deliverable**: treat snapshot generation as part of the Study package, not an implicit prerequisite.
+
+**Acceptance substitute:**
+
+* Even without ASAP7/Sky130 snapshots, the system must still satisfy:
+
+  * base-case gating
+  * early-failure determinism
+  * artifact indexing
+  * policy and telemetry contracts
+
+---
+
+### ASAP7-Specific Bring-Up Workarounds (Required for Stable Runs)
+
+ASAP7 has repeatedly exhibited failure modes that do not appear (or appear far less) in Nangate45/Sky130 bring-up. The following constraints are treated as **required workarounds** for ASAP7 studies unless and until a stable “no-special-casing” ASAP7 baseline is demonstrated.
+
+> Development note: validate all ASAP7-specific identifiers (e.g., site names, metal layer names) against the container’s LEF/tech files. If the names differ, the study must fail fast with a deterministic configuration error rather than “kind of working.”
+
+**1) Do not rely on implicit/automatic routing tracks**
+
+*Consequence if omitted:* unstable or non-reproducible routing grid inference leading to early routing failures or meaningless congestion.
+
+**Workaround:** explicitly constrain routing layers.
+
+```tcl
+set_routing_layers -signal metal2-metal9 -clock metal6-metal9
+```
+
+**2) Explicitly set the ASAP7 floorplan site (row alignment)**
+
+*Consequence if omitted:* row snapping / site mismatch that may survive placement but collapses in routing.
+
+**Workaround:** set the ASAP7 site during floorplanning.
+
+```tcl
+initialize_floorplan \
+  -utilization 0.55 \
+  -site asap7sc7p5t_28_R_24_NP_162NW_34O
+```
+
+**3) Restrict pin placement layers (avoid naïve random pins on low metals)**
+
+*Consequence if omitted:* stricter pin-access rules cause silent violations that poison routing.
+
+**Workaround:** place pins only on mid-stack metals.
+
+```tcl
+place_pins -random \
+  -hor_layers {metal4} \
+  -ver_layers {metal5}
+```
+
+**4) Prefer STA-first staging; defer congestion-first workflows**
+
+*Consequence if omitted:* early global routing can be fragile, and congestion metrics can be noisy and misleading before the design is well-behaved.
+
+**Workaround:** treat ASAP7 as **timing-first** in early stages:
+
+* Stage 1: STA-only baseline is the default for ASAP7
+* Stage 2+: congestion analysis is optional and enabled only once the design is stable
+
+**5) Lower utilization than Nangate45**
+
+*Consequence if omitted:* placement may converge but routing can “explode” under pressure.
+
+**Workaround:** target lower utilization headroom for ASAP7 bring-up.
+
+* Recommended: `0.50–0.55`
+
+**Memory anchor:**
+
+> ASAP7 is “timing-driven, high-metal, low-utilization, STA-first.”
+
+---
+
+### Deferred: Scalability & Long-Running E2E Validation
+
+**What’s missing (today):** 100-trial / 10-node scale studies, multiple concurrent Studies on a shared cluster, and “extreme” demo workloads validated end-to-end.
+
+**Workarounds (now):**
+
+* **Downscale budgets**: run 5–20 trial studies locally to validate scheduling, stage gating, and survivor selection.
+* **Synthetic load for Ray**: if OpenROAD runtimes are too long, add a development-only “sleep workload” to exercise Ray scheduling and dashboard behavior without consuming EDA compute.
+* **Progressive ladder (Bring-up → Extreme)**: introduce controlled failure injection on Nangate45 first, then port the same ladder to ASAP7/Sky130 once snapshots exist.
+
+**Acceptance substitute:**
+
+* Demonstrate a complete multi-stage Study locally (single node) that:
+
+  * advances stages only when gates are met
+  * updates priors
+  * triggers abort rails appropriately
+  * produces complete telemetry and summaries
+
+---
+
+## Explicit Non‑Goals
+
+Noodle 2 intentionally does **not**:
+
+* invent ECOs
+* replace OpenROAD algorithms
+* modify PD tool internals
+* rely on opaque optimization or ML
+* silently escalate risk
+
+All behavior is declarative, inspectable, and auditable.
+
+---
+
+## Summary
+
+Noodle 2 transforms physical‑design experimentation from ad‑hoc scripting into a **safety‑critical, policy‑driven system**.
+
+It enables engineers to explore aggressively when appropriate, close conservatively when required, and always understand *why* a decision was made.
+
+Noodle 2 is not an optimizer. It is the control plane that makes optimization trustworthy at scale.

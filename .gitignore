@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Ray
+/tmp/ray/
+ray_results/
+
+# Noodle 2 Artifacts
+artifacts/
+studies/*/artifacts/
+*.db
+
+# Container volumes
+volumes/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.bak
+
+# Docker
+.dockerignore
+
+# OpenROAD outputs (except reference snapshots)
+*.def
+*.odb
+*.rpt
+*.log
+*.spef
+
+# Do track
+!feature_list.json
+!init.sh
+!README.md
+!app_spec.txt

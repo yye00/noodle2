@@ -3,6 +3,7 @@
 import json
 import shutil
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +12,7 @@ from src.controller.types import ExecutionMode
 from src.parsers.congestion import parse_congestion_report_file
 from src.parsers.timing import parse_openroad_metrics_json, parse_timing_report
 from src.trial_runner.docker_runner import DockerRunConfig, DockerTrialRunner
+from src.trial_runner.provenance import ToolProvenance, create_provenance
 
 
 @dataclass
@@ -70,6 +72,7 @@ class TrialResult:
     stderr: str = ""
     container_id: str = ""
     failure: FailureClassification | None = None  # Deterministic failure classification
+    provenance: ToolProvenance | None = None  # Execution provenance for reproducibility
 
     def to_dict(self) -> dict[str, Any]:
         """Convert trial result to dictionary for JSON serialization."""
@@ -90,6 +93,10 @@ class TrialResult:
         # Add failure classification if present
         if self.failure:
             result["failure"] = self.failure.to_dict()
+
+        # Add provenance if present
+        if self.provenance:
+            result["provenance"] = self.provenance.to_dict()
 
         return result
 
@@ -195,6 +202,9 @@ class Trial:
             FileNotFoundError: If script or snapshot not found
             docker.errors.DockerException: On Docker errors
         """
+        # Record start time
+        start_time = datetime.now(timezone.utc).isoformat()
+
         # Copy snapshot to trial directory for isolated execution
         snapshot_copy = self._copy_snapshot_to_trial_dir()
 
@@ -205,6 +215,9 @@ class Trial:
             snapshot_dir=snapshot_copy,  # Use the copied snapshot
             timeout_seconds=self.config.timeout_seconds,
         )
+
+        # Record end time
+        end_time = datetime.now(timezone.utc).isoformat()
 
         # Save logs
         logs_dir = self.trial_dir / "logs"
@@ -235,6 +248,18 @@ class Trial:
                 expected_outputs=expected_outputs if exec_result.return_code == 0 else None,
             )
 
+        # Create provenance record for reproducibility
+        provenance = create_provenance(
+            container_image=self.docker_runner.config.image.rsplit(":", 1)[0],
+            container_tag=self.docker_runner.config.image.rsplit(":", 1)[1] if ":" in self.docker_runner.config.image else "latest",
+            container_id=exec_result.container_id,
+            command=f"openroad {self.config.script_path}",
+            working_dir=str(self.trial_dir),
+            start_time=start_time,
+            end_time=end_time,
+            query_version=False,  # Skip version query for performance (best-effort)
+        )
+
         # Create trial result
         result = TrialResult(
             config=self.config,
@@ -247,6 +272,7 @@ class Trial:
             stderr=exec_result.stderr,
             container_id=exec_result.container_id,
             failure=failure_classification,
+            provenance=provenance,
         )
 
         # Write trial summary

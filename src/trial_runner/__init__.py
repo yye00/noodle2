@@ -13,6 +13,11 @@ from src.trial_runner.docker_runner import (
     DockerTrialRunner,
     TrialExecutionResult,
 )
+from src.trial_runner.provenance import (
+    ToolProvenance,
+    create_provenance,
+    query_openroad_version,
+)
 from src.trial_runner.ray_executor import RayTrialExecutor, execute_trial_remote
 from src.trial_runner.tcl_generator import (
     generate_trial_script,
@@ -36,4 +41,7 @@ __all__ = [
     "generate_trial_artifact_index",
     "generate_trial_script",
     "write_trial_script",
+    "ToolProvenance",
+    "create_provenance",
+    "query_openroad_version",
 ]

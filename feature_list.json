@@ -1293,7 +1293,7 @@
       "Step 4: Display metadata in Study summary reports",
       "Step 5: Enable Study catalog/search by metadata"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

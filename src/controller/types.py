@@ -77,6 +77,10 @@ class StudyConfig:
     snapshot_path: str  # Path to design snapshot/checkpoint
     metadata: dict[str, Any] = field(default_factory=dict)
     snapshot_hash: str | None = None  # SHA-256 hash for integrity verification
+    # Study metadata for documentation and cataloging
+    author: str | None = None  # Study author/creator
+    creation_date: str | None = None  # ISO 8601 format creation timestamp
+    description: str | None = None  # Human-readable Study description
 
     def validate(self) -> None:
         """Validate Study configuration."""

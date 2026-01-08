@@ -53,10 +53,14 @@ class StudyResult:
     final_survivors: list[str] = field(default_factory=list)
     aborted: bool = False
     abort_reason: str | None = None
+    # Study metadata for documentation and cataloging
+    author: str | None = None
+    creation_date: str | None = None
+    description: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        return {
+        result = {
             "study_name": self.study_name,
             "total_stages": self.total_stages,
             "stages_completed": self.stages_completed,
@@ -66,6 +70,16 @@ class StudyResult:
             "aborted": self.aborted,
             "abort_reason": self.abort_reason,
         }
+
+        # Include metadata if present
+        if self.author is not None:
+            result["author"] = self.author
+        if self.creation_date is not None:
+            result["creation_date"] = self.creation_date
+        if self.description is not None:
+            result["description"] = self.description
+
+        return result
 
 
 class StudyExecutor:
@@ -320,6 +334,9 @@ class StudyExecutor:
                 final_survivors=[],
                 aborted=True,
                 abort_reason=f"Study configuration is ILLEGAL: {str(e)}",
+                author=self.config.author,
+                creation_date=self.config.creation_date,
+                description=self.config.description,
             )
 
         # SAFETY GATE 2: Verify base case before ECO experimentation
@@ -346,6 +363,9 @@ class StudyExecutor:
                     final_survivors=[],
                     aborted=True,
                     abort_reason=f"Base case failed structural runnability: {failure_message}",
+                    author=self.config.author,
+                    creation_date=self.config.creation_date,
+                    description=self.config.description,
                 )
 
         # Start with base case for stage 0
@@ -403,6 +423,9 @@ class StudyExecutor:
                     final_survivors=[],
                     aborted=True,
                     abort_reason=abort_reason_str,
+                    author=self.config.author,
+                    creation_date=self.config.creation_date,
+                    description=self.config.description,
                 )
 
             # Prepare cases for next stage
@@ -442,6 +465,9 @@ class StudyExecutor:
             stage_results=stage_results,
             final_survivors=final_survivors,
             aborted=False,
+            author=self.config.author,
+            creation_date=self.config.creation_date,
+            description=self.config.description,
         )
 
     def _execute_stage(

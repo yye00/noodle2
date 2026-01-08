@@ -688,7 +688,7 @@
       "Step 4: Confirm command succeeds without host filesystem access",
       "Step 5: Verify no network access is required for PDK data"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -699,7 +699,7 @@
       "Step 3: Emit clear error message requiring explicit PDK declaration",
       "Step 4: Confirm baseline PDK remains unchanged"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",
@@ -711,7 +711,7 @@
       "Step 4: Verify modified PDK is used",
       "Step 5: Confirm custom PDK is documented in provenance"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

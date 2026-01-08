@@ -8,6 +8,7 @@ import pytest
 
 from src.controller.types import StageConfig, ExecutionMode, ECOClass
 from src.trial_runner.docker_runner import DockerTrialRunner, DockerRunConfig, TrialExecutionResult
+from src.controller.exceptions import TimeoutConfigError
 
 
 # ============================================================================
@@ -38,7 +39,7 @@ def test_configure_soft_and_hard_timeout():
 
 def test_soft_timeout_must_be_less_than_hard_timeout():
     """Verify soft timeout must be less than hard timeout."""
-    with pytest.raises(ValueError, match="soft_timeout_seconds must be less than timeout_seconds"):
+    with pytest.raises(TimeoutConfigError, match="soft_timeout_seconds must be less than timeout_seconds"):
         StageConfig(
             name="test_stage",
             execution_mode=ExecutionMode.STA_ONLY,
@@ -52,7 +53,7 @@ def test_soft_timeout_must_be_less_than_hard_timeout():
 
 def test_soft_timeout_equal_to_hard_timeout_is_invalid():
     """Verify soft timeout equal to hard timeout is invalid."""
-    with pytest.raises(ValueError, match="soft_timeout_seconds must be less than timeout_seconds"):
+    with pytest.raises(TimeoutConfigError, match="soft_timeout_seconds must be less than timeout_seconds"):
         StageConfig(
             name="test_stage",
             execution_mode=ExecutionMode.STA_ONLY,
@@ -66,7 +67,7 @@ def test_soft_timeout_equal_to_hard_timeout_is_invalid():
 
 def test_soft_timeout_must_be_positive():
     """Verify soft timeout must be positive if specified."""
-    with pytest.raises(ValueError, match="soft_timeout_seconds must be positive"):
+    with pytest.raises(TimeoutConfigError, match="soft_timeout_seconds must be positive"):
         StageConfig(
             name="test_stage",
             execution_mode=ExecutionMode.STA_ONLY,

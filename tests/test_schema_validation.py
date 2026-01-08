@@ -23,6 +23,7 @@ from src.controller.types import (
     SafetyDomain,
     StageConfig,
 )
+from src.controller.exceptions import TrialBudgetError
 
 
 class TestSchemaValidation:
@@ -541,7 +542,7 @@ class TestValidateStudyConfig:
     def test_validate_invalid_parsed_config(self) -> None:
         """Test validation catches errors in parsed config."""
         # Create config with invalid stage budget
-        with pytest.raises(ValueError):
+        with pytest.raises(TrialBudgetError):
             create_study_config(
                 name="test_study",
                 pdk="Nangate45",

@@ -13,6 +13,7 @@ from src.controller.types import (
     ECOClass,
 )
 from src.controller.study import load_study_config
+from src.controller.exceptions import ECOBlacklistWhitelistConflictError
 
 
 class TestECOBlacklist:
@@ -300,7 +301,7 @@ class TestBlacklistWhitelistInteraction:
 
     def test_blacklist_and_whitelist_cannot_overlap(self) -> None:
         """Configuration with overlapping blacklist and whitelist should fail validation."""
-        with pytest.raises(ValueError, match="cannot be in both blacklist and whitelist"):
+        with pytest.raises(ECOBlacklistWhitelistConflictError, match="cannot be in both blacklist and whitelist"):
             config = StudyConfig(
                 name="test_study",
                 safety_domain=SafetyDomain.GUARDED,

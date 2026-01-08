@@ -11,6 +11,7 @@ from src.controller.types import (
     SafetyDomain,
     StageConfig,
 )
+from src.controller.exceptions import StudyNameError, NoStagesError, TrialBudgetError, SurvivorBudgetMismatchError
 
 
 def test_create_minimal_study_config() -> None:
@@ -58,7 +59,7 @@ def test_study_config_validation() -> None:
     config.validate()  # Should not raise
 
     # Empty name should fail
-    with pytest.raises(ValueError, match="name cannot be empty"):
+    with pytest.raises(StudyNameError, match="name cannot be empty"):
         bad_config = create_study_config(
             name="",
             pdk="Nangate45",
@@ -67,7 +68,7 @@ def test_study_config_validation() -> None:
         )
 
     # No stages should fail
-    with pytest.raises(ValueError, match="at least one stage"):
+    with pytest.raises(NoStagesError, match="at least one stage"):
         bad_config = create_study_config(
             name="no_stages",
             pdk="Nangate45",
@@ -80,7 +81,7 @@ def test_study_config_validation() -> None:
 def test_stage_config_validation() -> None:
     """Test Stage configuration validation."""
     # Invalid trial budget (zero)
-    with pytest.raises(ValueError, match="trial_budget must be positive"):
+    with pytest.raises(TrialBudgetError, match="trial_budget must be positive"):
         create_study_config(
             name="bad_budget",
             pdk="Nangate45",
@@ -98,7 +99,7 @@ def test_stage_config_validation() -> None:
         )
 
     # Survivor count exceeds budget
-    with pytest.raises(ValueError, match="cannot exceed trial_budget"):
+    with pytest.raises(SurvivorBudgetMismatchError, match="cannot exceed trial_budget"):
         create_study_config(
             name="bad_survivors",
             pdk="Nangate45",

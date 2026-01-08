@@ -84,7 +84,7 @@
       "Step 5: Verify case is named 'nangate45_0_1'",
       "Step 6: Advance to stage 1 and verify naming includes stage index"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

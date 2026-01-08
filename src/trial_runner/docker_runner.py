@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import docker
+import requests.exceptions
 from docker.models.containers import Container
 
 
@@ -32,6 +33,7 @@ class TrialExecutionResult:
     runtime_seconds: float
     success: bool
     container_id: str = ""
+    timed_out: bool = False  # True if trial exceeded timeout limit
 
 
 class DockerTrialRunner:
@@ -137,17 +139,28 @@ class DockerTrialRunner:
             )
 
             # Wait for completion with timeout
+            timed_out = False
             try:
                 result = container.wait(timeout=timeout)
                 return_code = result["StatusCode"]
+            except requests.exceptions.ReadTimeout:
+                # Timeout exceeded - kill container
+                timed_out = True
+                container.kill()
+                return_code = 124  # Standard timeout exit code
             except Exception:
-                # Timeout or other error - kill container
+                # Other error - kill container
                 container.kill()
                 return_code = -1
 
             # Get logs
             stdout = container.logs(stdout=True, stderr=False).decode("utf-8", errors="replace")
             stderr = container.logs(stdout=False, stderr=True).decode("utf-8", errors="replace")
+
+            # Add timeout message to stderr if timed out
+            if timed_out:
+                timeout_msg = f"\n[TIMEOUT] Trial exceeded timeout limit of {timeout} seconds\n"
+                stderr = timeout_msg + stderr
 
             # Calculate runtime
             runtime_seconds = time.time() - start_time
@@ -162,6 +175,7 @@ class DockerTrialRunner:
                 runtime_seconds=runtime_seconds,
                 success=(return_code == 0),
                 container_id=container.id[:12],
+                timed_out=timed_out,
             )
 
         except docker.errors.ContainerError as e:

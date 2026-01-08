@@ -78,6 +78,8 @@ class TrialResult:
     # Timestamps for execution time tracking and performance analysis
     start_time: str = ""  # ISO 8601 format timestamp
     end_time: str = ""  # ISO 8601 format timestamp
+    # Timeout tracking for runaway execution detection
+    timed_out: bool = False  # True if trial exceeded timeout limit
 
     def calculate_duration_seconds(self) -> float | None:
         """
@@ -111,6 +113,7 @@ class TrialResult:
             "runtime_seconds": self.runtime_seconds,
             "start_time": self.start_time,
             "end_time": self.end_time,
+            "timed_out": self.timed_out,
             "metrics": self.metrics,
             "artifacts": self.artifacts.to_dict(),
             "container_id": self.container_id,
@@ -302,6 +305,7 @@ class Trial:
             provenance=provenance,
             start_time=start_time,
             end_time=end_time,
+            timed_out=exec_result.timed_out,
         )
 
         # Write trial summary

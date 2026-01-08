@@ -1142,7 +1142,7 @@
       "Step 5: Classify as early failure 'timeout'",
       "Step 6: Mark trial as failed and continue with next trial"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

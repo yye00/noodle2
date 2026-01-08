@@ -5,6 +5,8 @@ Controller module - Study orchestration and stage progression logic.
 from src.controller.eco import (
     BufferInsertionECO,
     ECO,
+    ECOClassStats,
+    ECOClassTracker,
     ECOEffectiveness,
     ECOMetadata,
     ECOPrior,
@@ -43,6 +45,8 @@ __all__ = [
     "ECOResult",
     "ECOEffectiveness",
     "ECOPrior",
+    "ECOClassStats",
+    "ECOClassTracker",
     "NoOpECO",
     "BufferInsertionECO",
     "PlacementDensityECO",

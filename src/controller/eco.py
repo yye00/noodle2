@@ -362,3 +362,116 @@ def create_eco(eco_name: str, **parameters: Any) -> ECO:
 
     eco_class = ECO_REGISTRY[eco_name]
     return eco_class(**parameters)
+
+
+# ============================================================================
+# ECO Class-Level Failure Tracking and Containment
+# ============================================================================
+
+
+@dataclass
+class ECOClassStats:
+    """Statistics for tracking ECO class behavior across trials.
+
+    Tracks failures across all instances of an ECO class to enable
+    class-level failure containment when systematic failures occur.
+    """
+
+    eco_class: ECOClass
+    total_applications: int = 0
+    failed_applications: int = 0
+    is_blacklisted: bool = False
+
+    @property
+    def failure_rate(self) -> float:
+        """Calculate failure rate for this ECO class."""
+        if self.total_applications == 0:
+            return 0.0
+        return self.failed_applications / self.total_applications
+
+    def update(self, success: bool) -> None:
+        """Update statistics with new application result.
+
+        Args:
+            success: Whether the ECO application succeeded
+        """
+        self.total_applications += 1
+        if not success:
+            self.failed_applications += 1
+
+        # Blacklist if failure rate exceeds threshold
+        # Require at least 3 applications before blacklisting
+        # Threshold: 70% failure rate
+        if self.total_applications >= 3 and self.failure_rate >= 0.7:
+            self.is_blacklisted = True
+
+    def should_allow_eco_class(self) -> bool:
+        """Determine if this ECO class should be allowed in future trials."""
+        return not self.is_blacklisted
+
+
+class ECOClassTracker:
+    """Tracks ECO class-level statistics across a Study.
+
+    Provides class-level failure containment by:
+    - Aggregating results across all instances of each ECO class
+    - Blacklisting classes with systematic failures
+    - Preventing future trials from using blacklisted classes
+    """
+
+    def __init__(self) -> None:
+        """Initialize ECO class tracker."""
+        self.class_stats: dict[ECOClass, ECOClassStats] = {}
+
+    def record_eco_result(self, eco: ECO, success: bool) -> None:
+        """Record the result of an ECO application.
+
+        Args:
+            eco: The ECO that was applied
+            success: Whether the application succeeded
+        """
+        eco_class = eco.metadata.eco_class
+
+        if eco_class not in self.class_stats:
+            self.class_stats[eco_class] = ECOClassStats(eco_class=eco_class)
+
+        self.class_stats[eco_class].update(success)
+
+    def is_eco_class_allowed(self, eco_class: ECOClass) -> bool:
+        """Check if an ECO class is allowed (not blacklisted).
+
+        Args:
+            eco_class: The ECO class to check
+
+        Returns:
+            True if the class is allowed, False if blacklisted
+        """
+        if eco_class not in self.class_stats:
+            return True  # Unknown classes are allowed
+
+        return self.class_stats[eco_class].should_allow_eco_class()
+
+    def get_blacklisted_classes(self) -> list[ECOClass]:
+        """Return list of blacklisted ECO classes.
+
+        Returns:
+            List of ECOClass values that are blacklisted
+        """
+        return [
+            stats.eco_class
+            for stats in self.class_stats.values()
+            if stats.is_blacklisted
+        ]
+
+    def get_failure_rate(self, eco_class: ECOClass) -> float:
+        """Get failure rate for an ECO class.
+
+        Args:
+            eco_class: The ECO class to query
+
+        Returns:
+            Failure rate (0.0 to 1.0), or 0.0 if no data
+        """
+        if eco_class not in self.class_stats:
+            return 0.0
+        return self.class_stats[eco_class].failure_rate

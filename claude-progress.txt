@@ -4917,3 +4917,61 @@ Based on the remaining features, logical next steps include:
 - Clean, readable code with comprehensive docstrings ✅
 - Integration with existing modules ✅
 
+
+---
+
+## Session 30 — 2026-01-08
+
+### OBJECTIVE
+
+Implement timing path parsing for detailed ECO targeting and verify per-layer congestion support.
+
+### ACCOMPLISHMENTS
+
+#### Feature #83: Parse per-layer congestion metrics from detailed reports
+
+**Status:** Already implemented, now verified and marked passing
+
+**Implementation Review:**
+- CongestionMetrics dataclass already includes layer_metrics field
+- parse_congestion_report() already extracts per-layer overflow data
+- parse_congestion_json() already supports layer_metrics in JSON format
+- format_congestion_summary() already displays per-layer metrics in output
+
+**Test Coverage:** 3 existing tests validate layer metrics functionality (all passing)
+
+**Feature Steps Satisfied:** All 5 steps validated
+
+#### Feature #84: Support inspection of top timing paths from report_checks output
+
+**Status:** Newly implemented and passing
+
+**Implementation:**
+- Added TimingPath dataclass to types.py
+- Added parse_timing_paths() function to timing.py
+- Extended parse_timing_report_content() with extract_paths parameter
+- 8 new comprehensive tests covering all aspects
+
+**Feature Steps Satisfied:** All 5 steps completed and tested
+
+### CODE QUALITY METRICS
+
+- New Code: 395 lines (89 src + 306 tests)
+- Total Tests: 764 (all passing)
+- No Regressions
+- Full type hints
+- Backward compatible
+
+### SESSION SUMMARY
+
+**Features Complete:** 2 (Per-layer congestion #83, Top timing paths #84)
+**Completion Progress:** 73/200 features passing (36.5% complete)
+
+**Why This Matters:**
+- Enables path-level ECO targeting with detailed startpoint/endpoint info
+- Supports layer-specific congestion analysis
+- Reduces trial-and-error experimentation
+- Provides actionable detail for timing closure
+
+**Quality Bar Met:** All criteria satisfied
+

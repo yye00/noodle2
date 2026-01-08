@@ -1,6 +1,7 @@
 """Trial execution and artifact management for Noodle 2."""
 
 import json
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -129,9 +130,47 @@ class Trial:
         trial_dir.mkdir(parents=True, exist_ok=True)
         return trial_dir
 
+    def _copy_snapshot_to_trial_dir(self) -> Path | None:
+        """
+        Copy immutable snapshot to trial directory for isolated execution.
+
+        This ensures:
+        - The base snapshot remains unmodified
+        - Each trial operates on its own copy
+        - Trials are side-effect free with respect to the snapshot
+
+        Returns:
+            Path to the copied snapshot directory, or None if no snapshot
+        """
+        if not self.config.snapshot_dir:
+            return None
+
+        snapshot_src = Path(self.config.snapshot_dir)
+        if not snapshot_src.exists():
+            raise FileNotFoundError(f"Snapshot directory not found: {snapshot_src}")
+
+        # Create snapshot subdirectory in trial dir
+        snapshot_dest = self.trial_dir / "snapshot"
+
+        # Copy snapshot files to trial directory
+        if snapshot_dest.exists():
+            # Clean up any existing snapshot copy
+            shutil.rmtree(snapshot_dest)
+
+        shutil.copytree(snapshot_src, snapshot_dest, symlinks=False)
+
+        return snapshot_dest
+
     def execute(self) -> TrialResult:
         """
         Execute the trial and return complete results.
+
+        This method:
+        1. Copies the immutable snapshot to the trial directory
+        2. Executes the trial script via Docker
+        3. Discovers and catalogs artifacts
+        4. Parses metrics from outputs
+        5. Writes a trial summary
 
         Returns:
             TrialResult with execution details and artifacts
@@ -140,11 +179,14 @@ class Trial:
             FileNotFoundError: If script or snapshot not found
             docker.errors.DockerException: On Docker errors
         """
-        # Execute trial via Docker
+        # Copy snapshot to trial directory for isolated execution
+        snapshot_copy = self._copy_snapshot_to_trial_dir()
+
+        # Execute trial via Docker, using the copied snapshot
         exec_result = self.docker_runner.execute_trial(
             script_path=self.config.script_path,
             working_dir=self.trial_dir,
-            snapshot_dir=self.config.snapshot_dir,
+            snapshot_dir=snapshot_copy,  # Use the copied snapshot
             timeout_seconds=self.config.timeout_seconds,
         )
 

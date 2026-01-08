@@ -110,7 +110,7 @@
       "Step 5: Verify artifacts are written only to trial directory",
       "Step 6: Confirm trial is side-effect free"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

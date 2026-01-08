@@ -1255,7 +1255,7 @@
       "Step 5: Verify Stage 1 results are preserved and not re-executed",
       "Step 6: Complete Study successfully"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

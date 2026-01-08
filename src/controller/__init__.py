@@ -15,6 +15,10 @@ from src.controller.eco import (
     PlacementDensityECO,
     create_eco,
 )
+from src.controller.eco_containment import (
+    ECOClassContainmentTracker,
+    ECOClassStatus,
+)
 from src.controller.failure import (
     FailureClassification,
     FailureClassifier,
@@ -51,6 +55,8 @@ __all__ = [
     "FailureSeverity",
     "FailureClassification",
     "FailureClassifier",
+    "ECOClassContainmentTracker",
+    "ECOClassStatus",
     "CaseTelemetry",
     "StageTelemetry",
     "StudyTelemetry",

@@ -30,6 +30,10 @@ class FailureType(str, Enum):
     INVALID_SNAPSHOT = "invalid_snapshot"
     CONFIGURATION_ERROR = "configuration_error"
 
+    # Catastrophic failures
+    SEGFAULT = "segfault"  # Segmentation fault
+    CORE_DUMP = "core_dump"  # Core dump detected
+
     # Unknown/other
     UNKNOWN = "unknown"
 
@@ -131,6 +135,29 @@ class FailureClassifier:
                     failure_type=FailureType.OOM,
                     severity=FailureSeverity.CRITICAL,
                     reason=f"Out of memory error (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=False,
+                )
+
+            # Segfault detection (catastrophic)
+            if any(
+                marker in combined_output
+                for marker in ["segmentation fault", "segfault", "sigsegv", "signal 11"]
+            ) or return_code == 139:  # 139 = 128 + 11 (SIGSEGV)
+                return FailureClassification(
+                    failure_type=FailureType.SEGFAULT,
+                    severity=FailureSeverity.CRITICAL,
+                    reason=f"Segmentation fault detected (exit code {return_code})",
+                    log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
+                    recoverable=False,
+                )
+
+            # Core dump detection (catastrophic)
+            if "core dumped" in combined_output or return_code == 134:  # 134 = 128 + 6 (SIGABRT)
+                return FailureClassification(
+                    failure_type=FailureType.CORE_DUMP,
+                    severity=FailureSeverity.CRITICAL,
+                    reason=f"Core dump detected (exit code {return_code})",
                     log_excerpt=FailureClassifier._extract_log_excerpt(stderr, stdout),
                     recoverable=False,
                 )
@@ -296,3 +323,27 @@ class FailureClassifier:
             reason=f"Visualization not available: {reason}",
             recoverable=True,  # Can fall back to non-GUI mode
         )
+
+    @staticmethod
+    def is_catastrophic(failure: FailureClassification) -> bool:
+        """
+        Determine if a failure is catastrophic.
+
+        Catastrophic failures are unrecoverable and indicate serious
+        tool/system issues that require immediate attention. These failures
+        should trigger stage abort and ECO class containment.
+
+        Args:
+            failure: FailureClassification to check
+
+        Returns:
+            True if failure is catastrophic, False otherwise
+        """
+        # Catastrophic failure types
+        catastrophic_types = {
+            FailureType.SEGFAULT,
+            FailureType.CORE_DUMP,
+            FailureType.OOM,
+        }
+
+        return failure.failure_type in catastrophic_types or failure.severity == FailureSeverity.CRITICAL

@@ -1,5 +1,139 @@
 # Noodle 2 - Progress Tracker
 
+## Session 5 - Isolated Execution & Failure Classification (GATE 1 PROGRESS)
+**Date:** 2026-01-07
+**Status:** 11/200 features passing (5.5%)
+
+### 🎯 SESSION ACCOMPLISHMENTS
+
+This session focused on critical Gate 1 infrastructure: isolated trial execution and
+comprehensive failure detection. Two major features implemented:
+
+#### ✅ Feature #8: Isolated Trial Execution with Immutable Snapshots
+
+**Implementation:**
+- Added snapshot copy-on-write semantics to Trial class
+- Each trial gets its own isolated snapshot copy in `trial_dir/snapshot/`
+- Original base snapshots remain completely unmodified
+- Full isolation guarantees side-effect-free execution
+
+**Tests added (8 new, all passing):**
+- test_snapshot_copied_to_trial_directory
+- test_base_snapshot_remains_unmodified
+- test_trial_artifacts_written_to_trial_directory_only
+- test_multiple_trials_isolated_from_each_other
+- test_trial_with_no_snapshot
+- test_snapshot_not_found_raises_error
+- test_snapshot_with_subdirectories
+- test_nangate45_base_case_snapshot_isolation
+
+**Why this matters:** This is a critical safety feature. It ensures that trials
+cannot accidentally corrupt base snapshots, enabling safe parallel execution and
+reproducible experiments.
+
+#### ✅ Feature #12: Deterministic Failure Classification
+
+**Implementation:**
+- Created comprehensive failure classification system in `src/controller/failure.py`
+- 14 distinct FailureType values (tool_crash, OOM, timeout, placement_failed, etc.)
+- 5 FailureSeverity levels (critical, high, medium, low, info)
+- Deterministic classification logic with log excerpt extraction
+- Integrated into Trial.execute() - automatic failure detection
+
+**Tests added (18 new, all passing):**
+- Complete coverage of all failure types
+- Deterministic classification verification
+- Integration with Trial execution
+- Serialization and deserialization tests
+
+**Why this matters:** This enables Noodle 2 to detect, classify, and contain failures
+deterministically. Critical for unattended operation and safety gates.
+
+### VALIDATION LADDER STATUS
+
+- ✅ **Gate 0 - Baseline Viability**: **COMPLETE** (100%)
+  - Base case execution: ✓ Working
+  - Snapshot isolation: ✓ Working
+  - Failure detection: ✓ Working
+
+- 🔄 **Gate 1 - Full Output Contract**: In Progress (40%)
+  - ✓ Isolated execution with immutable snapshots
+  - ✓ Deterministic failure classification
+  - ⏸️ Structured telemetry (Study/Stage/Case axes)
+  - ⏸️ Trial artifact indexing
+  - ⏸️ Multi-stage execution
+
+- ⏸️ **Gate 2 - Controlled Regression**: Not started
+- ⏸️ **Gate 3 - Cross-Target Parity**: Not started
+- ⏸️ **Gate 4 - Extreme Scenarios**: Not started
+
+### CODE QUALITY METRICS
+
+- **Test Count**: 129 tests, all passing (26 new this session)
+- **Test Execution Time**: ~4.3 seconds
+- **Type Safety**: All functions properly typed
+- **Error Handling**: Comprehensive exception handling
+- **Documentation**: Full docstrings on all public APIs
+- **No Regressions**: All existing tests still passing
+
+### NEXT SESSION PRIORITIES
+
+With isolated execution and failure classification complete, focus on:
+
+1. **Multi-stage Study execution** (High Priority - enables many other features)
+   - Stage sequencing logic
+   - Survivor selection based on metrics
+   - Stage gating with abort rails
+   - Budget enforcement (trial count limits)
+
+2. **Structured telemetry** (High Priority - Gate 1 requirement)
+   - Study-level telemetry aggregation
+   - Stage-level metrics summaries
+   - Case-level tracking
+   - Backward-compatible JSON schema
+
+3. **Trial artifact indexing** (Medium Priority)
+   - artifact_index.json generation
+   - Deep links to Ray Dashboard tasks
+   - Content-type hints for artifacts
+
+### GIT HISTORY THIS SESSION
+
+```
+520682f Implement deterministic failure classification - Feature #12 passing
+e317582 Implement isolated trial execution with immutable snapshots - Feature #8 passing
+```
+
+### FILES CREATED/MODIFIED THIS SESSION
+
+**Created:**
+- src/controller/failure.py (320 lines)
+- tests/test_isolated_trial_execution.py (351 lines)
+- tests/test_failure_classification.py (364 lines)
+
+**Modified:**
+- src/trial_runner/trial.py (added snapshot copying + failure classification)
+- src/controller/__init__.py (exported failure types)
+- feature_list.json (2 features marked passing)
+
+### SESSION SUMMARY
+
+**Key Achievement:** Completed two foundational safety features that enable reliable,
+unattended operation:
+
+1. **Snapshot isolation** ensures trials cannot corrupt shared state
+2. **Failure classification** enables deterministic error detection and containment
+
+These features advance Gate 1 (Full Output Contract) to 40% completion and establish
+the foundation for multi-stage execution with proper failure handling.
+
+**Test Coverage:** All 129 tests passing, no regressions introduced.
+
+**Next Milestone:** Implement multi-stage Study execution to enable progressive
+refinement workflows with survivor selection and stage gating.
+
+---
+
 ## Session 4 - Base Case Execution (GATE 0 COMPLETE!)
 **Date:** 2026-01-07
 **Status:** 9/200 features passing (4.5%)

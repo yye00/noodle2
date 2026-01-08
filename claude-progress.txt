@@ -7767,3 +7767,232 @@ With policy rule evaluation logging complete, the next focus areas are:
    - Gate 4: Extreme scenarios (demo-grade)
    - Features #74-77 in feature_list.json
 
+
+---
+
+# Session 49 (continued) - Per-Stage Performance Summary  
+**Date:** 2026-01-08
+**Status:** 100/200 features passing (50.0% 🎉 MILESTONE!)
+
+## SECOND FEATURE COMPLETED: Per-Stage Performance Summary
+
+**Feature #119: Generate per-stage performance summary (trials/sec, total compute time)** ✅
+
+## IMPLEMENTATION
+
+**1. StagePerformanceSummary Class** (src/telemetry/stage_performance.py):
+- Tracks performance metrics for individual stages
+- Automatic calculation of derived metrics (throughput, averages, rates)
+- Support for both JSON and human-readable text export
+
+**2. Performance Metrics Tracked:**
+
+**Timing Metrics:**
+- Stage start time (ISO 8601)
+- Stage end time (ISO 8601)  
+- Duration in seconds (calculated property)
+
+**Trial Metrics:**
+- Total trials executed
+- Completed trials (successful)
+- Failed trials
+- Success rate (0.0 to 1.0)
+
+**Performance Metrics:**
+- Throughput (trials/sec) - calculated from duration
+- Total compute time (sum of all trial execution times)
+- Average trial time (compute time / completed trials)
+- Total CPU time (optional, if tracked by trials)
+- Peak memory usage (optional, maximum across all trials)
+
+**3. StudyPerformanceSummary Class:**
+- Aggregates metrics across all stages
+- Calculates study-level totals
+- Generates both per-stage and overall summaries
+- Export to JSON/TXT for artifacts
+
+**4. Recording API:**
+- `start()` - Mark stage start time
+- `end()` - Mark stage end time
+- `record_trial_completion()` - Record trial result with metrics
+  - success flag
+  - execution_time_seconds
+  - cpu_time_seconds (optional)
+  - peak_memory_mb (optional)
+
+**5. Properties (Auto-Calculated):**
+- `duration_seconds` - Stage wall-clock duration
+- `throughput_trials_per_sec` - Trials completed per second
+- `success_rate` - Fraction of successful trials
+- `avg_trial_time_seconds` - Average execution time per trial
+
+**6. Export Formats:**
+- **JSON**: Machine-readable with nested structure (timing, trials, performance sections)
+- **Text**: Human-readable report with headers, sections, and formatting
+
+## TEST COVERAGE
+
+Created `test_stage_performance.py` with **33 comprehensive tests** organized in 5 test classes:
+
+**TestStagePerformanceSummary** (13 tests):
+- Create stage performance summary
+- Track stage start and end times
+- Record successful and failed trial completions
+- Count completed trials
+- Calculate throughput (trials/sec)
+- Throughput None before stage ends (in-progress)
+- Sum total compute time across trials
+- Calculate average trial execution time
+- Average trial time None if no completed trials
+- Track peak memory across trials
+- Calculate success rate
+
+**TestStagePerformanceSerialization** (5 tests):
+- to_dict includes all fields (timing, trials, performance, metadata)
+- to_dict trials section (total, completed, failed, success_rate)
+- to_dict performance section (compute time, CPU time, memory, throughput, averages)
+- save_json produces valid JSON file
+- save_txt produces human-readable text file
+
+**TestStagePerformanceHumanReadable** (4 tests):
+- String representation has header with stage name
+- Includes timing information (start, end, duration)
+- Includes trial counts (total, completed, failed, success rate)
+- Includes performance metrics (throughput, compute time, averages, resources)
+
+**TestStudyPerformanceSummary** (8 tests):
+- Create study performance summary
+- Add stage summaries to study
+- Aggregate total trials across stages
+- Aggregate compute time across stages
+- Calculate overall success rate
+- Study to_dict includes totals and per-stage breakdowns
+- Study save_json
+- Study string representation with per-stage section
+
+**TestStagePerformanceIntegration** (3 tests):
+- Multi-stage performance tracking (exploration → refinement)
+- Write performance summary to stage artifacts (JSON + TXT)
+- Performance summary enables resource planning (extract metrics for future estimates)
+
+## ALL 6 FEATURE STEPS VALIDATED
+
+✅ **Step 1: Execute stage with multiple trials**
+   - Verified via integration tests
+   - StagePerformanceSummary initialized for stage
+
+✅ **Step 2: Track stage start and end time**
+   - start() method records ISO 8601 timestamp
+   - end() method records completion timestamp
+   - duration_seconds calculated as property
+
+✅ **Step 3: Count completed trials**
+   - record_trial_completion() tracks success/failure
+   - trials_total, trials_completed, trials_failed maintained
+   - Success rate calculated automatically
+
+✅ **Step 4: Calculate throughput (trials/sec)**
+   - throughput_trials_per_sec property
+   - Computed as trials_completed / duration_seconds
+   - Returns None if stage not yet ended
+
+✅ **Step 5: Sum total compute time across all trials**
+   - total_compute_time_seconds tracks cumulative time
+   - avg_trial_time_seconds calculated automatically
+   - Includes both successful and failed trials
+
+✅ **Step 6: Write performance summary to stage artifacts**
+   - save_json() exports to JSON
+   - save_txt() exports to human-readable text
+   - Both include complete metrics
+
+## WHY THIS MATTERS
+
+**Resource Planning:**
+- Understand actual resource consumption per stage
+- Predict compute requirements for future Studies
+- Optimize trial budgets based on throughput
+
+**Performance Analysis:**
+- Identify bottlenecks (slow stages, low throughput)
+- Track success rates to detect problematic configurations
+- Compare stage performance across Studies
+
+**Cost Management:**
+- Track compute costs on cloud infrastructure
+- Justify resource allocation requests
+- Optimize stage configurations for efficiency
+
+**Operational Visibility:**
+- Monitor Study progress in real-time
+- Estimate completion times for running stages
+- Detect anomalies (unusually slow trials, high failure rates)
+
+**Production Confidence:**
+- Performance metrics flow automatically to artifacts
+- No configuration required
+- Works with existing trial execution infrastructure
+
+## CODE QUALITY
+
+- **New Files**:
+  - src/telemetry/stage_performance.py (402 lines: Performance tracking classes)
+  - tests/test_stage_performance.py (508 lines: 33 comprehensive tests)
+- **Modified Files**:
+  - src/telemetry/__init__.py (export performance classes)
+  - feature_list.json (1 feature marked passing: #119)
+- **Test Count**: 1,070 tests total (1,037 existing + 33 new), all passing
+- **Test Execution Time**: ~0.13 seconds (stage performance tests)
+- **Type Safety**: Full type hints maintained
+- **Documentation**: Clear docstrings and comprehensive test documentation
+- **No Regressions**: All existing tests still passing
+- **Zero False Positives**: All tests verify real performance tracking behavior
+
+## SESSION SUMMARY
+
+✅ **2 Features COMPLETE in this session:**
+1. Log all policy rule evaluations for audit trail (Feature #108)
+2. Generate per-stage performance summary (Feature #119)
+
+**Session Productivity:** Excellent - implemented two significant auditability and observability features with comprehensive testing (58 new tests total).
+
+**Milestone Achieved:** 🎉 **100/200 features passing (50.0% complete)** 🎉
+
+**Pattern Consistency:** Both features follow the established pattern:
+- Dataclass-based structured data
+- ISO 8601 timestamps for auditability
+- Both JSON and TXT export formats
+- Comprehensive test coverage (>25 tests per feature)
+- Properties for auto-calculated derived values
+
+**Testing:** All 1,070 tests passing (1,012 at session start + 58 new), zero regressions.
+
+**Completion Progress:** 100/200 features passing (50.0% complete)
+
+## NEXT PRIORITIES
+
+With performance summary tracking complete, the next focus areas are:
+
+1. **ECO Blacklist/Whitelist** (Medium Priority)
+   - Support ECO blacklist to exclude known-bad ECOs
+   - Support ECO whitelist for approved-only ECOs
+   - Features #126, #127 in feature_list.json
+
+2. **Custom Metric Extractors** (Medium-High Priority)
+   - Support project-specific KPIs
+   - Register custom extractors with metric system
+   - Feature #109 in feature_list.json
+
+3. **Export Structured Study Results** (Medium Priority)
+   - Export results in standard formats (JSON, CSV)
+   - Enable integration with Jupyter, Excel, etc.
+   - Feature #120 in feature_list.json
+
+4. **Staged Validation Ladder** (High Priority)
+   - Gate 0: Baseline viability
+   - Gate 1: Full output contract on basic config
+   - Gate 2: Controlled regression/failure injection
+   - Gate 3: Cross-target parity
+   - Gate 4: Extreme scenarios (demo-grade)
+   - Features #74-77 in feature_list.json
+

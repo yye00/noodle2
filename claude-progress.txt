@@ -1,8 +1,48 @@
 # Noodle 2 - Progress Tracker
 
+## Session 8 - ECO Framework & Base Case Safety (GATE 2 PROGRESS!)
+**Date:** 2026-01-07
+**Status:** 20/200 features passing (10%)
+
+### 🎯 FINAL SESSION STATUS
+
+This session implemented **two major feature areas**: the comprehensive ECO framework
+and critical base case safety gating. Together, these advance Gate 2 (Controlled
+Regression) to 40% completion.
+
+#### ✅ SECOND ACCOMPLISHMENT: Base Case Verification (Feature #16)
+
+After completing the ECO framework, this session added critical safety infrastructure
+that blocks Studies when the base case fails structural runnability.
+
+**Implementation:**
+- verify_base_case() method in StudyExecutor
+- Executes base case with no-op to verify runnability
+- Checks return code, metrics extraction, report generation
+- Exception-safe execution with comprehensive error handling
+- Integrates as safety gate in execute() before any ECO work
+
+**Safety Contract:**
+- Base case failure → Study immediately blocked
+- No ECO experimentation allowed (stages_completed = 0)
+- Clear failure diagnostics with exception details
+- Telemetry emitted for audit trail
+
+**Test Coverage:**
+- 9 new tests (7 fast, 2 slow)
+- Tests for broken snapshots, Study abortion, telemetry
+- Tests for clear messaging and contract compliance
+- skip_base_case_verification flag for framework tests
+
+**Total Test Count:** 214 tests (all passing, 204 fast)
+
+---
+
+## Original Session Content Follows
+
 ## Session 8 - ECO Framework Implementation (GATE 2 PROGRESS!)
 **Date:** 2026-01-07
-**Status:** 19/200 features passing (9.5%)
+**Original Status:** 19/200 features passing (9.5%)
 
 ### 🎯 SESSION ACCOMPLISHMENTS
 
@@ -112,31 +152,30 @@ The ECO framework is THE foundation for controlled experimentation in Noodle 2. 
 
 - ✅ **Gate 1 - Full Output Contract**: **COMPLETE** (100%)
 
-- 🔄 **Gate 2 - Controlled Regression**: **IN PROGRESS** (30%)
+- 🔄 **Gate 2 - Controlled Regression**: **IN PROGRESS** (40%)
   - ✓ ECO framework with stable naming
   - ✓ ECO effectiveness tracking
   - ✓ Prior management (TRUSTED/MIXED/SUSPICIOUS/UNKNOWN)
+  - ✓ **Study abortion on base case failure** ← **NEW!**
   - ⏸️ Failure containment at ECO level
   - ⏸️ Failure containment at ECO class scope
-  - ⏸️ Failure containment at stage scope
-  - ⏸️ Study abortion on base case failure
+  - ⏸️ Failure containment at stage scope (already implemented, needs marking)
 
 - ⏸️ **Gate 3 - Cross-Target Parity**: Not started
 - ⏸️ **Gate 4 - Extreme Scenarios**: Not started
 
 ### CODE QUALITY METRICS
 
-- **Test Count**: 205 tests, all passing (34 new this session)
-- **Test Execution Time**: ~4.4 seconds
-- **Type Safety**: Full type hints on all ECO classes
-- **Error Handling**: Comprehensive parameter validation
+- **Test Count**: 214 tests, all passing (43 new this session: 34 ECO + 9 base case)
+- **Test Execution Time**: ~2.8 seconds (fast tests only)
+- **Type Safety**: Full type hints on all new code
+- **Error Handling**: Exception-safe base case verification
 - **Documentation**: Complete docstrings on all public APIs
 - **No Regressions**: All existing tests still passing
 
 ### NEXT SESSION PRIORITIES
 
-With the ECO framework complete, focus on completing Gate 2 by implementing
-failure containment at multiple scopes:
+With ECO framework and base case safety complete, focus on remaining Gate 2 features:
 
 1. **Failure Containment at ECO Level** (High Priority - Gate 2)
    - Mark individual ECO instance as failed
@@ -148,24 +187,24 @@ failure containment at multiple scopes:
    - Mark entire class as suspicious/blacklisted
    - Prevent future applications of class in Study
 
-3. **Failure Containment at Stage Scope** (High Priority - Gate 2)
-   - Detect stage-level failures (all trials fail)
-   - Abort current stage
-   - Block downstream stages
+3. **Mark Stage Scope Failure as Passing** (Quick Win)
+   - Feature is already implemented (see test_study_aborts_when_stage_produces_no_survivors)
+   - Just needs to be verified and marked in feature_list.json
 
-4. **Study Abortion on Base Case Failure** (High Priority - Gate 2)
-   - Detect base case structural failure
-   - Block all ECO experimentation
-   - Clear failure messaging
-
-5. **ECO Application Integration with Trial Execution** (Medium Priority)
+4. **ECO Application Integration with Trial Execution** (Medium Priority)
    - Integrate ECO.generate_tcl() with Trial.execute()
    - Apply ECOs during trial execution
    - Capture ECO-specific metrics
 
+5. **Trial Artifact Indexing** (Medium Priority - Gate 1 completion)
+   - artifact_index.json generation per trial
+   - Deep links for Ray Dashboard
+
 ### GIT HISTORY THIS SESSION
 
 ```
+30f36f2 Implement base case verification and Study abortion on failure - Feature #16 passing
+b11ab6e Update progress notes for Session 8 - ECO framework complete, 19/200 features passing (9.5%)
 9e02860 Implement comprehensive ECO framework - 6 features passing
 ```
 
@@ -174,26 +213,32 @@ failure containment at multiple scopes:
 **Created:**
 - src/controller/eco.py (412 lines)
 - tests/test_eco_framework.py (456 lines)
+- tests/test_base_case_verification.py (381 lines)
 
 **Modified:**
 - src/controller/__init__.py (exported ECO classes)
-- feature_list.json (6 features marked passing: #11, #17, #18, #40, #41, #42)
+- src/controller/executor.py (added verify_base_case() and safety gate)
+- tests/test_multi_stage_execution.py (added skip_base_case_verification)
+- tests/test_telemetry.py (added skip_base_case_verification)
+- feature_list.json (7 features marked passing: #11, #16, #17, #18, #40, #41, #42)
 
 ### SESSION SUMMARY
 
-**Major Achievement:** Implemented the **complete ECO framework** with effectiveness
-tracking, prior management, and three concrete ECO implementations.
+**Major Achievements:**
+1. **Complete ECO framework** with effectiveness tracking and prior management
+2. **Base case safety gating** that blocks Studies on structural failures
 
-✅ **6 Features COMPLETE**: ECO infrastructure is production-ready with full test
-coverage and type safety.
+✅ **7 Features COMPLETE**: ECO infrastructure + base case safety verification
 
-**Gate 2 Progress**: Now 30% complete. The ECO framework enables systematic
-experimentation and forms the foundation for failure containment features.
+**Gate 2 Progress**: Now 40% complete. Critical safety infrastructure in place:
+- ECO experimentation framework
+- Base case validation before any ECO work
+- Automatic Study blocking on structural failures
 
-**Test Coverage:** All 205 tests passing, zero regressions.
+**Test Coverage:** All 214 tests passing (204 fast), zero regressions.
 
-**Next Milestone:** Implement failure containment at ECO/class/stage scopes to
-complete Gate 2 (Controlled Regression).
+**Next Milestone:** Implement remaining failure containment scopes to complete
+Gate 2 (Controlled Regression).
 
 ---
 

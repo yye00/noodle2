@@ -2374,3 +2374,74 @@ This session added **critical safety and management infrastructure**:
 
 **Overall Progress: 8/200 features (4%)**
 **Next Session Goal: Complete Gate 0 by implementing Feature #3 (Base Case Execution)**
+
+
+---
+
+## Session 15 - Provenance and Snapshot Integrity
+**Date:** 2026-01-08
+**Status:** 41/200 features passing (20.5%)
+
+### SESSION ACCOMPLISHMENTS
+
+This session implemented **provenance tracking** and **snapshot integrity verification**,
+enabling reproducible trials and tamper detection for design snapshots.
+
+#### Feature #48: Record Tool Version and Invocation Provenance
+
+**Implementation:**
+- Created provenance.py module with ToolProvenance dataclass
+- Added provenance field to TrialResult for execution metadata
+- Integrated provenance tracking in Trial.execute()
+- Captures: container image/tag, container ID, tool version (best-effort),
+  command-line invocation, working directory, execution timestamps
+
+**Test Coverage:** 17 comprehensive tests
+
+**Why This Matters:** Provenance provides all information needed to reproduce
+a trial execution. Critical for debugging failures, validating ECO effectiveness
+claims, meeting audit requirements, and ensuring scientific reproducibility.
+
+#### Feature #49: Compute and Record Snapshot Hash for Base Case Verification
+
+**Implementation:**
+- Created snapshot.py module with comprehensive integrity verification
+- Implemented compute_snapshot_hash() for deterministic directory hashing
+- Implemented verify_snapshot_hash() and detect_snapshot_tampering()
+- Added SnapshotHash dataclass and snapshot_hash field to StudyConfig
+- SHA-256 hashing with sorted file order for determinism
+- Detects content modifications, added/removed files, corrupted snapshots
+
+**Test Coverage:** 30 comprehensive tests
+
+**Why This Matters:** Design snapshots are the foundation of all trials.
+Snapshot hashing enables pre-execution integrity verification, detection of
+accidental corruption or malicious tampering, and confidence in reproducibility.
+
+### CODE QUALITY METRICS
+
+- **New Code**: provenance.py (193 lines), snapshot.py (300 lines)
+- **New Tests**: test_provenance.py (17 tests), test_snapshot.py (30 tests)
+- **Test Count**: 395 tests total (348 existing + 47 new), all passing
+- **Test Execution Time**: ~10.6 seconds (all tests)
+- **No Regressions**: All existing 348 tests still passing
+
+### GIT HISTORY THIS SESSION
+
+```
+51bffcc Implement snapshot hash computation for base case verification - Test #49 passing
+b5ba093 Implement tool version and invocation provenance tracking - Test #48 passing
+b6d7e46 Fix import path in congestion parser - use src.controller.types
+```
+
+### SESSION SUMMARY
+
+**Major Achievement:** Implemented complete provenance and integrity tracking,
+advancing Noodle 2's reproducibility and auditability guarantees.
+
+**Features Complete:** 2 (Tool provenance tracking, snapshot hash verification)
+
+**Completion Progress:** 41/200 features passing (20.5% complete)
+
+**Next Milestone:** Implement Study isolation and case lineage DAG to support
+multi-study experiments and derived case tracking.

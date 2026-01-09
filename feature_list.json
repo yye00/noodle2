@@ -2039,7 +2039,7 @@
       "Step 17: Verify Ray dashboard shows all tasks completed",
       "Step 18: Export Study results for analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -517,6 +517,7 @@ http://localhost:8265
 * The dashboard runs **only on the Ray head node**.
 * Worker nodes connect via `ray start --address=<head>:6379`.
 * Multi‑node execution is supported by the architecture but is intentionally **not required for early development or demos**.
+* For now, demonstrations using single node are perfectly adequate, even preferred as we only have one node (i.e. everything locally on the same localhost)
 
 **Operational intent**:
 
@@ -570,6 +571,51 @@ These extensions remain **pluggable and subordinate** to the safety and policy m
 ---
 
 ## Supported Reference Studies & Smoke-Test Gates (vNext)
+
+### Priority Rule: Nangate45 + ASAP7 Must Always Run
+
+As a **non-negotiable development priority**, Noodle 2 must *always* be able to successfully execute **Nangate45** and **ASAP7** base cases.
+
+This requirement supersedes all feature development.
+
+* If either Nangate45 or ASAP7 base execution regresses, **development stops immediately**.
+* No new features, refactors, or extensions may be added until both are restored to a runnable state.
+
+This rule exists to prevent architectural drift away from real physical-design constraints.
+
+---
+
+### Mandatory Unit & Smoke Tests (First-Line Gates)
+
+Before any higher-level tests, Noodle 2 must ship with **unit / smoke tests** that verify:
+
+1. **Nangate45 base case runs end-to-end**
+2. **ASAP7 base case runs end-to-end (with required ASAP7 workarounds applied)**
+
+Each test must:
+
+* launch the standard container (`efabless/openlane:ci2504-dev-amd64`)
+* execute a base Study with a **no-op ECO**
+* confirm:
+
+  * tool return code `rc == 0`
+  * timing report produced and parsed (`wns_ps` present)
+  * early-failure classifier reports *no structural failure*
+  * artifact bundle and index are created
+
+**Failure semantics:**
+
+* If either test fails:
+
+  * the test suite fails hard
+  * the Study is marked blocked
+  * CI (or local dev) must not proceed
+
+These tests are treated as **infrastructure tests**, not optional examples.
+
+---
+
+Noodle 2 is required to ship with **deterministic, runnable baseline Studies** that validate the end-to-end toolchain (snapshot → trial runner → parsers → artifacts) before any ECO experimentation begins.
 
 Noodle 2 is required to ship with **deterministic, runnable baseline Studies** that validate the end-to-end toolchain (snapshot → trial runner → parsers → artifacts) before any ECO experimentation begins.
 

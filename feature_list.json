@@ -2289,7 +2289,7 @@
       "Step 12: Verify all telemetry is collected correctly",
       "Step 13: Generate cluster utilization report"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

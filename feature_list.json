@@ -2367,7 +2367,7 @@
       "Step 13: Generate v2 telemetry with new fields",
       "Step 14: Verify additive evolution is enforced"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

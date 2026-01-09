@@ -1496,7 +1496,7 @@
       "Step 5: Write JSON-LD to Study artifacts",
       "Step 6: Enable discovery and indexing by semantic search engines"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

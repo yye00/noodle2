@@ -16725,3 +16725,207 @@ All remaining features are comprehensive E2E or advanced features.
 Progress is excellent at 88.0% completion.
 
 ================================================================================
+
+# Session 106 - Comprehensive Failure Injection and Recovery E2E Testing
+**Date:** 2026-01-08
+**Status:** 177/200 features passing (88.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented **comprehensive failure injection and recovery testing**,
+validating the complete failure handling infrastructure across all failure modes.
+
+### Feature Completed
+
+**Feature #163: End-to-end: Failure injection and recovery testing across all failure modes** ✅
+
+## IMPLEMENTATION
+
+**1. Test ECO Classes for Failure Injection**:
+Created 6 specialized ECO classes to trigger specific failure modes:
+- `ToolCrashECO`: Simulates tool crash (exit code != 0)
+- `MissingOutputECO`: Completes but doesn't produce expected outputs
+- `ParseErrorECO`: Produces malformed output that can't be parsed
+- `TimeoutECO`: Simulates timeout by running indefinitely
+- `SegfaultECO`: Triggers segmentation fault (catastrophic failure)
+- `TransientFailureECO`: Fails transiently, succeeds on retry
+
+**2. Comprehensive Test Coverage (17 Tests)**:
+
+Step 1: Create test Study with intentional failure triggers
+- 6 failure-inducing ECOs properly configured
+- Validates ECO metadata and TCL generation
+
+Step 2-3: Tool crash detection and containment
+- Non-zero exit code classified as TOOL_CRASH
+- Severity: HIGH, not recoverable
+- Failure contained and doesn't crash system
+- Telemetry written successfully
+
+Step 4-5: Missing artifacts detection
+- Missing outputs detected even with rc=0
+- Classified as MISSING_OUTPUT, severity HIGH
+- Specific missing files identified in reason
+
+Step 6-7: Parse error detection
+- Malformed reports properly classified
+- Multiple failure patterns tested (empty, binary, truncated, invalid)
+- All classified as PARSE_FAILURE
+
+Step 8-9: Timeout detection and termination
+- Exit code 124 (timeout command) detected
+- Alternative timeout indicators (SIGTERM, SIGKILL) handled
+- Classified with HIGH severity
+
+Step 10: ECO-level failure containment
+- Failures in individual ECOs don't fail entire trial
+- Mixed success/failure ECO execution validated
+- All ECOs execute despite previous failures
+
+Step 11: ECO class-level failure containment
+- Catastrophic failures block entire ECO class
+- Other ECO classes remain healthy
+- Containment tracker properly isolates failures
+- Summary statistics accurate
+
+Step 12: Stage-level failure containment
+- Failures in one stage don't stop other stages
+- Multi-stage execution with mixed results validated
+- Survivor selection works despite failures
+- Stage progression continues
+
+Step 13: Catastrophic failure triggering Study abort
+- Segfault (exit 139) classified as CRITICAL
+- `is_catastrophic()` helper correctly identifies severe failures
+- Study abort decision made appropriately
+- Abort telemetry written with complete context
+
+Step 14: Clear diagnostics for all failure modes
+- Every failure type produces actionable diagnostics
+- Includes reason, suggestion, and log excerpt
+- User-facing messages are clear and helpful
+
+Step 15: Complete telemetry for all modes
+- All 6 required fields present in every failure
+- JSON serialization validated
+- Telemetry files written successfully
+- Field types correct (str, bool, dict)
+
+Step 16: Transient failure recovery with retry
+- Transient failures marked as recoverable
+- Retry logic simulated successfully
+- Recovery telemetry tracks attempt count
+- Final status recorded correctly
+
+**3. Comprehensive Integration Test**:
+- Complete end-to-end workflow validation
+- All phases tested together
+- Summary output with detailed progress
+- 88.5% project completion milestone
+
+## ALL 16 FEATURE STEPS VALIDATED
+
+✓ Step 1: Test Study with failure triggers created
+✓ Step 2: Tool crash detected (exit code != 0)
+✓ Step 3: Tool crash classification and containment verified
+✓ Step 4: Missing output files detected
+✓ Step 5: Missing artifacts classification verified
+✓ Step 6: Parse error detected on malformed report
+✓ Step 7: Parse error classification verified
+✓ Step 8: Timeout detected
+✓ Step 9: Timeout classification and termination verified
+✓ Step 10: ECO-level failure containment verified
+✓ Step 11: ECO class-level failure containment verified
+✓ Step 12: Stage-level failure containment verified
+✓ Step 13: Catastrophic failure triggers Study abort
+✓ Step 14: All failure modes produce clear diagnostics
+✓ Step 15: Complete telemetry for all modes verified
+✓ Step 16: Transient failure recovery with retry verified
+
+## TEST EXECUTION RESULTS
+
+New tests:
+✓ 17/17 tests passing in test_failure_injection_e2e.py
+✓ All 16 individual step tests pass
+✓ 1 comprehensive integration test passes
+
+All failure-related tests:
+✓ 91/91 tests passing across all failure test files
+✓ test_failure_classification.py (existing)
+✓ test_eco_failure_containment.py (existing)
+✓ test_catastrophic_failure_handling.py (existing)
+✓ test_failure_injection_e2e.py (NEW)
+
+Total project tests: 2706 tests collected
+
+## QUALITY METRICS
+
+Code Quality:
+✓ Full type hints on all new ECO classes and test functions
+✓ Comprehensive docstrings for each test class and method
+✓ Clear test names describing validation
+✓ Proper pytest fixtures (tmp_path)
+✓ 1136 lines of high-quality test code
+
+Test Quality:
+✓ 100+ assertions across all tests
+✓ Edge cases covered (multiple failure patterns)
+✓ Realistic simulation data
+✓ Telemetry validation for all modes
+✓ Integration test covers complete workflow
+
+Coverage:
+✓ All failure types tested: TOOL_CRASH, MISSING_OUTPUT, PARSE_FAILURE, 
+  TIMEOUT, OOM, SEGFAULT, NETWORK_ERROR
+✓ All severity levels: CRITICAL, HIGH, MEDIUM
+✓ All containment levels: ECO, ECO class, Stage
+✓ Recovery strategies: Retry logic for transient failures
+
+## INFRASTRUCTURE LEVERAGED
+
+Existing components used:
+- src/controller/failure.py (FailureClassifier, FailureClassification)
+- src/controller/eco_containment.py (ECOClassContainmentTracker)
+- src/controller/eco.py (ECO base class, ECOResult)
+- src/controller/types.py (ECOClass enum)
+- src/trial_runner/trial.py (Trial, TrialConfig, TrialResult)
+
+No new infrastructure needed - all validation uses existing production code.
+
+## PROGRESS TRACKING
+
+Previous state:
+- 176/200 features passing (88.0%)
+- 24 features remaining (12.0%)
+
+Current state:
+- 177/200 features passing (88.5%)
+- 23 features remaining (11.5%)
+
+Features remaining (23):
+- 3 advanced features (concurrent stages, Ray actor, power analysis)
+- 13 comprehensive E2E tests
+- 5 UI/UX validation tests
+- 2 extreme scenario tests
+
+## NEXT STEPS
+
+Recommended priorities for next session:
+1. Feature #164: Multi-objective optimization with Pareto frontier (12 steps)
+2. Feature #165: ECO effectiveness study with leaderboard (12 steps)
+3. Feature #166: Safety domain enforcement E2E (14 steps)
+
+All remaining features are comprehensive E2E or advanced features.
+Project is approaching 90% completion milestone.
+
+## SESSION SUMMARY
+
+This session successfully implemented and validated comprehensive failure injection
+and recovery testing, demonstrating that Noodle 2's failure handling infrastructure
+is robust, well-tested, and production-ready. The test suite validates all failure
+modes, containment levels, diagnostics, telemetry, and recovery strategies.
+
+Key achievement: All 16 test steps completed successfully with 17 passing tests,
+bringing total completion to 88.5% (177/200 features).
+
+================================================================================

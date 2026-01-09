@@ -2121,7 +2121,7 @@
       "Step 11: Verify multi-objective ranking is deterministic",
       "Step 12: Compare Pareto approach vs weighted-sum ranking"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

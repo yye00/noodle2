@@ -2328,7 +2328,7 @@
       "Step 12: Validate cryptographic integrity of provenance chain",
       "Step 13: Generate audit-ready provenance report"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

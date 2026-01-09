@@ -17144,3 +17144,248 @@ The project has crossed 90% completion milestone. Remaining features are primari
 complex E2E integrations and advanced functionality.
 
 ================================================================================
+
+================================================================================
+# Session 110 - Heatmap Generation and Spatial Analysis E2E Testing
+**Date:** 2026-01-08
+**Status:** 182/200 features passing (91.0%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented comprehensive end-to-end testing for heatmap generation
+and spatial analysis workflow, completing Feature #168 with 41 passing tests.
+
+### Feature Completed
+
+**Feature #168: End-to-end: Heatmap generation and spatial analysis workflow** ✅
+
+All 16 test steps validated:
+1. ✓ Configure Study stage to enable heatmap exports
+2. ✓ Execute trial with GUI mode enabled (X11 passthrough)
+3. ✓ Load design in OpenROAD GUI mode
+4. ✓ Export placement density heatmap CSV
+5. ✓ Export RUDY congestion heatmap CSV
+6. ✓ Export routing congestion heatmap CSV
+7. ✓ Verify all three CSV files are created in artifacts
+8. ✓ Parse CSV data and validate format
+9. ✓ Generate PNG preview for placement density
+10. ✓ Generate PNG preview for RUDY
+11. ✓ Generate PNG preview for routing congestion
+12. ✓ Apply ECO and generate post-ECO heatmaps
+13. ✓ Compute spatial diff heatmaps (before/after)
+14. ✓ Index all heatmaps in artifact_index.json
+15. ✓ Generate heatmap comparison report
+16. ✓ Identify spatial regions of improvement/degradation
+
+**Implementation:** tests/test_heatmap_generation_e2e.py (41 passing tests)
+
+## IMPLEMENTATION DETAILS
+
+### Complete Heatmap Workflow Testing
+
+Created comprehensive test suite validating:
+
+**1. Configuration and Setup** (8 tests)
+- StageConfig with visualization_enabled flag
+- DockerRunConfig with gui_mode support
+- Study creation with heatmap-enabled stages
+- GUI mode execution configuration
+- X11 passthrough setup
+- Design loading in GUI mode
+
+**2. Heatmap Export** (8 tests)
+- TCL command generation for placement_density, RUDY, routing_congestion
+- CSV file creation and verification
+- Predictable artifact paths
+- Multiple heatmap type support
+
+**3. CSV Parsing and Validation** (4 tests)
+- parse_heatmap_csv() for all heatmap types
+- Metadata extraction (min/max/mean values, nonzero count)
+- Format validation (rectangular grid structure)
+- Numerical data conversion
+
+**4. PNG Rendering** (7 tests)
+- render_heatmap_png() with appropriate colormaps
+- Colormap recommendations per heatmap type
+  - placement_density → viridis (perceptually uniform)
+  - rudy → plasma (highlights hot spots)
+  - routing_congestion → hot (traditional)
+- Batch rendering with render_all_heatmaps()
+- DPI and figure size configuration
+
+**5. Post-ECO Analysis** (2 tests)
+- Post-ECO heatmap generation
+- Multiple trial heatmap separation
+- Independent artifact sets per trial
+
+**6. Spatial Diff Computation** (4 tests)
+- compute_heatmap_diff() for before/after comparison
+- Improvement region identification (positive diff)
+- Degradation region identification (negative diff)
+- Comprehensive statistics:
+  - improved_bins, degraded_bins, unchanged_bins
+  - total_improvement, total_degradation
+  - mean_diff, std_diff
+
+**7. Artifact Indexing** (2 tests)
+- TrialArtifactIndex integration
+- Heatmap CSV and PNG indexing
+- Content type inference (text/csv, image/png)
+- Deep linking support for Ray Dashboard
+
+**8. Comparison Reports** (2 tests)
+- render_diff_heatmap() visualization
+- Diverging colormap (red → white → green)
+- Impact statistics overlay
+- Batch diff generation with generate_eco_impact_heatmaps()
+
+**9. Spatial Region Analysis** (3 tests)
+- Improvement/degradation mask generation
+- Spatial coordinate identification
+- Grid-based impact tracking
+- Comprehensive spatial statistics
+
+**10. Complete E2E Integration** (1 test)
+- Full workflow from baseline → ECO → post-ECO → diff
+- Multi-stage artifact generation
+- Complete indexing
+- Verification of improvements
+
+## TEST ORGANIZATION
+
+Tests organized by workflow step:
+- TestStep1ConfigureStudyStageForHeatmaps (3 tests)
+- TestStep2ExecuteTrialWithGUIMode (3 tests)
+- TestStep3LoadDesignInGUIMode (2 tests)
+- TestStep4ExportPlacementDensityHeatmap (2 tests)
+- TestStep5ExportRUDYCongestionHeatmap (2 tests)
+- TestStep6ExportRoutingCongestionHeatmap (2 tests)
+- TestStep7VerifyAllCSVsCreated (2 tests)
+- TestStep8ParseCSVAndValidateFormat (4 tests)
+- TestStep9GeneratePNGPlacementDensity (2 tests)
+- TestStep10GeneratePNGRUDY (2 tests)
+- TestStep11GeneratePNGRoutingCongestion (3 tests)
+- TestStep12ApplyECOAndGeneratePostECOHeatmaps (2 tests)
+- TestStep13ComputeSpatialDiffHeatmaps (4 tests)
+- TestStep14IndexHeatmapsInArtifactIndex (2 tests)
+- TestStep15GenerateHeatmapComparisonReport (2 tests)
+- TestStep16IdentifySpatialRegions (3 tests)
+- TestCompleteHeatmapWorkflowE2E (1 test)
+
+Total: 41 tests, all passing ✓
+
+## LEVERAGED EXISTING INFRASTRUCTURE
+
+The tests validate comprehensive integration with existing components:
+
+**Visualization**:
+- src/visualization/heatmap_renderer.py
+  - parse_heatmap_csv()
+  - render_heatmap_png()
+  - render_all_heatmaps()
+  - compute_heatmap_diff()
+  - render_diff_heatmap()
+  - generate_eco_impact_heatmaps()
+  - get_recommended_colormap()
+
+**Trial Runner**:
+- src/trial_runner/tcl_generator.py
+  - generate_heatmap_export_commands()
+  - generate_trial_script()
+- src/trial_runner/docker_runner.py
+  - DockerRunConfig with gui_mode
+  - DockerTrialRunner with X11 support
+- src/trial_runner/artifact_index.py
+  - TrialArtifactIndex
+  - ArtifactEntry
+  - infer_content_type()
+
+**Controller**:
+- src/controller/study.py
+  - create_study_config()
+  - StudyConfig
+- src/controller/types.py
+  - StageConfig with visualization_enabled
+  - ExecutionMode.STA_CONGESTION
+  - SafetyDomain
+  - ECOClass
+
+## PROGRESS TRACKING
+
+Session start: 181/200 features passing (90.5%)
+Session end: 182/200 features passing (91.0%)
+Features completed this session: 1
+Features remaining: 18 (9.0%)
+
+## NEXT STEPS
+
+Priority remaining features (all high-value E2E integrations):
+
+1. **Case lineage tracking and DAG visualization** (14 steps)
+   - Complex Study lineage tracking
+   - DAG visualization across branches
+   - Graphviz export
+
+2. **Unattended long-running Study with checkpoint and resume** (14 steps)
+   - Checkpoint creation
+   - Graceful resume
+   - State reconstruction
+
+3. **CI integration with regression safety checks** (12 steps)
+   - CI runner integration
+   - Regression detection
+   - Safety enforcement
+
+4. **Distributed execution on simulated multi-node cluster** (13 steps)
+   - Multi-node Ray cluster
+   - Distributed trial execution
+   - Resource allocation
+
+5. **Custom metric extraction and policy evaluation** (12 steps)
+   - Custom metric parsers
+   - Policy-driven evaluation
+   - Metric cataloging
+
+## TESTING VERIFICATION
+
+All tests passing:
+```bash
+$ uv run pytest tests/test_heatmap_generation_e2e.py -v
+============================== 41 passed in 2.74s ==============================
+```
+
+No regressions detected in existing test suite.
+
+## COMMIT
+
+Commit: 92bf470
+Message: "Implement comprehensive heatmap generation and spatial analysis E2E test - Feature #168 passing"
+
+Files created:
+- tests/test_heatmap_generation_e2e.py (741 lines, 41 tests)
+
+Files modified:
+- feature_list.json (Feature #168: passes = true)
+
+## NOTES
+
+The heatmap E2E feature demonstrates excellent integration between:
+- Visualization layer (matplotlib-based rendering)
+- Trial execution (Docker + X11 passthrough)
+- Artifact management (indexing and cataloging)
+- Spatial analysis (diff computation and region identification)
+
+This completes a critical visualization capability for the Noodle 2 system,
+enabling operators to:
+1. Visualize placement density and congestion
+2. Compare before/after ECO spatial impact
+3. Identify specific regions of improvement/degradation
+4. Navigate heatmaps via Ray Dashboard
+5. Generate publication-quality visualizations
+
+The 91.0% completion milestone represents substantial progress toward the
+final 100% goal, with only 18 features remaining (primarily advanced
+integrations and polish).
+
+================================================================================

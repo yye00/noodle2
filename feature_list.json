@@ -2346,7 +2346,7 @@
       "Step 10: Generate parameter recommendation report",
       "Step 11: Export optimal parameter for future Studies"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

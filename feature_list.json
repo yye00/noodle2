@@ -2079,7 +2079,7 @@
       "Step 11: Verify cross-target parity with Nangate45 (same telemetry schema)",
       "Step 12: Generate comparative report across all three PDKs"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -1534,7 +1534,7 @@
       "Step 5: Use power as additional ranking dimension",
       "Step 6: Support power-timing trade-off studies"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

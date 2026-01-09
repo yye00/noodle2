@@ -2140,7 +2140,7 @@
       "Step 11: Export ECO priors for future Study initialization",
       "Step 12: Generate ECO recommendation report for similar designs"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

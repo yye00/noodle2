@@ -17389,3 +17389,271 @@ final 100% goal, with only 18 features remaining (primarily advanced
 integrations and polish).
 
 ================================================================================
+
+================================================================================
+SESSION 111 - CASE LINEAGE TRACKING AND DAG VISUALIZATION E2E
+================================================================================
+
+**Date:** 2026-01-08
+**Status:** 183/200 features passing (91.5%)
+
+## SESSION ACCOMPLISHMENTS
+
+This session implemented comprehensive end-to-end testing for case lineage tracking
+and DAG visualization across complex multi-stage Studies, achieving the 91.5%
+completion milestone.
+
+### Feature Completed
+
+**Feature #170: End-to-end: Case lineage tracking and DAG visualization across complex Study** ✅
+- 31 comprehensive tests covering all 14 workflow steps
+- Complete integration with existing case lineage infrastructure
+- Full DAG export, visualization, and analysis capabilities
+
+## ENHANCEMENTS TO CASE LINEAGE INFRASTRUCTURE
+
+**1. Metric Annotation in DAG Visualization** (src/controller/case.py):
+- Enhanced `export_to_dot()` with `annotate_metrics` parameter
+- Supports WNS, congestion_score, and area annotations
+- Metrics displayed in node labels for visual analysis
+- Updated `render_to_png()` to propagate annotation flag
+
+**2. Winning Path Identification**:
+- New `identify_winning_path()` method
+- Finds best leaf case based on configurable metric
+- Supports both minimization and maximization
+- Traces complete path from base to winning leaf
+- Returns ordered list of case IDs
+
+**3. Lineage Report Generation**:
+- New `generate_lineage_report()` method
+- Human-readable report format
+- Shows complete ECO application sequence
+- Displays metrics at each derivation stage
+- Includes summary statistics
+- Formatted with headers and sections
+
+## COMPREHENSIVE E2E TEST IMPLEMENTATION
+
+**File Created**: tests/test_case_lineage_e2e.py (989 lines, 31 tests)
+
+### Test Coverage by Feature Step:
+
+**Step 1-2: Study Creation** (2 tests)
+- Create Study with branching case derivations
+- Start with single base case
+- Verify base case properties
+
+**Step 3: Apply ECOs** (2 tests)
+- Apply 5 different ECOs to base case
+- Create 5 derived cases in Stage 0
+- Verify each ECO produces unique case
+
+**Step 4: Survivor Selection** (2 tests)
+- Select top 3 survivors based on WNS
+- Verify survivor selection preserves lineage
+- Validate metric-based selection
+
+**Step 5: Second Stage ECOs** (2 tests)
+- Apply 3 ECOs to each of 3 survivors
+- Create 9 Stage 1 cases
+- Verify correct parent-child relationships
+
+**Step 6: Parent-Child Tracking** (2 tests)
+- Track all parent-child relationships
+- Verify lineage traces back to base
+- Validate graph integrity
+
+**Step 7: Deterministic Naming** (2 tests)
+- Verify case naming follows pattern
+- Ensure uniqueness across stages
+- Validate CaseIdentifier format
+
+**Step 8: DAG Building** (2 tests)
+- Build complete case lineage DAG
+- Export DAG with all metadata
+- Verify node and edge counts
+
+**Step 9: DOT Export** (2 tests)
+- Export to Graphviz DOT format
+- Verify DOT structure and syntax
+- Include edge labels with ECO names
+
+**Step 10: PNG Rendering** (2 tests)
+- Render DAG to PNG format
+- Invoke `dot` command correctly
+- Handle subprocess execution
+
+**Step 11: Derivation Paths** (2 tests)
+- Verify all paths visible in DAG
+- Identify leaf cases correctly
+- Validate branching structure
+
+**Step 12: Metric Annotation** (3 tests)
+- Export with metric annotations
+- Verify metrics not included by default
+- Render PNG with annotated metrics
+
+**Step 13: Winning Path** (2 tests)
+- Identify winning path by WNS (maximize)
+- Identify winning path by congestion (minimize)
+- Validate path correctness
+
+**Step 14: Lineage Report** (3 tests)
+- Generate report for winning path
+- Include ECO sequence
+- Show metric progression
+
+**Complete E2E Workflow** (1 test)
+- Full workflow from base to report
+- All steps integrated
+- Comprehensive validation
+
+## WORKFLOW DEMONSTRATION
+
+The complete E2E test demonstrates the full case lineage workflow:
+
+1. Create base case with initial metrics
+2. Apply 5 different ECOs (buffer_insertion, gate_sizing, vt_swap, pin_swap, clock_skew)
+3. Select top 3 survivors based on WNS improvement
+4. Apply 3 optimization ECOs (opt_a, opt_b, opt_c) to each survivor
+5. Build complete DAG with 15 nodes (1 base + 5 s0 + 9 s1)
+6. Export to DOT format (basic and annotated)
+7. Render to PNG visualization
+8. Identify leaf cases (9 s1 cases + 2 non-survivor s0 cases)
+9. Find winning path through DAG
+10. Generate human-readable lineage report
+
+## CAPABILITIES DELIVERED
+
+Noodle 2 users can now:
+1. **Track Case Lineage**: Complete parent-child relationship tracking across complex Studies
+2. **Visualize Experiment Structure**: Graphviz-based DAG visualization with optional metrics
+3. **Identify Winners**: Automatically find best performing case based on any metric
+4. **Generate Reports**: Human-readable reports showing ECO sequence for winning path
+5. **Analyze Trade-offs**: Visual comparison of different derivation paths
+6. **Audit Decisions**: Complete traceability from base case to final result
+7. **Understand Branching**: Clear visualization of survivor selection and branching
+8. **Export for Analysis**: Machine-readable DAG export for custom analysis
+
+## TECHNICAL IMPLEMENTATION
+
+**Case Naming Convention**:
+- Base case: `<name>_0_0`
+- Stage 0 derived: `<name>_0_1`, `<name>_0_2`, ..., `<name>_0_N`
+- Stage 1 derived: `<name>_1_0`, `<name>_1_1`, ..., `<name>_1_M`
+- Ensures uniqueness and deterministic ordering
+
+**DAG Structure**:
+- Nodes: All cases (base + derived)
+- Edges: Parent-child relationships labeled with ECO names
+- Metadata: WNS, congestion, area, etc.
+- Base case highlighted with special styling
+
+**Visualization**:
+- DOT format for Graphviz rendering
+- Top-to-bottom layout (rankdir=TB)
+- Rounded box nodes
+- Labeled edges with ECO names
+- Optional metric annotations in node labels
+
+**Winning Path Algorithm**:
+1. Get all leaf cases (cases with no children)
+2. Filter by presence of metric
+3. Find best leaf (min or max based on metric)
+4. Trace back to base case
+5. Return ordered path
+
+**Report Format**:
+- Header with metric and optimization direction
+- Derivation sequence with numbered steps
+- ECO names at each stage
+- Metrics displayed for each case
+- Summary section with final metrics and ECO count
+
+## TESTING VERIFICATION
+
+All 31 tests passing:
+```bash
+$ uv run pytest tests/test_case_lineage_e2e.py -v
+============================== 31 passed in 0.21s ==============================
+```
+
+Existing case tests still passing:
+```bash
+$ uv run pytest tests/test_case_management.py tests/test_case_lineage_dag.py \
+                  tests/test_case_lineage_dot_export.py tests/test_case_lineage_visualization.py -v
+============================== 94 passed in 0.23s ==============================
+```
+
+No regressions detected.
+
+## PROGRESS TRACKING
+
+Session start: 182/200 features passing (91.0%)
+Session end: 183/200 features passing (91.5%)
+Features completed this session: 1
+Features remaining: 17 (8.5%)
+
+## NEXT STEPS
+
+Priority remaining features (high-value E2E integrations):
+
+1. **Unattended long-running Study with checkpoint and resume** (14 steps)
+   - Checkpoint creation during execution
+   - Graceful resume after interruption
+   - State reconstruction and validation
+
+2. **CI integration with regression safety checks** (12 steps)
+   - CI runner integration
+   - Regression detection
+   - Safety enforcement
+
+3. **Distributed execution on simulated multi-node cluster** (13 steps)
+   - Multi-node Ray cluster setup
+   - Distributed trial execution
+   - Resource allocation and load balancing
+
+4. **Custom metric extraction and policy evaluation** (12 steps)
+   - Custom metric parsers
+   - Policy-driven evaluation
+   - Metric cataloging
+
+5. **Provenance tracking and reproducibility validation** (13 steps)
+   - Complete provenance tracking
+   - Reproducibility guarantees
+   - Audit trail generation
+
+## COMMITS
+
+Commit: 0f0ddc6
+Message: "Implement comprehensive case lineage tracking and DAG visualization E2E test - Feature #170 passing"
+
+Files modified:
+- src/controller/case.py (3 methods enhanced)
+- feature_list.json (Feature #170: passes = true)
+
+Files created:
+- tests/test_case_lineage_e2e.py (989 lines, 31 tests)
+
+## NOTES
+
+The case lineage E2E feature demonstrates excellent integration across the
+Noodle 2 system layers:
+- Controller layer (case management and graph building)
+- Visualization layer (DOT export and PNG rendering)
+- Analysis layer (winning path identification and report generation)
+- Telemetry layer (metadata tracking and propagation)
+
+This feature is critical for:
+- **Operator confidence**: Clear visibility into experiment structure
+- **Decision auditing**: Traceable path from base to winner
+- **Trade-off analysis**: Visual comparison of alternative paths
+- **Publication quality**: Professional DAG visualizations
+- **Reproducibility**: Complete record of ECO sequence
+
+The 91.5% completion milestone represents substantial maturity of the Noodle 2
+system, with only 17 features remaining (primarily advanced integrations,
+UI/UX polish, and extreme scenarios).
+
+================================================================================

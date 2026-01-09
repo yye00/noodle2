@@ -2102,7 +2102,7 @@
       "Step 15: Verify failure telemetry is complete for all modes",
       "Step 16: Test recovery after transient failure with retry logic"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

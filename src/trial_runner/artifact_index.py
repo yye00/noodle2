@@ -319,6 +319,7 @@ def generate_trial_artifact_index(
         ("sta.rpt", "Static Timing Analysis Report", "text/plain"),
         ("congestion_report.txt", "Congestion Report", "text/plain"),
         ("congestion.rpt", "Congestion Report", "text/plain"),
+        ("power.rpt", "Power Analysis Report", "text/plain"),
         ("metrics.json", "Trial Metrics (JSON)", "application/json"),
         ("trial_summary.json", "Trial Summary", "application/json"),
         ("logs/stdout.txt", "OpenROAD stdout", "text/plain"),

@@ -2386,7 +2386,7 @@
       "Step 11: Test artifact search by content-type",
       "Step 12: Test artifact filtering by stage/case"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

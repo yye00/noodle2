@@ -157,17 +157,20 @@ class TestExtremeScaleParameterSweep:
         self, ray_cluster, large_scale_artifacts_dir
     ):
         """Step 4: Monitor cluster resource utilization."""
-        # Get cluster resources before execution
-        resources_before = ray.available_resources()
+        # Get both available and total cluster resources
+        resources_available = ray.available_resources()
+        resources_total = ray.cluster_resources()
 
-        print(f"✓ Cluster resources available:")
-        print(f"  - CPUs: {resources_before.get('CPU', 0)}")
-        print(f"  - Memory: {resources_before.get('memory', 0) / 1e9:.2f} GB")
-        print(f"  - Object store: {resources_before.get('object_store_memory', 0) / 1e9:.2f} GB")
+        print(f"✓ Cluster resources:")
+        print(f"  - CPUs available: {resources_available.get('CPU', 0)}")
+        print(f"  - CPUs total: {resources_total.get('CPU', 0)}")
+        print(f"  - Memory: {resources_total.get('memory', 0) / 1e9:.2f} GB")
+        print(f"  - Object store: {resources_total.get('object_store_memory', 0) / 1e9:.2f} GB")
 
-        # Verify we have enough resources for parallel execution
-        assert resources_before.get("CPU", 0) > 0
-        assert resources_before.get("memory", 0) > 0
+        # Verify cluster has resources (check total, not just available)
+        # Available might be 0 if other tests are still running
+        assert resources_total.get("CPU", 0) > 0
+        assert resources_total.get("memory", 0) > 0
 
     def test_step_5_verify_ray_handles_large_task_queue(self, ray_cluster):
         """Step 5: Verify Ray handles large task queue."""

@@ -2229,7 +2229,7 @@
       "Step 13: Identify winning path through DAG",
       "Step 14: Generate lineage report with ECO sequence for winner"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

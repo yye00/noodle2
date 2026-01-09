@@ -400,7 +400,7 @@ class CaseGraph:
             if case.case_id not in parent_ids
         ]
 
-    def export_to_dot(self) -> str:
+    def export_to_dot(self, annotate_metrics: bool = False) -> str:
         """
         Export the case lineage graph in Graphviz DOT format.
 
@@ -408,6 +408,10 @@ class CaseGraph:
         - Nodes representing cases (with stage and ECO info)
         - Edges representing parent-child relationships (labeled with ECO names)
         - Visual styling based on case properties (base case highlighted)
+        - Optional metric annotations (WNS, congestion, etc.)
+
+        Args:
+            annotate_metrics: If True, include metrics from case metadata in node labels
 
         Returns:
             String containing DOT format graph specification
@@ -428,6 +432,18 @@ class CaseGraph:
                 label_parts.append("(BASE)")
             else:
                 label_parts.append(f"Stage {case.stage_index}")
+
+            # Add metrics if requested and available
+            if annotate_metrics and case.metadata:
+                if "wns_ps" in case.metadata:
+                    wns = case.metadata["wns_ps"]
+                    label_parts.append(f"WNS: {wns} ps")
+                if "congestion_score" in case.metadata:
+                    cong = case.metadata["congestion_score"]
+                    label_parts.append(f"Cong: {cong:.2f}")
+                if "area" in case.metadata:
+                    area = case.metadata["area"]
+                    label_parts.append(f"Area: {area:.0f}")
 
             label = "\\n".join(label_parts)
 
@@ -456,6 +472,7 @@ class CaseGraph:
         self,
         output_path: str | Path,
         dot_content: str | None = None,
+        annotate_metrics: bool = False,
     ) -> bool:
         """
         Render the case lineage graph to PNG format using Graphviz.
@@ -466,6 +483,7 @@ class CaseGraph:
         Args:
             output_path: Path where PNG file should be written
             dot_content: DOT format string to render. If None, calls export_to_dot()
+            annotate_metrics: If True, include metrics in node labels
 
         Returns:
             True if rendering succeeded, False otherwise
@@ -478,7 +496,7 @@ class CaseGraph:
 
         # Get DOT content if not provided
         if dot_content is None:
-            dot_content = self.export_to_dot()
+            dot_content = self.export_to_dot(annotate_metrics=annotate_metrics)
 
         # Ensure output directory exists
         output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -505,3 +523,122 @@ class CaseGraph:
             )
         except subprocess.TimeoutExpired:
             raise RuntimeError("Graph rendering timed out after 30 seconds")
+
+    def identify_winning_path(self, metric_key: str = "wns_ps", minimize: bool = False) -> list[str]:
+        """
+        Identify the winning path through the DAG based on a metric.
+
+        Finds the leaf case with the best metric value, then traces back
+        to the base case to identify the complete winning path.
+
+        Args:
+            metric_key: Metadata key to use for comparison (e.g., "wns_ps", "congestion_score")
+            minimize: If True, minimize the metric; if False, maximize it
+
+        Returns:
+            List of case IDs forming the winning path from base to leaf
+
+        Raises:
+            ValueError: If no cases have the specified metric
+        """
+        # Get all leaf cases with the metric
+        leaf_cases = self.get_leaf_cases()
+        cases_with_metric = [
+            case for case in leaf_cases
+            if metric_key in case.metadata and case.metadata[metric_key] is not None
+        ]
+
+        if not cases_with_metric:
+            raise ValueError(f"No leaf cases have metric '{metric_key}'")
+
+        # Find best leaf case
+        if minimize:
+            best_case = min(cases_with_metric, key=lambda c: c.metadata[metric_key])
+        else:
+            best_case = max(cases_with_metric, key=lambda c: c.metadata[metric_key])
+
+        # Trace back to base case
+        path = [best_case.case_id]
+        current = best_case
+        while current.parent_id is not None:
+            path.insert(0, current.parent_id)
+            current = self.cases[current.parent_id]
+
+        return path
+
+    def generate_lineage_report(
+        self,
+        winning_path: list[str] | None = None,
+        metric_key: str = "wns_ps",
+        minimize: bool = False,
+    ) -> str:
+        """
+        Generate a human-readable lineage report for the winning path.
+
+        Creates a detailed report showing the sequence of ECOs applied
+        along the winning path, with metrics at each stage.
+
+        Args:
+            winning_path: Optional pre-computed winning path. If None, computes it
+            metric_key: Metric key used for winning path identification
+            minimize: Whether to minimize (True) or maximize (False) the metric
+
+        Returns:
+            Formatted string report
+        """
+        # Get winning path if not provided
+        if winning_path is None:
+            try:
+                winning_path = self.identify_winning_path(metric_key, minimize)
+            except ValueError:
+                return "Unable to identify winning path: no cases have the specified metric"
+
+        # Build report
+        lines = []
+        lines.append("=" * 80)
+        lines.append("CASE LINEAGE REPORT - WINNING PATH")
+        lines.append("=" * 80)
+        lines.append("")
+        lines.append(f"Metric: {metric_key} ({'minimized' if minimize else 'maximized'})")
+        lines.append(f"Path length: {len(winning_path)} cases")
+        lines.append("")
+        lines.append("DERIVATION SEQUENCE:")
+        lines.append("-" * 80)
+
+        for i, case_id in enumerate(winning_path):
+            case = self.cases[case_id]
+
+            # Case header
+            if case.is_base_case:
+                lines.append(f"\n{i+1}. BASE CASE: {case_id}")
+            else:
+                lines.append(f"\n{i+1}. {case_id}")
+                lines.append(f"   ECO Applied: {case.eco_applied}")
+                lines.append(f"   Stage: {case.stage_index}")
+
+            # Metrics
+            if case.metadata:
+                lines.append("   Metrics:")
+                for key, value in sorted(case.metadata.items()):
+                    if isinstance(value, float):
+                        lines.append(f"     {key}: {value:.2f}")
+                    else:
+                        lines.append(f"     {key}: {value}")
+
+        # Summary
+        lines.append("")
+        lines.append("=" * 80)
+        lines.append("SUMMARY")
+        lines.append("=" * 80)
+
+        # Get final case metrics
+        final_case = self.cases[winning_path[-1]]
+        if metric_key in final_case.metadata:
+            lines.append(f"Final {metric_key}: {final_case.metadata[metric_key]}")
+
+        # Count ECOs
+        eco_count = sum(1 for cid in winning_path if not self.cases[cid].is_base_case)
+        lines.append(f"Total ECOs applied: {eco_count}")
+
+        lines.append("")
+        return "\n".join(lines)

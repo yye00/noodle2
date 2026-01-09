@@ -2536,7 +2536,7 @@
       "Step 8: Verify Study doesn't crash due to ECO segfault",
       "Step 9: Generate incident report for pathological ECO"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

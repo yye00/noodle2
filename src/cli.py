@@ -341,13 +341,37 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 def cmd_list_studies(args: argparse.Namespace) -> int:
     """Execute list-studies command."""
+    from src.controller.study_list import discover_studies, filter_studies, format_study_table
+
     print("📋 Study Catalog")
-    print(f"   Status filter: {args.status}")
-    print(f"   Domain filter: {args.domain}")
     print()
-    print("Error: Study catalog not yet implemented.")
-    print("This is a placeholder for Study listing.")
-    return 1
+
+    # Discover all Studies
+    all_studies = discover_studies()
+
+    if not all_studies:
+        print("No Studies found in telemetry directory.")
+        print()
+        print("Tip: Run 'noodle2 init --name <name> --pdk <pdk>' to create a new Study.")
+        return 0
+
+    # Apply filters
+    filtered = filter_studies(all_studies, status=args.status, domain=args.domain)
+
+    if not filtered:
+        print(f"No Studies match filters (status={args.status}, domain={args.domain})")
+        return 0
+
+    # Display filters if active
+    if args.status != "all" or args.domain != "all":
+        print(f"Filters: status={args.status}, domain={args.domain}")
+        print()
+
+    # Format and display table
+    table = format_study_table(filtered)
+    print(table)
+
+    return 0
 
 
 def cmd_show(args: argparse.Namespace) -> int:

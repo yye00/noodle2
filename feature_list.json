@@ -1692,7 +1692,7 @@
       "Step 4: Take screenshot of cluster status",
       "Step 5: Verify node count and health status are clearly visible"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",
@@ -1705,7 +1705,7 @@
       "Step 5: Verify stage index is visible",
       "Step 6: Verify ECO name is displayed"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "style",

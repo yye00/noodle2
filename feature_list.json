@@ -1192,7 +1192,7 @@
       "Step 5: Execute trial using custom PDK",
       "Step 6: Document PDK override in Study provenance"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

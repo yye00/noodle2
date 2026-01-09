@@ -114,6 +114,8 @@ class StudyConfig:
     notification_events: list[str] | None = None  # Events to notify about (defaults to completion/failure)
     # Custom script mounting for ECO execution
     custom_script_mounts: dict[str, str] = field(default_factory=dict)  # {host_path: container_path} for custom ECO scripts
+    # PDK override for versioned PDK bind mounting
+    pdk_override: Any = None  # PDKOverride instance for bind-mounted versioned PDK
 
     def validate(self) -> None:
         """Validate Study configuration."""

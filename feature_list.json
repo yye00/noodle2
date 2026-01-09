@@ -1483,7 +1483,7 @@
       "Step 5: Update Study state deterministically",
       "Step 6: Verify actor provides fault-tolerance for controller"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

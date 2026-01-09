@@ -2308,7 +2308,7 @@
       "Step 11: Use custom metric in survivor ranking",
       "Step 12: Export custom metrics for external analysis"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

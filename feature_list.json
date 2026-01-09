@@ -2269,7 +2269,7 @@
       "Step 11: Generate regression test report",
       "Step 12: Archive regression artifacts for investigation"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

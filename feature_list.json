@@ -2208,7 +2208,7 @@
       "Step 15: Generate heatmap comparison report",
       "Step 16: Identify spatial regions of improvement/degradation"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "category": "functional",

@@ -192,6 +192,60 @@
     {
       "session_num": 22,
       "started_at": "2026-01-11T17:45:59.187388",
+      "ended_at": "2026-01-11T17:52:56.664941",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 23,
+      "started_at": "2026-01-11T17:53:00.670606",
+      "ended_at": "2026-01-11T17:56:26.774873",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 24,
+      "started_at": "2026-01-11T17:56:30.780319",
+      "ended_at": "2026-01-11T18:02:39.905626",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 25,
+      "started_at": "2026-01-11T18:02:43.908551",
+      "ended_at": "2026-01-11T18:05:44.515555",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 26,
+      "started_at": "2026-01-11T18:05:48.534944",
+      "ended_at": "2026-01-11T18:10:42.459281",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 27,
+      "started_at": "2026-01-11T18:10:46.464938",
+      "ended_at": "2026-01-11T18:16:54.580148",
+      "passing_at_start": 200,
+      "passing_at_end": 200,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 28,
+      "started_at": "2026-01-11T18:16:58.585824",
       "ended_at": null,
       "passing_at_start": 200,
       "passing_at_end": null,
@@ -201,7 +255,7 @@
   ],
   "feature_attempts": {},
   "last_passing_count": 200,
-  "sessions_without_progress": 20,
+  "sessions_without_progress": 26,
   "stuck_features": [],
   "created_at": "2026-01-11T15:33:47.026890"
 }

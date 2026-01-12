@@ -89,6 +89,7 @@ from src.controller.ci_runner import (
 )
 from src.controller.demo_study import (
     create_asap7_demo_study,
+    create_asap7_extreme_demo_study,
     create_minimal_demo_study,
     create_nangate45_demo_study,
     create_nangate45_extreme_demo_study,
@@ -160,6 +161,7 @@ __all__ = [
     "RegressionBaseline",
     "create_ci_config",
     "create_asap7_demo_study",
+    "create_asap7_extreme_demo_study",
     "create_nangate45_demo_study",
     "create_nangate45_extreme_demo_study",
     "create_minimal_demo_study",

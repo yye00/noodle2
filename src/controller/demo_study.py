@@ -445,6 +445,139 @@ def create_nangate45_extreme_demo_study(
     return study
 
 
+def create_asap7_extreme_demo_study(
+    snapshot_path: str | None = None,
+    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+) -> StudyConfig:
+    """Create an 'extreme' broken design demo Study for ASAP7.
+
+    This creates a demo Study designed to showcase Noodle 2's ability to
+    fix extremely broken ASAP7 designs with:
+    - Starting WNS ~ -3000ps (very negative slack, worse than Nangate45)
+    - Starting hot_ratio > 0.4 (severe congestion due to advanced node)
+    - ASAP7-specific workarounds automatically applied
+    - STA-first staging for stability
+    - Auto-diagnosis to identify bottlenecks
+    - Multi-stage ECO application to systematically fix the design
+
+    ASAP7-Specific Considerations:
+    - Uses STA-first staging (stages start with STA_ONLY or STA_CONGESTION)
+    - Lower utilization (0.55) to prevent routing explosion
+    - All ASAP7 workarounds automatically applied by tcl_generator
+    - Higher initial trial budget due to advanced node complexity
+
+    Args:
+        snapshot_path: Path to ASAP7 extreme design snapshot.
+                      If None, uses default 'studies/asap7_extreme'
+        safety_domain: Safety domain for the Study (default: GUARDED)
+
+    Returns:
+        StudyConfig: ASAP7 extreme demo Study configuration
+
+    Example:
+        >>> demo = create_asap7_extreme_demo_study()
+        >>> demo.validate()
+        >>> # STA-first staging is used for ASAP7
+        >>> assert demo.stages[0].execution_mode in [ExecutionMode.STA_ONLY, ExecutionMode.STA_CONGESTION]
+    """
+    if snapshot_path is None:
+        # Default to studies/asap7_extreme relative to project root
+        snapshot_path = str(Path("studies") / "asap7_extreme")
+
+    # Stage 0: STA-first exploration (ASAP7 best practice)
+    # Use STA_CONGESTION instead of pure STA_ONLY to track both metrics
+    # but rely on STA-first staging philosophy
+    stage_0 = StageConfig(
+        name="sta_exploration",
+        execution_mode=ExecutionMode.STA_CONGESTION,  # Track both, STA-priority
+        trial_budget=12,  # More trials for ASAP7 complexity
+        survivor_count=4,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+        ],
+        abort_threshold_wns_ps=-200000,  # -200ns - very permissive for extreme case
+        visualization_enabled=True,
+        timeout_seconds=900,  # 15 minutes per trial (ASAP7 is slower)
+    )
+
+    # Stage 1: Timing-focused refinement
+    stage_1 = StageConfig(
+        name="timing_refinement",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=8,
+        survivor_count=3,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+        ],
+        abort_threshold_wns_ps=-250000,  # -250ns
+        visualization_enabled=True,
+        timeout_seconds=1200,  # 20 minutes per trial
+    )
+
+    # Stage 2: Final closure with careful routing consideration
+    stage_2 = StageConfig(
+        name="careful_closure",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=6,
+        survivor_count=2,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+            ECOClass.ROUTING_AFFECTING,
+        ],
+        abort_threshold_wns_ps=None,  # No abort in final stage
+        visualization_enabled=True,
+        timeout_seconds=1800,  # 30 minutes per trial (ASAP7 routing is complex)
+    )
+
+    # Create the complete Study configuration
+    study = StudyConfig(
+        name="asap7_extreme_demo",
+        safety_domain=safety_domain,
+        base_case_name="asap7_extreme",
+        pdk="ASAP7",  # Triggers ASAP7-specific workarounds
+        stages=[stage_0, stage_1, stage_2],
+        snapshot_path=snapshot_path,
+        metadata={
+            "purpose": "Demonstrate fixing extremely broken ASAP7 design with STA-first staging",
+            "design": "AES or similar complex design with severe advanced-node issues",
+            "expected_behavior": "Improve WNS by >40%, reduce hot_ratio from >0.4 to <0.15",
+            "version": "1.0.0",
+            "asap7_workarounds": [
+                "routing_layer_constraints",
+                "site_specification",
+                "pin_placement_constraints",
+                "low_utilization_0.55",
+            ],
+            "staging_strategy": "STA-first for ASAP7 stability",
+            "initial_state": {
+                "wns_ps_range": [-3500, -2500],
+                "hot_ratio_range": [0.40, 0.55],
+            },
+            "target_improvements": {
+                "wns_improvement_percent": 40,
+                "hot_ratio_target": 0.15,
+            },
+        },
+        author="Noodle2 Team",
+        description=(
+            "Extreme broken design demo Study for ASAP7 PDK. Showcases Noodle 2's "
+            "ability to systematically fix an advanced-node design with severe timing "
+            "violations (WNS ~ -3000ps) and congestion issues (hot_ratio > 0.4) through "
+            "STA-first staging, ASAP7-specific workarounds, and multi-stage ECO "
+            "application. Demonstrates ASAP7 best practices: low utilization (0.55), "
+            "timing-priority staging, and explicit routing/pin constraints."
+        ),
+        tags=["demo", "asap7", "extreme", "sta-first", "advanced-node"],
+    )
+
+    # Validate configuration before returning
+    study.validate()
+
+    return study
+
+
 def save_demo_study_config(output_path: Path) -> None:
     """Save demo Study configuration to JSON file.
 

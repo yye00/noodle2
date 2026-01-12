@@ -6564,3 +6564,104 @@ Additional tests:
 8ab34b3 - Implement F255: Compound ECO inherits most restrictive component ECO class
 
 ================================================================================
+
+================================================================================
+SESSION 405 - F264 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F264 - Warm-start supports prior decay for older studies
+
+**Implementation Summary:**
+Implemented temporal decay functionality for warm-start prior loading. Priors from 
+older studies are automatically downweighted based on their age, allowing recent 
+data to have higher influence while still benefiting from historical knowledge.
+
+**Implementation Details:**
+
+1. Enhanced WarmStartConfig (src/controller/warm_start.py):
+   - Added decay parameter (0.0 to 1.0)
+   - Validation in __post_init__
+   - Included in to_dict() serialization
+
+2. Updated WarmStartLoader.load_priors():
+   - Added current_time parameter for testability
+   - Calculate age_days from completion_timestamp in metadata
+   - Apply decay: effective_weight = weight * (decay^age_days)
+   - Track decay_metadata per source for audit trail
+
+3. Decay formula:
+   - effective_weight = original_weight × decay^age_days
+   - Example: 5 days old with decay=0.9 → 1.0 × 0.9^5 ≈ 0.59049
+   - Older studies exponentially lose influence
+
+4. Audit trail enhancements:
+   - Log decay configuration
+   - Per-source decay_metadata:
+     * completion_timestamp
+     * age_days
+     * decay_factor
+     * original_weight
+     * effective_weight
+
+**Test Coverage (tests/test_f264_prior_decay.py - 18 tests passing):**
+
+Step 1: Configure warm-start with decay: 0.9
+Step 2: Load priors from study completed 5 days ago
+Step 3: Verify prior confidence is multiplied by 0.9^5
+Step 4: Verify older priors have lower influence
+Step 5: Verify decay is logged in prior provenance
+
+Additional comprehensive tests:
+- Configuration validation
+- Decay defaults to None
+- Serialization with/without decay
+- Different study ages (1, 5, 10, 30 days)
+- Different decay rates (0.8, 0.9, 0.95, 0.99)
+- Multiple sources with different ages
+- Audit trail with decay metadata
+- Edge cases: 0 days old, decay=0.0, decay=1.0
+
+**Backward Compatibility:**
+- decay parameter is optional (defaults to None)
+- When None, no decay applied (existing behavior)
+- All 29 existing warm-start tests still pass
+
+**Key Design Decisions:**
+
+1. Exponential decay chosen for:
+   - Smooth, continuous reduction
+   - Intuitive "half-life" concept
+   - Mathematical elegance
+
+2. Per-day granularity:
+   - More intuitive than per-hour/second
+   - Aligns with typical study durations
+   - Easy to reason about (e.g., "7 days old")
+
+3. Applied to weight (not counts directly):
+   - Maintains consistency with merge strategies
+   - Works naturally with weighted averaging
+   - Simpler implementation
+
+**Current Status:**
+- Features passing: 271/280 (96.8%)
+- Features remaining: 9
+
+**Next Steps:**
+Remaining 9 features are all low priority:
+- F212: Timing diagnosis confidence scoring
+- F214: Diagnosis configurable path count
+- F215: Diagnosis hotspot threshold configurable
+- F225: Critical path overlay conditional
+- F228: Hotspot bounding boxes on heatmap
+- F235: Stage progression chart quality
+- F248: Diversity-aware random survivors
+- F261: ECO parameter range validation
+- F265: Warm-start prior inspection
+
+**Commit:**
+09efa38 - Implement F264: Warm-start supports prior decay for older studies
+
+================================================================================

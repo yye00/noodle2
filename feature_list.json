@@ -6261,8 +6261,8 @@
       "Step 5: Use confidence to prioritize ECO selection"
     ],
     "priority": "low",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T12:18:44.710191+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

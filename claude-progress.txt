@@ -3676,3 +3676,73 @@ The system can now:
 4. Store results in structured JSON format
 
 This enables genuine physical design experimentation with Noodle 2.
+
+
+## Session 380 Summary
+
+**Date:** 2026-01-12
+**Session Focus:** Critical Infrastructure - Real Congestion Execution
+
+### Features Completed This Session
+
+✅ **F276** - Execute real global_route and generate actual congestion metrics (26 tests)
+- Implemented congestion_execution.py module for executing global_route via Docker
+- Created execute_global_route() to run OpenROAD global_route with verbose flag
+- Created parse_congestion_from_openroad_output() to extract congestion metrics from stdout
+- Created extract_congestion_metrics() for complete congestion analysis workflow
+- Created verify_congestion_metrics_are_real() to validate metrics authenticity
+- Successfully executed real OpenROAD global_route on placed Nangate45 design
+- Parsed real congestion metrics: bins_total=10000, bins_hot=0, hot_ratio=0.0
+- Verified overflow metrics from actual routing: Total overflow=0 (no congestion)
+- Output saved to congestion report files and metrics.json format
+
+### Total Tests Added: 26 tests (all passing)
+
+### Infrastructure Achievements
+
+**Real OpenROAD Execution Pipeline Extended:**
+1. ✅ Docker container infrastructure (F272)
+2. ✅ ORFS repository with PDKs (F273)
+3. ✅ Real design snapshot creation (F274)
+4. ✅ Real timing analysis with OpenROAD (F275)
+5. ✅ Real congestion analysis with global_route (F276) ← NEW
+
+This completes the core real execution capabilities for Noodle 2:
+- Timing metrics (WNS, TNS, WHS) from report_checks
+- Congestion metrics (bins_hot, hot_ratio, overflow) from global_route
+- Ready for heatmap generation (F277)
+
+### Project Status After Session 380
+
+**Current State:**
+- **229 features passing** (up from 228 at session start) - 81.8%
+- **51 features remaining**
+- **0 features need reverification**
+
+**Next Critical Features:**
+1. **F277** [CRITICAL]: Generate real heatmap using gui::dump_heatmap with Xvfb
+2. **F278** [CRITICAL]: Run complete single-trial Nangate45 Study with real execution
+3. **F279** [CRITICAL]: Create real ASAP7 design snapshot
+4. **F280** [CRITICAL]: Create real Sky130 design snapshot
+
+### Commits Made
+
+1. `272f6a8` - Implement F276: Execute real global_route and generate congestion metrics (26 tests)
+
+### Significance
+
+Session 380 adds real congestion analysis to the infrastructure:
+- Real global_route execution creating actual congestion metrics
+- Parsing of OpenROAD congestion report from stdout
+- Validation that metrics are from real routing (not mocked)
+- Foundation for congestion-aware ECO selection
+
+The system can now:
+1. Run complete ORFS flows (synth → floorplan → placement)
+2. Execute OpenROAD timing analysis with real libraries  
+3. Execute OpenROAD global_route and extract congestion metrics
+4. Parse and verify actual timing and congestion data
+5. Store results in structured JSON format
+
+This enables genuine physical design experimentation with both timing
+and congestion feedback for Noodle 2 studies.

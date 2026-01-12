@@ -10,6 +10,9 @@ from .heatmap_renderer import (
     render_heatmap_with_critical_path_overlay,
 )
 from .pareto_plot import (
+    create_pareto_evolution_animation,
+    generate_pareto_evolution_animation,
+    generate_pareto_frontier_per_stage,
     generate_pareto_visualization,
     plot_pareto_frontier_2d,
     save_pareto_plot,
@@ -24,4 +27,7 @@ __all__ = [
     "plot_pareto_frontier_2d",
     "save_pareto_plot",
     "generate_pareto_visualization",
+    "generate_pareto_frontier_per_stage",
+    "create_pareto_evolution_animation",
+    "generate_pareto_evolution_animation",
 ]

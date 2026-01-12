@@ -10,10 +10,14 @@ from pathlib import Path
 from typing import Any
 
 import matplotlib.pyplot as plt
-import numpy as np
 from matplotlib.figure import Figure
 
-from src.controller.pareto import ObjectiveSpec, ParetoFrontier, ParetoTrial
+try:
+    from PIL import Image
+except ImportError:
+    Image = None  # type: ignore
+
+from src.controller.pareto import ObjectiveSpec, ParetoFrontier
 
 
 def plot_pareto_frontier_2d(
@@ -106,8 +110,8 @@ def plot_pareto_frontier_2d(
         # Connect Pareto points with a line (if 2D)
         if len(pareto_x) >= 2:
             # Sort points for proper line drawing
-            pareto_points = sorted(zip(pareto_x, pareto_y))
-            sorted_x, sorted_y = zip(*pareto_points)
+            pareto_points = sorted(zip(pareto_x, pareto_y, strict=False))
+            sorted_x, sorted_y = zip(*pareto_points, strict=False)
             ax.plot(
                 sorted_x,
                 sorted_y,
@@ -145,7 +149,7 @@ def plot_pareto_frontier_2d(
         transform=ax.transAxes,
         fontsize=9,
         verticalalignment="top",
-        bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.3),
+        bbox={"boxstyle": "round", "facecolor": "wheat", "alpha": 0.3},
         family="monospace",
     )
 
@@ -174,8 +178,7 @@ def _format_axis_label(objective_name: str, obj_spec: ObjectiveSpec) -> str:
 
     if units:
         return f"{objective_name} ({units}) {direction}"
-    else:
-        return f"{objective_name} {direction}"
+    return f"{objective_name} {direction}"
 
 
 def _infer_units(objective_name: str) -> str:
@@ -285,8 +288,6 @@ def plot_pareto_frontier_from_file(
     """
     import json
 
-    from src.controller.pareto import compute_pareto_frontier
-    from src.trial_runner.trial import TrialResult
 
     # Load Pareto data
     with open(pareto_json_path) as f:
@@ -294,7 +295,7 @@ def plot_pareto_frontier_from_file(
 
     # Reconstruct ParetoFrontier from dict
     # This is a simplified loader - in practice, may need full deserialization
-    objectives = [
+    [
         ObjectiveSpec(
             name=obj["name"],
             metric_path=obj["metric_path"],
@@ -357,3 +358,171 @@ def generate_pareto_visualization(
         plt.close(fig)
 
     return generated_plots
+
+
+def generate_pareto_frontier_per_stage(
+    stage_frontiers: list[ParetoFrontier],
+    objective_x: str,
+    objective_y: str,
+    output_dir: Path,
+    title_prefix: str = "Stage",
+) -> list[Path]:
+    """
+    Generate Pareto frontier plots for each stage in a multi-stage study.
+
+    Args:
+        stage_frontiers: List of Pareto frontiers, one per stage
+        objective_x: Name of objective for x-axis
+        objective_y: Name of objective for y-axis
+        output_dir: Directory to save stage plots
+        title_prefix: Prefix for plot titles (default: "Stage")
+
+    Returns:
+        List of paths to generated stage plot files (in order)
+
+    Raises:
+        ValueError: If stage_frontiers is empty or objectives not found
+    """
+    if not stage_frontiers:
+        raise ValueError("stage_frontiers cannot be empty")
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+    stage_plots = []
+
+    for stage_idx, frontier in enumerate(stage_frontiers):
+        # Generate plot with stage-specific title
+        title = f"{title_prefix} {stage_idx}: Pareto Frontier"
+        fig = plot_pareto_frontier_2d(
+            frontier,
+            objective_x=objective_x,
+            objective_y=objective_y,
+            title=title,
+        )
+
+        # Save plot with stage number in filename
+        plot_filename = f"pareto_frontier_stage_{stage_idx}.png"
+        plot_path = output_dir / plot_filename
+        save_pareto_plot(fig, plot_path)
+        stage_plots.append(plot_path)
+
+        # Close figure to free memory
+        plt.close(fig)
+
+    return stage_plots
+
+
+def create_pareto_evolution_animation(
+    stage_plot_paths: list[Path],
+    output_path: Path,
+    duration_ms: int = 1000,
+    loop: int = 0,
+) -> Path:
+    """
+    Create animated GIF showing Pareto frontier evolution across stages.
+
+    Args:
+        stage_plot_paths: List of paths to stage plot PNG files (in order)
+        output_path: Path to save the animated GIF
+        duration_ms: Duration to display each frame in milliseconds
+        loop: Number of times to loop (0 = infinite loop)
+
+    Returns:
+        Path to the generated animated GIF
+
+    Raises:
+        ValueError: If stage_plot_paths is empty or files don't exist
+        RuntimeError: If PIL/Pillow is not installed
+    """
+    if Image is None:
+        raise RuntimeError(
+            "PIL/Pillow is required for animation. Install with: pip install Pillow"
+        )
+
+    if not stage_plot_paths:
+        raise ValueError("stage_plot_paths cannot be empty")
+
+    # Validate all files exist
+    for path in stage_plot_paths:
+        if not path.exists():
+            raise ValueError(f"Stage plot file not found: {path}")
+
+    # Load all images
+    images: list[Any] = []
+    for path in stage_plot_paths:
+        img = Image.open(path)
+        # Convert to RGB if necessary (GIF doesn't support RGBA well)
+        if img.mode != "RGB":
+            img = img.convert("RGB")  # type: ignore[assignment]
+        images.append(img)
+
+    # Create parent directory if needed
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save as animated GIF
+    images[0].save(
+        output_path,
+        format="GIF",
+        save_all=True,
+        append_images=images[1:],
+        duration=duration_ms,
+        loop=loop,
+    )
+
+    return output_path
+
+
+def generate_pareto_evolution_animation(
+    stage_frontiers: list[ParetoFrontier],
+    objective_x: str,
+    objective_y: str,
+    output_dir: Path,
+    animation_filename: str = "pareto_evolution.gif",
+    duration_ms: int = 1000,
+    loop: int = 0,
+) -> tuple[Path, list[Path]]:
+    """
+    Generate complete Pareto frontier evolution animation for a multi-stage study.
+
+    This is a high-level convenience function that:
+    1. Generates Pareto frontier plots for each stage
+    2. Creates an animated GIF from the stage snapshots
+
+    Args:
+        stage_frontiers: List of Pareto frontiers, one per stage
+        objective_x: Name of objective for x-axis
+        objective_y: Name of objective for y-axis
+        output_dir: Directory to save outputs
+        animation_filename: Filename for the animated GIF
+        duration_ms: Duration to display each frame in milliseconds
+        loop: Number of times to loop (0 = infinite loop)
+
+    Returns:
+        Tuple of (animation_path, list of stage plot paths)
+
+    Raises:
+        ValueError: If stage_frontiers is empty or objectives not found
+        RuntimeError: If PIL/Pillow is not installed
+    """
+    if Image is None:
+        raise RuntimeError(
+            "PIL/Pillow is required for animation. Install with: pip install Pillow"
+        )
+
+    # Step 1: Generate plots for each stage
+    stage_plots = generate_pareto_frontier_per_stage(
+        stage_frontiers=stage_frontiers,
+        objective_x=objective_x,
+        objective_y=objective_y,
+        output_dir=output_dir,
+    )
+
+    # Step 2: Create animation from stage plots
+    animation_path = output_dir / animation_filename
+    create_pareto_evolution_animation(
+        stage_plot_paths=stage_plots,
+        output_path=animation_path,
+        duration_ms=duration_ms,
+        loop=loop,
+    )
+
+    return animation_path, stage_plots

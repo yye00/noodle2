@@ -1,3 +1,68 @@
+## Session 370 - Diagnosis-Driven ECO Selection Implementation (2026-01-11)
+
+### Session Summary
+
+**Status:** ✅ FEATURE COMPLETE - F209 Implemented
+**Achievement:** Diagnosis-driven ECO selection with priority queue
+**Project Completion:** 213/271 features (78.6%)
+**New Passing Features:** 1 (F209)
+**Test Suite:** All F209 tests passing (11/11)
+
+### Implementation Summary
+
+Implemented F209: "Combined diagnosis drives ECO selection with priority queue"
+
+**Created:**
+1. **diagnosis_driven_eco_selector.py** - ECO selector using diagnosis priority queue
+   - `DiagnosisDrivenECOSelector` class for intelligent ECO selection
+   - Selects ECOs in priority order from auto-diagnosis output
+   - Verifies ECOs address primary/secondary issues identified
+   - Tracks ECO effectiveness against diagnosis predictions
+   - Provides selection reports with detailed notes
+
+2. **test_diagnosis_driven_eco_selection.py** - Comprehensive test suite
+   - 11 tests covering all F209 verification steps
+   - Tests priority queue generation and ordering
+   - Validates ECOs address primary issue first
+   - Ensures selection respects diagnosis recommendations
+   - Tracks effectiveness with detailed notes
+   - All tests passing
+
+### Key Features
+
+**ECO Selection Process:**
+- Uses diagnosis summary to drive ECO selection
+- Applies ECOs in priority order (1, 2, 3, ...)
+- Ensures highest priority ECO addresses primary issue
+- Supports tracking of applied vs unapplied ECOs
+- Generates comprehensive selection reports
+
+**Verification:**
+- ✅ Step 1: Generate combined diagnosis with ECO priority queue
+- ✅ Step 2: Apply ECOs in priority order
+- ✅ Step 3: Verify highest priority ECO addresses primary issue
+- ✅ Step 4: Verify ECO selection respects diagnosis recommendations
+- ✅ Step 5: Track ECO effectiveness against diagnosis predictions
+
+### Integration with Existing System
+
+The diagnosis-driven ECO selector integrates with:
+- F208: Combined diagnosis report (dependency satisfied)
+- Auto-diagnosis system (timing + congestion analysis)
+- ECO framework for tracking effectiveness
+- Priority queue mechanism for intelligent ordering
+
+### Next Steps
+
+High-priority features ready to implement (dependencies satisfied):
+- F218: Generate improvement summary quantifying differential heatmap changes
+- F219: Track hotspot resolution in differential congestion heatmaps
+- F222: Generate critical path overlay on placement density heatmap
+- F226: Annotate hotspots on congestion heatmap with IDs and severity
+- F229: Generate Pareto frontier evolution animation across stages
+
+---
+
 ## Session 364 - Nangate45 Extreme Demo Implementation (2026-01-11)
 
 ### Session Summary

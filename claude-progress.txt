@@ -5019,3 +5019,126 @@ Successfully implemented rollback functionality for compound ECOs!
 - Consider parameterized TCL templates next (F258)
 - All tests passing, clean state for next session
 
+
+
+=============================================================================
+SESSION 391 - 2026-01-12 02:29 EST
+=============================================================================
+
+**Completed Features: F256 and F257**
+
+Successfully implemented ECO preconditions and postconditions with comprehensive testing!
+
+**Features Completed:**
+
+1. **F256: ECO definition supports preconditions with diagnosis integration**
+   - Preconditions enable ECOs to check design state before application
+   - ECOs can be skipped if preconditions not met
+   - Integrates with diagnosis metrics (wire_delay_ratio, wns_ps, etc.)
+   - 12 comprehensive tests covering all 7 feature steps
+
+2. **F257: ECO definition supports postconditions for verification**
+   - Postconditions verify ECO effects after execution
+   - Checks WNS improvement, DRC violations, etc.
+   - Postcondition failures tracked and logged
+   - Affect ECO prior state (TRUSTED -> MIXED -> SUSPICIOUS)
+   - 13 comprehensive tests covering all 6 feature steps
+
+**Implementation Summary:**
+
+1. **Core Data Structures:**
+   - ECOPrecondition: Checks design state before ECO (has check: Callable)
+   - ECOPostcondition: Verifies ECO effects after execution (has check: Callable)
+   - Both include name, description, parameters for serialization
+
+2. **ECOMetadata Extensions:**
+   - Added preconditions: list[ECOPrecondition] = []
+   - Added postconditions: list[ECOPostcondition] = []
+
+3. **ECOResult Extensions:**
+   - preconditions_satisfied: bool
+   - precondition_failures: list[str]
+   - skipped_due_to_preconditions: bool
+   - postconditions_satisfied: bool
+   - postcondition_failures: list[str]
+
+4. **ECO Base Class Methods:**
+   - evaluate_preconditions(design_metrics) -> (satisfied, failures)
+   - evaluate_postconditions(before, after) -> (satisfied, failures)
+   - Exception handling for robust evaluation
+   - Serialization support in to_dict()
+
+5. **ECOEffectiveness Enhancement:**
+   - Added success_rate property: successful_applications / total_applications
+   - Postcondition failures tracked as ECO application failures
+   - Affect prior classification appropriately
+
+**Test Coverage:**
+
+F256: 12 tests, all passing ✅
+- Define ECO with timing preconditions (wns_worse_than_threshold)
+- Evaluate preconditions with WNS = -300ps (not bad enough, skip)
+- Evaluate preconditions with WNS = -800ps (bad enough, apply)
+- Precondition evaluation logged in ECOResult
+- Edge cases: no preconditions, missing metrics, exceptions
+- Serialization support
+- Diagnosis integration (wire_delay_ratio)
+
+F257: 13 tests, all passing ✅
+- Define ECO with postconditions (wns_must_improve, no_new_drc_violations)
+- Check postconditions after execution
+- Log when WNS did not improve
+- Log when DRC violations introduced
+- Postcondition failures affect ECO prior state
+- Edge cases: no postconditions, multiple conditions, exceptions
+- Serialization support
+- Combined preconditions and postconditions
+
+**Verification Results:**
+- All 25 new tests passing ✅
+- All 231 ECO-related tests passing (no regressions) ✅
+- Total test suite: still passing ✅
+- F256 and F257 marked as passing in feature_list.json
+
+**Key Design Decisions:**
+
+1. **Callable-based checks:** Preconditions and postconditions use Callable functions for maximum flexibility
+2. **Exception handling:** Evaluation errors treated as failures (safer than crashing)
+3. **Default behavior:** ECOs with no conditions always pass (backward compatible)
+4. **Logging:** All condition evaluations captured in ECOResult for auditability
+5. **Prior impact:** Postcondition failures tracked same as execution failures
+
+**Feature Progress:**
+- Total features: 280
+- Passing: 245 (was 243)
+- Failing: 35 (was 37)
+- F256 and F257 marked as passing with timestamp
+
+**Next High-Priority Features:**
+1. F258 [high]: ECO definition supports parameterized TCL templates
+2. F262 [high]: Support warm-start prior loading from source studies with weighting
+3. F207 [medium]: Congestion diagnosis correlates congestion with placement density
+4. F210 [medium]: Diagnosis history is tracked and saved across stages
+
+**Session Statistics:**
+- Duration: ~60 minutes
+- Features completed: 2 (F256, F257)
+- Tests written: 25 new tests (12 + 13)
+- Lines added: ~1293 (implementation + tests)
+- All tests passing: ✅
+- No regressions: ✅
+
+**Quality Metrics:**
+- Type hints on all new functions
+- Comprehensive docstrings with examples
+- Full test coverage including edge cases
+- Clean git commit with detailed message
+- Code follows existing patterns and conventions
+- Exception handling for robustness
+
+**Notes for Next Session:**
+- F256 and F257 successfully completed with comprehensive testing
+- Preconditions and postconditions infrastructure ready for use
+- ECO framework now has conditional execution and verification
+- Ready to implement parameterized TCL templates (F258)
+- All tests passing, clean state for next session

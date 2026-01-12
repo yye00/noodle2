@@ -752,6 +752,187 @@ def generate_eco_impact_heatmaps(
     return results
 
 
+def render_heatmap_with_hotspot_annotations(
+    csv_path: str | Path,
+    output_path: str | Path,
+    hotspots: list[dict[str, Any]],
+    title: str | None = None,
+    colormap: str = "hot",
+    dpi: int = 150,
+    figsize: tuple[int, int] = (10, 8),
+) -> dict[str, Any]:
+    """
+    Render congestion heatmap with hotspot annotations (IDs and severity values).
+
+    Hotspots are annotated with:
+    - Hotspot ID labels like [HS-1], [HS-2], etc.
+    - Severity values displayed as percentages (e.g., 0.92, 0.78)
+    - Annotations positioned near hotspot bounding box regions
+
+    Args:
+        csv_path: Path to congestion heatmap CSV file
+        output_path: Path where annotated PNG should be saved
+        hotspots: List of hotspot dictionaries with 'id', 'bbox', and 'severity' keys
+                  Each hotspot should have: {'id': int, 'bbox': {'x1', 'y1', 'x2', 'y2'},
+                  'severity': str or float}
+        title: Optional title for the plot
+        colormap: Matplotlib colormap name (default: 'hot' for congestion)
+        dpi: Resolution in dots per inch (default: 150)
+        figsize: Figure size in inches (width, height)
+
+    Returns:
+        Metadata dictionary with rendering information including hotspot count
+
+    Raises:
+        FileNotFoundError: If CSV file doesn't exist
+        ValueError: If CSV format is invalid or hotspots are malformed
+
+    Example:
+        >>> hotspots = [
+        ...     {
+        ...         'id': 1,
+        ...         'bbox': {'x1': 10, 'y1': 20, 'x2': 30, 'y2': 40},
+        ...         'severity': 'critical',  # or 0.92
+        ...     }
+        ... ]
+        >>> render_heatmap_with_hotspot_annotations(
+        ...     'routing_congestion.csv',
+        ...     'hotspots.png',
+        ...     hotspots
+        ... )
+    """
+    csv_path = Path(csv_path)
+    output_path = Path(output_path)
+
+    # Parse CSV
+    data, metadata = parse_heatmap_csv(csv_path)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    # Render base heatmap
+    im = ax.imshow(data, cmap=colormap, interpolation="nearest", aspect="auto")
+
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label("Congestion Value", rotation=270, labelpad=20)
+
+    # Map severity strings to numeric values for display
+    severity_map = {
+        "critical": 0.95,
+        "moderate": 0.75,
+        "minor": 0.50,
+        "low": 0.30,
+    }
+
+    # Annotate each hotspot
+    for hotspot in hotspots:
+        hotspot_id = hotspot.get("id", -1)
+        bbox = hotspot.get("bbox", {})
+
+        # Extract bounding box coordinates
+        x1 = bbox.get("x1", 0)
+        y1 = bbox.get("y1", 0)
+        x2 = bbox.get("x2", 0)
+        y2 = bbox.get("y2", 0)
+
+        # Calculate center position for annotation
+        center_x = (x1 + x2) / 2.0
+        center_y = (y1 + y2) / 2.0
+
+        # Get severity value (handle both string and numeric formats)
+        severity_raw = hotspot.get("severity", "unknown")
+        if isinstance(severity_raw, str):
+            severity_value = severity_map.get(severity_raw.lower(), 0.50)
+        else:
+            severity_value = float(severity_raw)
+
+        # Create annotation text with ID and severity
+        annotation_text = f"[HS-{hotspot_id}]\n{severity_value:.2f}"
+
+        # Add text annotation near hotspot center
+        ax.text(
+            center_x,
+            center_y,
+            annotation_text,
+            color="white",
+            fontsize=10,
+            fontweight="bold",
+            ha="center",
+            va="center",
+            bbox=dict(
+                boxstyle="round,pad=0.3",
+                facecolor="black",
+                alpha=0.7,
+                edgecolor="yellow",
+                linewidth=1.5,
+            ),
+        )
+
+        # Draw bounding box outline
+        rect_width = x2 - x1
+        rect_height = y2 - y1
+        rect = plt.Rectangle(
+            (x1, y1),
+            rect_width,
+            rect_height,
+            linewidth=2,
+            edgecolor="yellow",
+            facecolor="none",
+            linestyle="--",
+            alpha=0.8,
+        )
+        ax.add_patch(rect)
+
+    # Set title
+    if title:
+        ax.set_title(title)
+    else:
+        ax.set_title(f"Congestion Heatmap with Hotspots: {csv_path.stem}")
+
+    # Add axis labels
+    ax.set_xlabel("X Bin")
+    ax.set_ylabel("Y Bin")
+
+    # Add grid for clarity
+    ax.grid(True, alpha=0.2, linestyle="--", linewidth=0.5)
+
+    # Add hotspot count to plot
+    info_text = f"Hotspots: {len(hotspots)}"
+    ax.text(
+        0.02,
+        0.98,
+        info_text,
+        transform=ax.transAxes,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+        fontsize=9,
+    )
+
+    # Tight layout to prevent label cutoff
+    plt.tight_layout()
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save figure
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+
+    # Return metadata
+    return {
+        "csv_path": str(csv_path),
+        "png_path": str(output_path),
+        "data_shape": metadata["shape"],
+        "value_range": [metadata["min_value"], metadata["max_value"]],
+        "colormap": colormap,
+        "dpi": dpi,
+        "figsize": figsize,
+        "hotspots_annotated": len(hotspots),
+        "hotspot_ids": [h.get("id", -1) for h in hotspots],
+    }
+
+
 def render_heatmap_with_critical_path_overlay(
     csv_path: str | Path,
     output_path: str | Path,

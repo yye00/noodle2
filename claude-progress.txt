@@ -5142,3 +5142,66 @@ F257: 13 tests, all passing ✅
 - ECO framework now has conditional execution and verification
 - Ready to implement parameterized TCL templates (F258)
 - All tests passing, clean state for next session
+
+================================================================================
+SESSION 392 - 2026-01-12 07:35-07:40 UTC
+================================================================================
+
+COMPLETED: F258 - ECO definition supports parameterized TCL templates
+
+**Feature Summary:**
+Implemented parameterized TCL template support for ECOs, enabling reusable
+ECO definitions with configurable parameters that are substituted at runtime.
+
+**Implementation Details:**
+
+1. **ParameterDefinition Class:**
+   - Supports multiple types: int, float, str, bool
+   - Numeric ranges: min_value, max_value validation
+   - Allowed values: enumeration support
+   - Default values for all parameters
+   - validate() method for constraint checking
+   - Serialization via to_dict()
+
+2. **ParameterizedECO Class:**
+   - Extends ECO base class
+   - Accepts tcl_template with {{ parameter }} placeholders
+   - generate_tcl(**kwargs) for runtime substitution
+   - Merges custom values with parameter defaults
+   - validate_parameters(**kwargs) for constraint checking
+   - Regex-based template substitution (handles repeated parameters)
+   - Proper error handling for undefined parameters
+
+**Test Coverage: 18 tests (all passing)**
+- All 6 feature steps verified
+- ParameterDefinition details (ranges, allowed values, type coercion)
+- Edge cases: defaults, partial overrides, undefined parameters
+- Complex scenarios: multi-line templates, many parameters, repetition
+- Serialization support
+
+**Verification Results:**
+- All 18 new tests passing ✅
+- All 194 ECO tests passing (no regressions) ✅
+- F258 marked as passing with timestamp
+
+**Files Created:**
+- src/controller/eco_templates.py (221 lines)
+- tests/test_eco_parameterized_templates.py (575 lines)
+
+**Feature Progress:**
+- Total: 280 features
+- Passing: 246 (was 245)
+- Failing: 34 (was 35)
+
+**Next High-Priority Features:**
+1. F262 [high]: Support warm-start prior loading from source studies with weighting
+2. F263 [high]: Warm-start supports multiple source studies with conflict resolution
+3. F207 [medium]: Congestion diagnosis correlates congestion with placement density
+
+**Session Quality:**
+- Clean implementation following existing patterns
+- Comprehensive test coverage including edge cases
+- No regressions in existing tests
+- Proper type hints and documentation
+- Clean git commit
+

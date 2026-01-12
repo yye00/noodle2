@@ -517,6 +517,171 @@ puts "This line should not execute"
         return error_type in ["invalid_command", "missing_file", "syntax_error"]
 
 
+class CompoundECO(ECO):
+    """Compound ECO that applies multiple component ECOs sequentially.
+
+    Compound ECOs enable:
+    - Sequential application of multiple ECO components
+    - Logging of each component's completion
+    - Aggregate metrics tracking across all components
+    - Rollback strategies on failure
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        components: list[ECO],
+        apply_order: str = "sequential",
+        rollback_on_failure: str = "all",
+    ) -> None:
+        """Initialize compound ECO.
+
+        Args:
+            name: Unique name for this compound ECO
+            description: Human-readable description
+            components: List of component ECOs to apply
+            apply_order: Application order ("sequential" only for now)
+            rollback_on_failure: Rollback strategy ("all", "partial", or "none")
+
+        Raises:
+            ValueError: If components is empty or apply_order is invalid
+        """
+        if not components:
+            raise ValueError("CompoundECO requires at least one component")
+
+        if apply_order not in ["sequential"]:
+            raise ValueError(f"Unsupported apply_order: {apply_order}")
+
+        if rollback_on_failure not in ["all", "partial", "none"]:
+            raise ValueError(f"Invalid rollback_on_failure: {rollback_on_failure}")
+
+        # Determine compound ECO class from most restrictive component
+        eco_class = self._determine_eco_class(components)
+
+        metadata = ECOMetadata(
+            name=name,
+            eco_class=eco_class,
+            description=description,
+            parameters={
+                "apply_order": apply_order,
+                "rollback_on_failure": rollback_on_failure,
+                "component_count": len(components),
+            },
+            version="1.0",
+            tags=["compound"],
+        )
+        super().__init__(metadata)
+        self.components = components
+
+    def _determine_eco_class(self, components: list[ECO]) -> ECOClass:
+        """Determine compound ECO class from most restrictive component.
+
+        The hierarchy from most to least restrictive:
+        1. GLOBAL_DISRUPTIVE
+        2. ROUTING_AFFECTING
+        3. PLACEMENT_LOCAL
+        4. TOPOLOGY_NEUTRAL
+
+        Args:
+            components: List of component ECOs
+
+        Returns:
+            Most restrictive ECO class
+        """
+        hierarchy = {
+            ECOClass.GLOBAL_DISRUPTIVE: 3,
+            ECOClass.ROUTING_AFFECTING: 2,
+            ECOClass.PLACEMENT_LOCAL: 1,
+            ECOClass.TOPOLOGY_NEUTRAL: 0,
+        }
+
+        max_level = -1
+        result_class = ECOClass.TOPOLOGY_NEUTRAL
+
+        for component in components:
+            level = hierarchy.get(component.eco_class, 0)
+            if level > max_level:
+                max_level = level
+                result_class = component.eco_class
+
+        return result_class
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script for compound ECO.
+
+        Sequentially applies all component ECOs with logging between each.
+
+        Returns:
+            Tcl script as a string
+        """
+        tcl_lines = [
+            f"# Compound ECO: {self.metadata.name}",
+            f"# {self.metadata.description}",
+            f"# Components: {len(self.components)}",
+            "",
+        ]
+
+        for i, component in enumerate(self.components, 1):
+            tcl_lines.append(f"# Component {i}: {component.name}")
+            tcl_lines.append(f"puts \"Starting component {i}/{len(self.components)}: {component.name}\"")
+            tcl_lines.append("")
+
+            # Generate component TCL
+            component_tcl = component.generate_tcl(**kwargs)
+            tcl_lines.append(component_tcl)
+
+            tcl_lines.append(f"puts \"Completed component {i}/{len(self.components)}: {component.name}\"")
+            tcl_lines.append("")
+
+        tcl_lines.append(f"puts \"Compound ECO '{self.metadata.name}' complete - all {len(self.components)} components applied\"")
+
+        return "\n".join(tcl_lines)
+
+    def validate_parameters(self) -> bool:
+        """Validate compound ECO parameters.
+
+        Validates all component ECOs.
+
+        Returns:
+            True if all components are valid, False otherwise
+        """
+        # Validate all components
+        for component in self.components:
+            if not component.validate_parameters():
+                return False
+
+        # Validate compound-specific parameters
+        apply_order = self.metadata.parameters.get("apply_order")
+        if apply_order not in ["sequential"]:
+            return False
+
+        rollback = self.metadata.parameters.get("rollback_on_failure")
+        if rollback not in ["all", "partial", "none"]:
+            return False
+
+        return True
+
+    def get_component_names(self) -> list[str]:
+        """Get names of all component ECOs.
+
+        Returns:
+            List of component ECO names
+        """
+        return [component.name for component in self.components]
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert compound ECO to dictionary for serialization.
+
+        Returns:
+            Dictionary representation
+        """
+        base_dict = super().to_dict()
+        base_dict["components"] = [component.to_dict() for component in self.components]
+        base_dict["component_names"] = self.get_component_names()
+        return base_dict
+
+
 # ECO Registry
 ECO_REGISTRY: dict[str, type[ECO]] = {
     "noop": NoOpECO,

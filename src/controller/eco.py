@@ -110,6 +110,7 @@ class ECOMetadata:
     postconditions: list[ECOPostcondition] = field(default_factory=list)  # Postconditions
     expected_effects: dict[str, str] = field(default_factory=dict)  # Expected metric changes (F259)
     timeout_seconds: float | None = None  # Execution timeout limit (F260)
+    parameter_ranges: dict[str, dict[str, float]] = field(default_factory=dict)  # Parameter value ranges (F261)
 
     def __post_init__(self) -> None:
         """Validate metadata."""
@@ -119,6 +120,52 @@ class ECOMetadata:
             raise ValueError("ECO description cannot be empty")
         if self.timeout_seconds is not None and self.timeout_seconds <= 0:
             raise ValueError("timeout_seconds must be positive")
+
+        # Validate parameter ranges (F261)
+        self._validate_parameter_ranges()
+
+    def _validate_parameter_ranges(self) -> None:
+        """Validate that all parameters are within their defined ranges.
+
+        Raises:
+            ValueError: If any parameter is outside its defined range
+        """
+        if not self.parameter_ranges:
+            return  # No ranges defined, nothing to validate
+
+        for param_name, range_spec in self.parameter_ranges.items():
+            if param_name not in self.parameters:
+                # Parameter has a range but no value - skip (may be optional)
+                continue
+
+            param_value = self.parameters[param_name]
+
+            # Check if value is numeric (required for range checking)
+            if not isinstance(param_value, (int, float)):
+                raise ValueError(
+                    f"Parameter '{param_name}' has a range constraint but "
+                    f"value is not numeric: {type(param_value).__name__}"
+                )
+
+            # Check min constraint
+            if "min" in range_spec:
+                min_value = range_spec["min"]
+                if param_value < min_value:
+                    raise ValueError(
+                        f"Parameter '{param_name}' value {param_value} is below "
+                        f"minimum allowed value {min_value} (range: "
+                        f"[{range_spec.get('min', '-∞')}, {range_spec.get('max', '∞')}])"
+                    )
+
+            # Check max constraint
+            if "max" in range_spec:
+                max_value = range_spec["max"]
+                if param_value > max_value:
+                    raise ValueError(
+                        f"Parameter '{param_name}' value {param_value} is above "
+                        f"maximum allowed value {max_value} (range: "
+                        f"[{range_spec.get('min', '-∞')}, {range_spec.get('max', '∞')}])"
+                    )
 
 
 @dataclass
@@ -285,6 +332,41 @@ class ECO(ABC):
         """
         pass
 
+    def validate_parameter_ranges(self) -> bool:
+        """Validate that all parameters are within their defined ranges.
+
+        This is a helper method that ECO implementations can call from their
+        validate_parameters() method to check parameter range constraints.
+
+        Returns:
+            True if all parameters are within range, False otherwise
+        """
+        if not self.metadata.parameter_ranges:
+            return True  # No ranges defined, all parameters valid
+
+        for param_name, range_spec in self.metadata.parameter_ranges.items():
+            if param_name not in self.metadata.parameters:
+                # Parameter has a range but no value - skip
+                continue
+
+            param_value = self.metadata.parameters[param_name]
+
+            # Check if value is numeric (required for range checking)
+            if not isinstance(param_value, (int, float)):
+                return False
+
+            # Check min constraint
+            if "min" in range_spec:
+                if param_value < range_spec["min"]:
+                    return False
+
+            # Check max constraint
+            if "max" in range_spec:
+                if param_value > range_spec["max"]:
+                    return False
+
+        return True
+
     def evaluate_preconditions(
         self, design_metrics: dict[str, Any]
     ) -> tuple[bool, list[str]]:
@@ -358,6 +440,8 @@ class ECO(ABC):
         }
         if self.metadata.timeout_seconds is not None:
             result["timeout_seconds"] = self.metadata.timeout_seconds
+        if self.metadata.parameter_ranges:
+            result["parameter_ranges"] = self.metadata.parameter_ranges
         return result
 
 
@@ -442,6 +526,10 @@ puts "Buffer insertion ECO complete"
         if not buffer_cell or not isinstance(buffer_cell, str):
             return False
 
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
         return True
 
 
@@ -486,6 +574,11 @@ puts "Placement density ECO complete"
         density = self.metadata.parameters.get("target_density")
         if density is None or density <= 0 or density > 1.0:
             return False
+
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
         return True
 
 

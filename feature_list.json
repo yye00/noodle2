@@ -8160,10 +8160,11 @@
       "Step 4: Verify metrics are from real routing (not mocked)",
       "Step 5: Store congestion metrics in metrics.json"
     ],
-    "passes": false,
+    "passes": true,
     "depends_on": [
       "F275"
-    ]
+    ],
+    "passed_at": "2026-01-12T04:33:23.394787+00:00"
   },
   {
     "id": "F277",

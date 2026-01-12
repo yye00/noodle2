@@ -1,0 +1,66 @@
+OpenROAD 24Q3-12208-gbbf699543a 
+Features included (+) or not (-): +GPU +GUI +Python
+This program is licensed under the BSD-3 license. See the LICENSE file for details.
+Components of this program may be licensed under more restrictive licenses which must be honored.
+[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.
+[INFO GRT-0020] Min routing layer: metal2
+[INFO GRT-0021] Max routing layer: metal10
+[INFO GRT-0022] Global adjustment: 0%
+[INFO GRT-0023] Grid origin: (0, 0)
+[INFO GRT-0088] Layer metal1  Track-Pitch = 0.1400  line-2-Via Pitch: 0.1350
+[INFO GRT-0088] Layer metal2  Track-Pitch = 0.1900  line-2-Via Pitch: 0.1400
+[INFO GRT-0088] Layer metal3  Track-Pitch = 0.1400  line-2-Via Pitch: 0.1400
+[INFO GRT-0088] Layer metal4  Track-Pitch = 0.2800  line-2-Via Pitch: 0.2800
+[INFO GRT-0088] Layer metal5  Track-Pitch = 0.2800  line-2-Via Pitch: 0.2800
+[INFO GRT-0088] Layer metal6  Track-Pitch = 0.2800  line-2-Via Pitch: 0.2800
+[INFO GRT-0088] Layer metal7  Track-Pitch = 0.8000  line-2-Via Pitch: 0.8000
+[INFO GRT-0088] Layer metal8  Track-Pitch = 0.8000  line-2-Via Pitch: 0.8000
+[INFO GRT-0088] Layer metal9  Track-Pitch = 1.6000  line-2-Via Pitch: 1.6000
+[INFO GRT-0088] Layer metal10 Track-Pitch = 1.6000  line-2-Via Pitch: 1.6000
+[INFO GRT-0003] Macros: 0
+[INFO GRT-0004] Blockages: 0
+[INFO GRT-0019] Found 0 clock nets.
+[INFO GRT-0001] Minimum degree: 2
+[INFO GRT-0002] Maximum degree: 36
+
+[INFO GRT-0053] Routing resources analysis:
+          Routing      Original      Derated      Resource
+Layer     Direction    Resources     Resources    Reduction (%)
+---------------------------------------------------------------
+metal1     Horizontal          0             0          0.00%
+metal2     Vertical         1980           946          52.22%
+metal3     Horizontal       2801          1372          51.02%
+metal4     Vertical         1342           649          51.64%
+metal5     Horizontal       1387           677          51.19%
+metal6     Vertical         1407           688          51.10%
+metal7     Horizontal        414           189          54.35%
+metal8     Vertical          484           209          56.82%
+metal9     Horizontal        242           132          45.45%
+metal10    Vertical          242           132          45.45%
+---------------------------------------------------------------
+
+[INFO GRT-0197] Via related to pin nodes: 2335
+[INFO GRT-0198] Via related Steiner nodes: 12
+[INFO GRT-0199] Via filling finished.
+[INFO GRT-0111] Final number of vias: 2791
+[INFO GRT-0112] Final usage 3D: 9354
+
+[INFO GRT-0096] Final congestion report:
+Layer         Resource        Demand        Usage (%)    Max H / Max V / Total Overflow
+---------------------------------------------------------------------------------------
+metal1               0             0            0.00%             0 /  0 /  0
+metal2             946           417           44.08%             0 /  0 /  0
+metal3            1372           473           34.48%             0 /  0 /  0
+metal4             649            61            9.40%             0 /  0 /  0
+metal5             677            30            4.43%             0 /  0 /  0
+metal6             688             0            0.00%             0 /  0 /  0
+metal7             189             0            0.00%             0 /  0 /  0
+metal8             209             0            0.00%             0 /  0 /  0
+metal9             132             0            0.00%             0 /  0 /  0
+metal10            132             0            0.00%             0 /  0 /  0
+---------------------------------------------------------------------------------------
+Total             4994           981           19.64%             0 /  0 /  0
+
+[INFO GRT-0018] Total wirelength: 5033 um
+[INFO GRT-0014] Routed nets: 592
+

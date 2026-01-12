@@ -1,0 +1,171 @@
+warning: `VIRTUAL_ENV=/home/captain/work/PhysicalDesign/claude-quickstarts/.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- /home/captain/work/PhysicalDesign/noodle2/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/captain/work/PhysicalDesign/noodle2
+configfile: pyproject.toml
+plugins: cov-7.0.0
+collecting ... collected 26 items
+
+tests/test_f276_congestion_execution.py::TestStep1LoadSnapshot::test_snapshot_file_exists PASSED [  3%]
+tests/test_f276_congestion_execution.py::TestStep1LoadSnapshot::test_snapshot_is_placed_design PASSED [  7%]
+tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_execute_global_route_command FAILED [ 11%]
+tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_global_route_creates_report_file FAILED [ 15%]
+tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_global_route_produces_output FAILED [ 19%]
+tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_congestion_report_not_empty FAILED [ 23%]
+tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_bins_total FAILED [ 26%]
+tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_bins_hot FAILED [ 30%]
+tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_hot_ratio FAILED [ 34%]
+tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_hot_ratio_calculation FAILED [ 38%]
+tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_max_overflow_optional FAILED [ 42%]
+tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_metrics_are_not_mocked FAILED [ 46%]
+tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_bins_total_is_realistic FAILED [ 50%]
+tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_bins_hot_not_greater_than_total FAILED [ 53%]
+tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_metrics_have_specific_values_not_placeholders FAILED [ 57%]
+tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_extract_and_save_metrics_to_json FAILED [ 61%]
+tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_file_is_valid FAILED [ 65%]
+tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_contains_all_metrics FAILED [ 69%]
+tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_metrics_match_parsed_metrics FAILED [ 73%]
+tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_complete_congestion_workflow FAILED [ 76%]
+tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_congestion_report_file_has_expected_format FAILED [ 80%]
+tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_multiple_executions_produce_consistent_results FAILED [ 84%]
+tests/test_f276_congestion_execution.py::TestCongestionMetricsValidation::test_verify_real_metrics_passes_for_valid_data PASSED [ 88%]
+tests/test_f276_congestion_execution.py::TestCongestionMetricsValidation::test_verify_real_metrics_fails_for_zero_bins PASSED [ 92%]
+tests/test_f276_congestion_execution.py::TestCongestionMetricsValidation::test_verify_real_metrics_fails_for_invalid_ratio PASSED [ 96%]
+tests/test_f276_congestion_execution.py::TestCongestionMetricsValidation::test_verify_real_metrics_fails_for_inconsistent_data PASSED [100%]
+
+=================================== FAILURES ===================================
+________ TestStep2ExecuteGlobalRoute.test_execute_global_route_command _________
+tests/test_f276_congestion_execution.py:53: in test_execute_global_route_command
+    assert result.success, f"global_route failed: {result.error}"
+E   AssertionError: global_route failed: Congestion report file was not created
+E   assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+______ TestStep2ExecuteGlobalRoute.test_global_route_creates_report_file _______
+tests/test_f276_congestion_execution.py:62: in test_global_route_creates_report_file
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+________ TestStep2ExecuteGlobalRoute.test_global_route_produces_output _________
+tests/test_f276_congestion_execution.py:72: in test_global_route_produces_output
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_________ TestStep2ExecuteGlobalRoute.test_congestion_report_not_empty _________
+tests/test_f276_congestion_execution.py:82: in test_congestion_report_not_empty
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_____________ TestStep3ParseCongestionReport.test_parse_bins_total _____________
+tests/test_f276_congestion_execution.py:97: in test_parse_bins_total
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+______________ TestStep3ParseCongestionReport.test_parse_bins_hot ______________
+tests/test_f276_congestion_execution.py:107: in test_parse_bins_hot
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_____________ TestStep3ParseCongestionReport.test_parse_hot_ratio ______________
+tests/test_f276_congestion_execution.py:118: in test_parse_hot_ratio
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+__________ TestStep3ParseCongestionReport.test_hot_ratio_calculation ___________
+tests/test_f276_congestion_execution.py:128: in test_hot_ratio_calculation
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_______ TestStep3ParseCongestionReport.test_parse_max_overflow_optional ________
+tests/test_f276_congestion_execution.py:140: in test_parse_max_overflow_optional
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+____________ TestStep4VerifyRealMetrics.test_metrics_are_not_mocked ____________
+tests/test_f276_congestion_execution.py:156: in test_metrics_are_not_mocked
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+___________ TestStep4VerifyRealMetrics.test_bins_total_is_realistic ____________
+tests/test_f276_congestion_execution.py:166: in test_bins_total_is_realistic
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_______ TestStep4VerifyRealMetrics.test_bins_hot_not_greater_than_total ________
+tests/test_f276_congestion_execution.py:177: in test_bins_hot_not_greater_than_total
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_ TestStep4VerifyRealMetrics.test_metrics_have_specific_values_not_placeholders _
+tests/test_f276_congestion_execution.py:187: in test_metrics_have_specific_values_not_placeholders
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_______ TestStep5StoreMetricsJSON.test_extract_and_save_metrics_to_json ________
+tests/test_f276_congestion_execution.py:204: in test_extract_and_save_metrics_to_json
+    assert success
+E   assert False
+______________ TestStep5StoreMetricsJSON.test_json_file_is_valid _______________
+tests/test_f276_congestion_execution.py:215: in test_json_file_is_valid
+    assert success
+E   assert False
+___________ TestStep5StoreMetricsJSON.test_json_contains_all_metrics ___________
+tests/test_f276_congestion_execution.py:233: in test_json_contains_all_metrics
+    assert success
+E   assert False
+_______ TestStep5StoreMetricsJSON.test_json_metrics_match_parsed_metrics _______
+tests/test_f276_congestion_execution.py:249: in test_json_metrics_match_parsed_metrics
+    assert success
+E   assert False
+______ TestCongestionExecutionEndToEnd.test_complete_congestion_workflow _______
+tests/test_f276_congestion_execution.py:274: in test_complete_congestion_workflow
+    assert success, "Congestion workflow failed"
+E   AssertionError: Congestion workflow failed
+E   assert False
+_ TestCongestionExecutionEndToEnd.test_congestion_report_file_has_expected_format _
+tests/test_f276_congestion_execution.py:295: in test_congestion_report_file_has_expected_format
+    assert result.success
+E   AssertionError: assert False
+E    +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+_ TestCongestionExecutionEndToEnd.test_multiple_executions_produce_consistent_results _
+tests/test_f276_congestion_execution.py:310: in test_multiple_executions_produce_consistent_results
+    assert success1
+E   assert False
+=========================== short test summary info ============================
+FAILED tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_execute_global_route_command - AssertionError: global_route failed: Congestion report file was not created
+assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_global_route_creates_report_file - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_global_route_produces_output - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep2ExecuteGlobalRoute::test_congestion_report_not_empty - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_bins_total - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_bins_hot - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_hot_ratio - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_hot_ratio_calculation - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep3ParseCongestionReport::test_parse_max_overflow_optional - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_metrics_are_not_mocked - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_bins_total_is_realistic - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_bins_hot_not_greater_than_total - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep4VerifyRealMetrics::test_metrics_have_specific_values_not_placeholders - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_extract_and_save_metrics_to_json - assert False
+FAILED tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_file_is_valid - assert False
+FAILED tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_contains_all_metrics - assert False
+FAILED tests/test_f276_congestion_execution.py::TestStep5StoreMetricsJSON::test_json_metrics_match_parsed_metrics - assert False
+FAILED tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_complete_congestion_workflow - AssertionError: Congestion workflow failed
+assert False
+FAILED tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_congestion_report_file_has_expected_format - AssertionError: assert False
+ +  where False = CongestionExecutionResult(success=False, stdout='OpenROAD 24Q3-12208-gbbf699543a \nFeatures included (+) or not (-): +GPU +GUI +Python\nThis program is licensed under the BSD-3 license. See the LICENSE file for details.\nComponents of this program may be licensed under more restrictive licenses which must be honored.\n[WARNING GRT-0300] Timing is not available, setting critical nets percentage to 0.\n', stderr='', report_file=None, metrics=None, error='Congestion report file was not created').success
+FAILED tests/test_f276_congestion_execution.py::TestCongestionExecutionEndToEnd::test_multiple_executions_produce_consistent_results - assert False
+========================= 20 failed, 6 passed in 6.79s =========================

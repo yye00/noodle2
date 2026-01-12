@@ -26,6 +26,7 @@ class ReplayConfig:
     telemetry_root: Path = Path("telemetry")  # Root directory for telemetry data
     eco_override: str | None = None  # ECO class to apply (overrides original)
     param_overrides: dict[str, Any] = field(default_factory=dict)  # Parameter overrides
+    force_visualization: bool = False  # Force visualization generation even if disabled in original
 
 
 @dataclass
@@ -46,6 +47,9 @@ class ReplayResult:
     original_eco: str | None = None
     replay_eco: str | None = None
     param_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)  # {param: (old, new)}
+    # Visualization tracking
+    visualization_forced: bool = False  # Whether visualization was forced on
+    visualizations_generated: list[Path] = field(default_factory=list)  # Paths to generated heatmaps
 
 
 def load_trial_config_from_telemetry(
@@ -213,6 +217,10 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
         if config.eco_override and config.eco_override != original_eco:
             logger.info(f"ECO override: {original_eco} → {replay_eco}")
 
+        # Log visualization forcing
+        if config.force_visualization:
+            logger.info("Forcing visualization generation (overriding original config)")
+
         # Create output directory
         output_dir = config.output_dir / f"{config.case_name}_t{trial_config.trial_index}"
         if config.param_overrides or config.eco_override:
@@ -220,6 +228,12 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
         output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Output directory: {output_dir}")
+
+        # Create visualizations directory if force_visualization enabled
+        visualizations_dir = output_dir / "heatmaps"
+        if config.force_visualization:
+            visualizations_dir.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Visualizations will be saved to: {visualizations_dir}")
 
         # For now, we simulate the replay since full trial execution
         # requires Docker integration and base snapshots.
@@ -236,6 +250,24 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
 
         # Simulate execution
         time.sleep(0.1)  # Minimal delay for realism
+
+        # Simulate visualization generation if forced
+        visualizations_generated = []
+        if config.force_visualization:
+            logger.info("Generating forced visualizations...")
+            # Simulate generating standard heatmaps
+            heatmap_types = [
+                "placement_density.png",
+                "routing_congestion.png",
+                "rudy_congestion.png",
+            ]
+            for heatmap in heatmap_types:
+                heatmap_path = visualizations_dir / heatmap
+                # Create empty placeholder files to simulate generation
+                heatmap_path.write_text(f"# Simulated heatmap: {heatmap}\n")
+                visualizations_generated.append(heatmap_path)
+                logger.debug(f"Generated: {heatmap}")
+            logger.info(f"Generated {len(visualizations_generated)} visualizations")
 
         runtime = time.time() - start_time
 
@@ -258,6 +290,11 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
                 "replay_params": replay_params,
                 "param_changes": {k: {"old": v[0], "new": v[1]} for k, v in param_changes.items()},
             },
+            "visualization": {
+                "forced": config.force_visualization,
+                "visualizations_generated": [str(p) for p in visualizations_generated],
+                "count": len(visualizations_generated),
+            },
         }
 
         metadata_file = output_dir / "replay_metadata.json"
@@ -278,6 +315,8 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
             original_eco=original_eco,
             replay_eco=replay_eco,
             param_changes=param_changes,
+            visualization_forced=config.force_visualization,
+            visualizations_generated=visualizations_generated,
         )
 
     except Exception as e:

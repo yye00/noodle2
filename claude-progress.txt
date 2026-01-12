@@ -6016,3 +6016,65 @@ All tests passing. Codebase in excellent, clean state. Progress: 91.4% complete.
 - Full backward compatibility verified (F222, F223, F226 all still pass)
 
 **Progress: 257/280 (91.8%)**
+
+=== SESSION 398: F230 and F233 Completed ===
+
+**Date:** 2026-01-12
+**Features Completed:** 2 (F230, F233)
+**Progress:** 259/280 features passing (92.5%)
+
+**Feature 1: F230 - Track Pareto history in pareto_history.json**
+- Status: ✓ PASSING (20 tests)
+- Implementation: Added src/controller/pareto_history.py module
+- Key components:
+  * ParetoHistory class for tracking frontiers across stages
+  * ParetoStageSnapshot for individual stage data
+  * Serialization/deserialization to/from JSON
+  * Evolution tracking for visualization support
+- All 5 feature steps verified:
+  1. Study with Pareto tracking
+  2. pareto_history.json creation
+  3. Per-stage frontier snapshots
+  4. Non-dominated solution marking per stage
+  5. Evolution visualization support
+- Edge cases: empty frontiers, mismatched names/frontiers, single stage, no Pareto optimal trials
+
+**Feature 2: F233 - Trajectory charts show best/median/worst statistics per stage**
+- Status: ✓ PASSING (11 tests)
+- Implementation: Verified existing trajectory_plot.py satisfies requirements
+- All 5 feature steps verified:
+  1. Generate improvement trajectory
+  2. Best survivor metric plotted
+  3. Median survivor metric plotted
+  4. Worst survivor metric plotted
+  5. Visual distinction between lines
+- Additional verification:
+  * Hot_ratio statistics confirmed
+  * Edge cases: single trial, many trials, varied counts, two stages
+  * Legend clarity verified
+- Implementation already present in src/visualization/trajectory_plot.py
+
+**Code Changes:**
+- New file: src/controller/pareto_history.py (214 lines)
+- New file: tests/test_f230_pareto_history.py (488 lines)
+- New file: tests/test_f233_trajectory_statistics.py (461 lines)
+- Total: 31 new tests, all passing
+
+**Commits:**
+1. F230: Pareto history tracking implementation
+2. F233: Trajectory statistics test suite
+
+**Next Priorities:**
+- F238: Replay with forced visualization (depends on F236 ✓)
+- F240: Debug report captures exact TCL commands (depends on F239 ✓)
+- F243: Study comparison identifies key differences
+- F245: Study comparison quantifies total trials and runtime efficiency
+- F247: Diversity-aware selection supports elitism
+
+**Session Quality:**
+- All tests passing
+- Clean implementation with proper type hints
+- Comprehensive edge case coverage
+- Full backward compatibility maintained
+- Progress: +2 features (257→259)
+

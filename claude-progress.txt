@@ -2042,3 +2042,54 @@ All F201 tests continue to pass, confirming no regressions.
 - 66 features remaining
 - 0 features need reverification
 - All test suites passing
+
+## Session 367 Update - F203 Implementation (2026-01-11)
+
+### Additional Feature Complete: F203
+
+**Feature:** Timing diagnosis suggests appropriate ECOs based on bottleneck type
+**Status:** ✅ PASSING
+**Project Completion:** 206/271 features (76.0%)
+
+### F203 Implementation Details
+
+**ECO Suggestion Logic:**
+- **Wire-dominated paths** → insert_buffers (priority 1) + spread_dense_region (priority 2)
+- **Cell-dominated paths** → resize_critical_drivers (priority 1) + swap_to_faster_cells (priority 2)
+- **Mixed paths** → insert_buffers (priority 1) + resize_critical_drivers (priority 2)
+
+**Code Changes:**
+- Updated ECO names to match spec (resize_critical_drivers, swap_to_faster_cells)
+- All suggestions include reasoning field explaining the recommendation
+- Suggestions indicate what they address (timing/congestion/both)
+
+**F203 Test Results (12/12 passing):**
+```
+tests/test_eco_suggestion.py
+  ✅ test_step_1_run_diagnosis_on_wire_dominated_design
+  ✅ test_step_2_verify_insert_buffers_suggested_with_priority_1
+  ✅ test_step_3_run_diagnosis_on_cell_dominated_design
+  ✅ test_step_4_verify_resize_critical_drivers_suggested
+  ✅ test_step_5_verify_suggestions_include_reasoning
+  ✅ test_wire_dominated_suggests_buffer_insertion
+  ✅ test_cell_dominated_suggests_cell_resizing
+  ✅ test_eco_suggestions_have_addresses_field
+  ✅ test_eco_priority_ordering
+  ✅ test_mixed_issue_suggests_both_eco_types
+  ✅ test_eco_suggestions_serialize_to_json
+  ✅ test_complete_f203_workflow
+```
+
+### Session 367 Final Summary
+
+**Features Completed:** 2 (F202, F203)
+**Total Tests Created:** 26 (14 for F202, 12 for F203)
+**All Tests Passing:** 38 tests (26 new + 12 existing timing diagnosis)
+**Project Progress:** 204 → 206 features (75.6% → 76.0%)
+**No Regressions:** All existing tests continue to pass
+
+**Key Achievements:**
+1. F202: Critical path information extraction with bounding box
+2. F203: Intelligent ECO suggestion based on bottleneck classification
+3. Complete timing diagnosis pipeline now functional
+4. Ready for downstream features (F204, F216-F217, F222)

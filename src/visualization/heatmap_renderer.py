@@ -868,19 +868,20 @@ def render_heatmap_with_hotspot_annotations(
     figsize: tuple[int, int] = (10, 8),
 ) -> dict[str, Any]:
     """
-    Render congestion heatmap with hotspot annotations (IDs and severity values).
+    Render congestion heatmap with hotspot annotations (IDs, severity, and causes).
 
     Hotspots are annotated with:
     - Hotspot ID labels like [HS-1], [HS-2], etc.
     - Severity values displayed as percentages (e.g., 0.92, 0.78)
+    - Cause labels indicating the root cause (pins, density, macro_proximity)
     - Annotations positioned near hotspot bounding box regions
 
     Args:
         csv_path: Path to congestion heatmap CSV file
         output_path: Path where annotated PNG should be saved
-        hotspots: List of hotspot dictionaries with 'id', 'bbox', and 'severity' keys
+        hotspots: List of hotspot dictionaries with 'id', 'bbox', 'severity', and 'cause' keys
                   Each hotspot should have: {'id': int, 'bbox': {'x1', 'y1', 'x2', 'y2'},
-                  'severity': str or float}
+                  'severity': str or float, 'cause': str (pins/density/macro_proximity)}
         title: Optional title for the plot
         colormap: Matplotlib colormap name (default: 'hot' for congestion)
         dpi: Resolution in dots per inch (default: 150)
@@ -899,6 +900,7 @@ def render_heatmap_with_hotspot_annotations(
         ...         'id': 1,
         ...         'bbox': {'x1': 10, 'y1': 20, 'x2': 30, 'y2': 40},
         ...         'severity': 'critical',  # or 0.92
+        ...         'cause': 'pins',  # or 'density' or 'macro_proximity'
         ...     }
         ... ]
         >>> render_heatmap_with_hotspot_annotations(
@@ -953,8 +955,15 @@ def render_heatmap_with_hotspot_annotations(
         else:
             severity_value = float(severity_raw)
 
-        # Create annotation text with ID and severity
-        annotation_text = f"[HS-{hotspot_id}]\n{severity_value:.2f}"
+        # Get cause (if available)
+        cause = hotspot.get("cause", None)
+
+        # Create annotation text with ID, severity, and cause
+        if cause:
+            annotation_text = f"[HS-{hotspot_id}]\n{severity_value:.2f}\n{cause}"
+        else:
+            # Backward compatibility: if no cause, show only ID and severity
+            annotation_text = f"[HS-{hotspot_id}]\n{severity_value:.2f}"
 
         # Add text annotation near hotspot center
         ax.text(

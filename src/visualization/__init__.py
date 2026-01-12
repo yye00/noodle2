@@ -17,6 +17,13 @@ from .pareto_plot import (
     plot_pareto_frontier_2d,
     save_pareto_plot,
 )
+from .trajectory_plot import (
+    generate_hot_ratio_trajectory_chart,
+    generate_wns_trajectory_chart,
+    plot_hot_ratio_trajectory,
+    plot_wns_trajectory,
+    save_trajectory_plot,
+)
 
 __all__ = [
     "parse_heatmap_csv",
@@ -30,4 +37,9 @@ __all__ = [
     "generate_pareto_frontier_per_stage",
     "create_pareto_evolution_animation",
     "generate_pareto_evolution_animation",
+    "plot_wns_trajectory",
+    "plot_hot_ratio_trajectory",
+    "save_trajectory_plot",
+    "generate_wns_trajectory_chart",
+    "generate_hot_ratio_trajectory_chart",
 ]

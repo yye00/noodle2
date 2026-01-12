@@ -6665,3 +6665,66 @@ Remaining 9 features are all low priority:
 09efa38 - Implement F264: Warm-start supports prior decay for older studies
 
 ================================================================================
+
+================================================================================
+SESSION 406 - F261 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F261 - ECO parameter ranges are validated before execution
+
+**Implementation Summary:**
+Implemented parameter range validation for ECO parameters. ECOs can now define
+valid ranges for their parameters, and validation occurs both at metadata
+creation and before execution, preventing invalid configurations from reaching
+OpenROAD.
+
+**Implementation Details:**
+
+1. Enhanced ECOMetadata (src/controller/eco.py):
+   - Added parameter_ranges field: dict[str, dict[str, float]]
+   - Supports min, max, or both constraints per parameter
+   - Example: {"target_density": {"min": 0.3, "max": 0.95}}
+   - Validation in __post_init__ via _validate_parameter_ranges()
+
+2. Validation Logic:
+   - _validate_parameter_ranges() method in ECOMetadata
+   - Checks each parameter against its defined range
+   - Raises ValueError with clear error messages
+   - Format: "Parameter 'X' value Y is above maximum allowed value Z (range: [min, max])"
+
+3. Runtime Validation Support:
+   - Added validate_parameter_ranges() helper to ECO base class
+   - Returns bool (True if valid, False otherwise)
+   - ECO implementations can call this from validate_parameters()
+   - Enables runtime range checking before execution
+
+4. Updated Existing ECOs:
+   - BufferInsertionECO.validate_parameters() calls validate_parameter_ranges()
+   - PlacementDensityECO.validate_parameters() calls validate_parameter_ranges()
+
+**Test Coverage (tests/test_f261_parameter_range_validation.py - 12 tests passing):**
+
+Core Feature Steps (5/5):
+- Step 1: Define ECO parameter with range: [1.1, 2.0] ✓
+- Step 2: Attempt to apply ECO with parameter value 2.5 (out of range) ✓
+- Step 3: Verify parameter validation fails before execution ✓
+- Step 4: Verify clear error message indicates range violation ✓
+- Step 5: Verify ECO is not executed with invalid parameters ✓
+
+Integration Tests (7/7):
+- BufferInsertionECO with parameter range validation ✓
+- PlacementDensityECO with parameter range validation ✓
+- Multiple parameters with different ranges ✓
+- Parameter range with only min/max constraint ✓
+- Boundary value validation (inclusive) ✓
+- ECOs without parameter_ranges defined ✓
+
+**Current Status:**
+- Features passing: 272/280 (97.1%)
+- Features remaining: 8 (all low priority)
+
+**Commit:** 6346b00
+
+================================================================================

@@ -578,6 +578,141 @@ def create_asap7_extreme_demo_study(
     return study
 
 
+def create_sky130_extreme_demo_study(
+    snapshot_path: str | None = None,
+    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+) -> StudyConfig:
+    """Create an 'extreme' broken design demo Study for Sky130.
+
+    This creates a demo Study designed to showcase Noodle 2's ability to
+    fix extremely broken Sky130 designs with:
+    - Production-realistic Ibex RISC-V core design
+    - Starting WNS ~ -2200ps (severe timing violation)
+    - Starting hot_ratio > 0.32 (severe congestion)
+    - Complete audit trail for manufacturing
+    - Publication-quality visualizations
+    - Approval gate simulation
+    - Multi-stage ECO application to systematically fix the design
+
+    Sky130-Specific Considerations:
+    - Uses production-realistic Ibex design (not synthetic)
+    - Provides complete audit trail for manufacturing approval
+    - Generates publication-quality differential visualizations
+    - Simulates approval gate workflow
+    - Uses open-source Sky130 PDK (sky130_fd_sc_hd)
+
+    Args:
+        snapshot_path: Path to Sky130 extreme design snapshot.
+                      If None, uses default 'studies/sky130_extreme'
+        safety_domain: Safety domain for the Study (default: GUARDED)
+
+    Returns:
+        StudyConfig: Sky130 extreme demo Study configuration
+
+    Example:
+        >>> demo = create_sky130_extreme_demo_study()
+        >>> demo.validate()
+        >>> # Production-realistic Ibex design
+        >>> assert demo.metadata["design"] == "Ibex RISC-V Core"
+    """
+    if snapshot_path is None:
+        # Default to studies/sky130_extreme relative to project root
+        snapshot_path = str(Path("studies") / "sky130_extreme")
+
+    # Stage 0: Aggressive exploration
+    stage_0 = StageConfig(
+        name="aggressive_exploration",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=14,  # Moderate trial budget for production design
+        survivor_count=4,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+        ],
+        abort_threshold_wns_ps=-150000,  # -150ns - permissive for extreme case
+        visualization_enabled=True,
+        timeout_seconds=800,  # ~13 minutes per trial
+    )
+
+    # Stage 1: Placement refinement
+    stage_1 = StageConfig(
+        name="placement_refinement",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=10,
+        survivor_count=3,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+        ],
+        abort_threshold_wns_ps=-200000,  # -200ns
+        visualization_enabled=True,
+        timeout_seconds=1000,  # ~17 minutes per trial
+    )
+
+    # Stage 2: Final closure
+    stage_2 = StageConfig(
+        name="final_closure",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=7,
+        survivor_count=2,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+            ECOClass.ROUTING_AFFECTING,
+        ],
+        abort_threshold_wns_ps=None,  # No abort in final stage
+        visualization_enabled=True,
+        timeout_seconds=1500,  # 25 minutes per trial
+    )
+
+    # Create the complete Study configuration
+    study = StudyConfig(
+        name="sky130_extreme_demo",
+        safety_domain=safety_domain,
+        base_case_name="sky130_extreme",
+        pdk="Sky130",
+        stages=[stage_0, stage_1, stage_2],
+        snapshot_path=snapshot_path,
+        metadata={
+            "purpose": "Demonstrate fixing extremely broken Sky130 design with production-realistic workflow",
+            "design": "Ibex RISC-V Core",
+            "design_type": "production_realistic",
+            "expected_behavior": "Improve WNS by >50%, reduce hot_ratio from >0.32 to <0.13",
+            "version": "1.0.0",
+            "sky130_features": [
+                "pdk_variant: sky130A",
+                "std_cell_library: sky130_fd_sc_hd",
+                "open_source_pdk: true",
+                "production_realistic_ibex_design",
+                "complete_audit_trail",
+                "approval_gate_simulation",
+                "publication_quality_visualizations",
+            ],
+            "success_criteria": {
+                "wns_improvement_percent": 50,
+                "hot_ratio_reduction_percent": 60,
+                "audit_trail_complete": True,
+                "approval_gate_passed": True,
+            },
+        },
+        author="Noodle2 Team",
+        description=(
+            "Extreme broken design demo Study for Sky130 PDK with production-realistic "
+            "Ibex RISC-V core. Showcases Noodle 2's ability to systematically fix a "
+            "design with severe timing violations (WNS ~ -2200ps) and congestion issues "
+            "(hot_ratio > 0.32) through multi-stage ECO application. Demonstrates "
+            "production-realistic features: complete audit trail, approval gate simulation, "
+            "and publication-quality visualizations. Uses open-source Sky130 PDK "
+            "(sky130_fd_sc_hd) suitable for manufacturing."
+        ),
+        tags=["demo", "sky130", "extreme", "production-realistic", "ibex", "audit-trail"],
+    )
+
+    # Validate configuration before returning
+    study.validate()
+
+    return study
+
+
 def save_demo_study_config(output_path: Path) -> None:
     """Save demo Study configuration to JSON file.
 

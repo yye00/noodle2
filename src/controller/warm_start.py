@@ -54,11 +54,19 @@ class WarmStartConfig:
         mode: Prior loading mode ("warm_start", "cold_start", etc.)
         source_studies: List of source studies to load priors from
         merge_strategy: How to merge priors from multiple sources ("weighted_avg", "max", etc.)
+        decay: Optional decay factor per day for prior confidence (0.0 to 1.0)
+              If set, priors from older studies have reduced confidence: confidence *= decay^age_days
     """
 
     mode: str
     source_studies: list[SourceStudyConfig] = field(default_factory=list)
     merge_strategy: str = "weighted_avg"
+    decay: float | None = None
+
+    def __post_init__(self) -> None:
+        """Validate configuration."""
+        if self.decay is not None and not 0.0 <= self.decay <= 1.0:
+            raise ValueError(f"Decay must be between 0.0 and 1.0, got {self.decay}")
 
     def normalize_weights(self) -> list[float]:
         """Normalize weights to sum to 1.0.
@@ -79,11 +87,14 @@ class WarmStartConfig:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
-        return {
+        result = {
             "mode": self.mode,
             "source_studies": [s.to_dict() for s in self.source_studies],
             "merge_strategy": self.merge_strategy,
         }
+        if self.decay is not None:
+            result["decay"] = self.decay
+        return result
 
 
 class WarmStartLoader:
@@ -101,12 +112,14 @@ class WarmStartLoader:
         self,
         target_study_id: str,
         audit_trail_path: Path | None = None,
+        current_time: datetime | None = None,
     ) -> dict[str, ECOEffectiveness]:
         """Load and merge priors from configured source studies.
 
         Args:
             target_study_id: ID of the target study
             audit_trail_path: Optional path to write audit trail
+            current_time: Current time for age calculation (defaults to now)
 
         Returns:
             Dictionary mapping ECO names to weighted effectiveness data
@@ -117,8 +130,12 @@ class WarmStartLoader:
         if not self.config.source_studies:
             return {}
 
+        if current_time is None:
+            current_time = datetime.now(UTC)
+
         # Load priors from each source
-        source_priors: dict[str, list[tuple[ECOEffectiveness, float, int]]] = {}
+        source_priors: dict[str, list[tuple[ECOEffectiveness, float, int, dict[str, Any]]]] = {}
+        decay_metadata: dict[int, dict[str, Any]] = {}
 
         for source_idx, source_config in enumerate(self.config.source_studies):
             # Load repository
@@ -132,15 +149,40 @@ class WarmStartLoader:
 
             repository = PriorRepository.from_dict(data)
 
-            # Scale each prior by weight and collect
+            # Calculate decay if enabled
+            effective_weight = source_config.weight
+            decay_info: dict[str, Any] = {}
+
+            if self.config.decay is not None:
+                # Get study completion timestamp
+                completion_time_str = source_config.metadata.get("completion_timestamp")
+                if completion_time_str:
+                    completion_time = datetime.fromisoformat(completion_time_str)
+                    age_days = (current_time - completion_time).total_seconds() / 86400
+                    decay_factor = self.config.decay ** age_days
+                    effective_weight *= decay_factor
+
+                    decay_info = {
+                        "completion_timestamp": completion_time_str,
+                        "age_days": age_days,
+                        "decay_factor": decay_factor,
+                        "original_weight": source_config.weight,
+                        "effective_weight": effective_weight,
+                    }
+
+            decay_metadata[source_idx] = decay_info
+
+            # Scale each prior by effective weight and collect
             for eco_name, effectiveness in repository.eco_priors.items():
-                scaled = self._scale_effectiveness(effectiveness, source_config.weight)
+                scaled = self._scale_effectiveness(effectiveness, effective_weight)
 
                 if eco_name not in source_priors:
                     source_priors[eco_name] = []
 
-                # Store: (effectiveness, weight, source_index)
-                source_priors[eco_name].append((scaled, source_config.weight, source_idx))
+                # Store: (effectiveness, effective_weight, source_index, decay_info)
+                source_priors[eco_name].append(
+                    (scaled, effective_weight, source_idx, decay_info)
+                )
 
         # Merge priors using configured strategy
         merged_priors = self._merge_priors(source_priors)
@@ -151,6 +193,7 @@ class WarmStartLoader:
                 target_study_id=target_study_id,
                 merged_priors=merged_priors,
                 audit_trail_path=audit_trail_path,
+                decay_metadata=decay_metadata,
             )
 
         return merged_priors
@@ -182,12 +225,13 @@ class WarmStartLoader:
         )
 
     def _merge_priors(
-        self, source_priors: dict[str, list[tuple[ECOEffectiveness, float, int]]]
+        self,
+        source_priors: dict[str, list[tuple[ECOEffectiveness, float, int, dict[str, Any]]]],
     ) -> dict[str, ECOEffectiveness]:
         """Merge priors from multiple sources.
 
         Args:
-            source_priors: Map of ECO names to list of (effectiveness, weight, source_idx) tuples
+            source_priors: Map of ECO names to list of (effectiveness, weight, source_idx, decay_info) tuples
 
         Returns:
             Dictionary of merged ECO effectiveness data
@@ -213,38 +257,38 @@ class WarmStartLoader:
         return merged
 
     def _merge_weighted_average(
-        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
+        self, priors_list: list[tuple[ECOEffectiveness, float, int, dict[str, Any]]]
     ) -> ECOEffectiveness:
         """Merge multiple ECO effectiveness records using weighted average.
 
         Args:
-            priors_list: List of (effectiveness, weight, source_idx) tuples
+            priors_list: List of (effectiveness, weight, source_idx, decay_info) tuples
 
         Returns:
             Merged effectiveness data
         """
         # Sum up counts from all sources (already scaled by weight)
-        total_apps = sum(eff.total_applications for eff, _, _ in priors_list)
-        successful_apps = sum(eff.successful_applications for eff, _, _ in priors_list)
-        failed_apps = sum(eff.failed_applications for eff, _, _ in priors_list)
+        total_apps = sum(eff.total_applications for eff, _, _, _ in priors_list)
+        successful_apps = sum(eff.successful_applications for eff, _, _, _ in priors_list)
+        failed_apps = sum(eff.failed_applications for eff, _, _, _ in priors_list)
 
         # Weighted average for improvement metrics
-        total_weight = sum(weight for _, weight, _ in priors_list)
+        total_weight = sum(weight for _, weight, _, _ in priors_list)
 
         if total_weight > 0:
             avg_wns = sum(
                 eff.average_wns_improvement_ps * weight
-                for eff, weight, _ in priors_list
+                for eff, weight, _, _ in priors_list
             ) / total_weight
         else:
             avg_wns = 0.0
 
         # Best and worst across all sources
-        best_wns = max(eff.best_wns_improvement_ps for eff, _, _ in priors_list)
-        worst_wns = min(eff.worst_wns_degradation_ps for eff, _, _ in priors_list)
+        best_wns = max(eff.best_wns_improvement_ps for eff, _, _, _ in priors_list)
+        worst_wns = min(eff.worst_wns_degradation_ps for eff, _, _, _ in priors_list)
 
         # Use the most conservative prior
-        priors = [eff.prior for eff, _, _ in priors_list]
+        priors = [eff.prior for eff, _, _, _ in priors_list]
         if ECOPrior.SUSPICIOUS in priors or ECOPrior.BLACKLISTED in priors:
             merged_prior = ECOPrior.SUSPICIOUS
         elif ECOPrior.MIXED in priors:
@@ -269,12 +313,12 @@ class WarmStartLoader:
         )
 
     def _merge_highest_weight(
-        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
+        self, priors_list: list[tuple[ECOEffectiveness, float, int, dict[str, Any]]]
     ) -> ECOEffectiveness:
         """Merge by selecting the prior from the source with highest weight.
 
         Args:
-            priors_list: List of (effectiveness, weight, source_idx) tuples
+            priors_list: List of (effectiveness, weight, source_idx, decay_info) tuples
 
         Returns:
             Effectiveness data from source with highest weight
@@ -284,14 +328,14 @@ class WarmStartLoader:
         return priors_list[highest_weight_idx][0]
 
     def _merge_newest(
-        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
+        self, priors_list: list[tuple[ECOEffectiveness, float, int, dict[str, Any]]]
     ) -> ECOEffectiveness:
         """Merge by selecting the prior from the most recent source.
 
         Uses timestamp from source config metadata to determine recency.
 
         Args:
-            priors_list: List of (effectiveness, weight, source_idx) tuples
+            priors_list: List of (effectiveness, weight, source_idx, decay_info) tuples
 
         Returns:
             Effectiveness data from most recent source
@@ -300,7 +344,7 @@ class WarmStartLoader:
         newest_timestamp = None
         newest_prior = None
 
-        for eff, weight, source_idx in priors_list:
+        for eff, weight, source_idx, decay_info in priors_list:
             source_config = self.config.source_studies[source_idx]
             timestamp = source_config.metadata.get("timestamp", "1970-01-01T00:00:00Z")
 
@@ -319,6 +363,7 @@ class WarmStartLoader:
         target_study_id: str,
         merged_priors: dict[str, ECOEffectiveness],
         audit_trail_path: Path,
+        decay_metadata: dict[int, dict[str, Any]] | None = None,
     ) -> None:
         """Write audit trail for warm-start loading.
 
@@ -326,8 +371,9 @@ class WarmStartLoader:
             target_study_id: ID of the target study
             merged_priors: Merged prior data
             audit_trail_path: Path to write audit trail
+            decay_metadata: Optional decay information per source
         """
-        audit_record = {
+        audit_record: dict[str, Any] = {
             "import_timestamp": datetime.now(UTC).isoformat(),
             "target_study_id": target_study_id,
             "mode": self.config.mode,
@@ -336,6 +382,13 @@ class WarmStartLoader:
             "eco_count": len(merged_priors),
             "loaded_ecos": list(merged_priors.keys()),
         }
+
+        if self.config.decay is not None:
+            audit_record["decay"] = self.config.decay
+            if decay_metadata:
+                audit_record["decay_metadata"] = {
+                    str(k): v for k, v in decay_metadata.items()
+                }
 
         audit_trail_path.parent.mkdir(parents=True, exist_ok=True)
         with open(audit_trail_path, "w") as f:

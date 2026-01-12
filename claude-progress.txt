@@ -1475,3 +1475,78 @@ The feature list is now ready for systematic implementation following the priori
 order outlined above.
 
 ===
+
+===
+SESSION 363 - F201 Auto-Diagnosis Implementation
+Date: 2026-01-11
+===
+
+## FEATURE COMPLETED: F201
+
+Successfully implemented F201: Generate timing diagnosis report for negative WNS design
+
+### Implementation Details
+
+Created comprehensive auto-diagnosis system in src/analysis/diagnosis.py:
+
+1. Data Types and Schemas:
+   - TimingDiagnosis: Complete timing analysis with wire vs cell classification
+   - CongestionDiagnosis: Hotspot identification and layer breakdown
+   - DiagnosisSummary: Combined recommendations with ECO priority queue
+   - CompleteDiagnosisReport: Full diagnosis combining all analyses
+
+2. Core Functionality:
+   - diagnose_timing: Analyzes timing metrics to classify issues
+   - diagnose_congestion: Identifies congestion hotspots and root causes
+   - generate_complete_diagnosis: Unified interface for all diagnosis
+
+3. Features Implemented:
+   - WNS/TNS/failing_endpoints reporting
+   - Dominant issue classification with confidence scores
+   - Problem net identification with delay breakdowns
+   - ECO suggestion generation based on diagnosis
+   - Slack histogram generation
+   - JSON serialization for all reports
+
+### Test Coverage
+
+Created comprehensive test suite tests/test_timing_diagnosis.py:
+- 12 tests covering all 6 steps of F201
+- Tests for wire-dominated classification
+- Tests for cell-dominated classification
+- Tests for ECO suggestion generation
+- Tests for JSON serialization
+- Full integration test for complete workflow
+
+### Code Quality
+
+- All tests passing (12/12)
+- Type-safe (mypy clean)
+- Lint-clean (ruff clean)
+- Production-quality code with proper error handling
+
+### Progress
+
+- Feature F201: PASSING
+- Passed at: 2026-01-12T00:03:11Z
+- Overall progress: 201/271 (74.2%)
+- Features remaining: 70
+
+### Files Modified
+
+- src/analysis/diagnosis.py (NEW - 700+ lines)
+- src/analysis/__init__.py (updated exports)
+- tests/test_timing_diagnosis.py (NEW - 12 comprehensive tests)
+- feature_list.json (F201 marked passing)
+
+### Next Steps
+
+Recommended next features (high priority, dependencies satisfied):
+- F204: Generate congestion diagnosis report
+- F216: Differential placement density heatmaps
+- F217: Differential routing congestion heatmaps
+- F222: Critical path overlays
+- F229: Pareto frontier evolution animations
+- F231: WNS improvement trajectory charts
+
+===

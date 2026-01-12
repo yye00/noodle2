@@ -90,6 +90,8 @@ class StageConfig:
     timeout_hours: int = 24  # Timeout for approval in hours
     show_summary: bool = True  # Display stage results summary at approval gate
     show_visualizations: bool = False  # Display heatmaps and charts at approval gate
+    # Stage dependency enforcement
+    requires_approval: str | None = None  # Name of approval gate stage that must be completed before this stage can execute
 
     def __post_init__(self) -> None:
         """Validate stage configuration based on stage type."""

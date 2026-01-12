@@ -184,6 +184,9 @@ class StudyExecutor:
         # Initialize Study checkpoint tracking
         self.study_checkpoint: StudyCheckpoint = initialize_checkpoint(config.name)
 
+        # Track completed approval gates for dependency enforcement
+        self.completed_approvals: set[str] = set()
+
     def verify_base_case(self) -> tuple[bool, str]:
         """
         Verify base case structural runnability before ECO experimentation.
@@ -576,11 +579,55 @@ class StudyExecutor:
                         description=self.config.description,
                     )
 
-                # Approval granted - current_cases passes through unchanged to next stage
+                # Approval granted - record this approval gate as completed
+                self.completed_approvals.add(stage_config.name)
+                # current_cases passes through unchanged to next stage
                 # (Approval gates don't execute trials or select survivors)
             else:
                 # Normal execution stage
                 print(f"\n=== Executing Stage {stage_index}: {stage_config.name} ===")
+
+                # Check if this stage requires approval dependency
+                if stage_config.requires_approval is not None:
+                    if stage_config.requires_approval not in self.completed_approvals:
+                        # Dependency not satisfied - block execution
+                        error_msg = f"Stage '{stage_config.name}' requires approval from '{stage_config.requires_approval}' but it has not been completed"
+                        print(f"\n🚫 STAGE BLOCKED: {error_msg}")
+
+                        # Save safety trace
+                        trace_path = report_dir / "safety_trace.json"
+                        self.safety_trace.save_to_file(trace_path)
+                        trace_txt_path = report_dir / "safety_trace.txt"
+                        self.safety_trace.save_to_file(trace_txt_path)
+
+                        # Export case lineage graph
+                        lineage_dot_path = report_dir / "lineage.dot"
+                        lineage_dot = self.case_graph.export_to_dot()
+                        lineage_dot_path.write_text(lineage_dot)
+
+                        # Finalize and emit study telemetry
+                        study_telemetry.finalize(
+                            final_survivors=[],
+                            aborted=True,
+                            abort_reason=error_msg,
+                        )
+                        self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+                        self.telemetry_emitter.flush_all_case_telemetry()
+
+                        return StudyResult(
+                            study_name=self.config.name,
+                            total_stages=len(self.config.stages),
+                            stages_completed=stage_index,
+                            total_runtime_seconds=time.time() - study_start,
+                            stage_results=stage_results,
+                            final_survivors=[],
+                            aborted=True,
+                            abort_reason=error_msg,
+                            author=self.config.author,
+                            creation_date=self.config.creation_date,
+                            description=self.config.description,
+                        )
+
                 print(f"Input cases: {len(current_cases)}")
                 print(f"Trial budget: {stage_config.trial_budget}")
                 print(f"Survivor count: {stage_config.survivor_count}")
@@ -632,8 +679,8 @@ class StudyExecutor:
                     details=stage_result.abort_decision.details,
                 )
 
-            # Check for stage abort conditions using comprehensive abort logic
-            if stage_result.abort_decision and stage_result.abort_decision.should_abort:
+            # Check for stage abort conditions using comprehensive abort logic (only for execution stages)
+            if stage_config.stage_type == StageType.EXECUTION and stage_result.abort_decision and stage_result.abort_decision.should_abort:
                 abort_reason_str = (
                     f"Stage {stage_index} aborted: {stage_result.abort_decision.reason.value if stage_result.abort_decision.reason else 'unknown'}\n"
                     f"Details: {stage_result.abort_decision.details}"

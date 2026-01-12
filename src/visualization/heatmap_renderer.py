@@ -1049,6 +1049,8 @@ def render_heatmap_with_critical_path_overlay(
     figsize: tuple[int, int] = (8, 6),
     path_count: int = 10,
     color_by: str = "slack",
+    show_endpoints: bool = False,
+    show_slack_labels: bool = False,
 ) -> dict[str, Any]:
     """
     Render heatmap with critical paths overlaid as lines.
@@ -1071,6 +1073,8 @@ def render_heatmap_with_critical_path_overlay(
         path_count: Number of paths to overlay (default: 10, uses top N paths)
         color_by: Color mode for paths: 'slack' (red=worst, yellow=moderate),
                   'wire_delay' (by wire delay percentage), or 'cell_delay' (by cell delay percentage)
+        show_endpoints: If True, mark path endpoints with visible symbols (stars)
+        show_slack_labels: If True, display slack values labeled on paths
 
     Returns:
         Metadata dictionary with rendering information including path count
@@ -1204,6 +1208,62 @@ def render_heatmap_with_critical_path_overlay(
             label=label_text,
         )
 
+        # Add endpoint markers if requested
+        if show_endpoints and len(points) >= 2:
+            # Mark startpoint with star
+            ax.plot(
+                xs[0],
+                ys[0],
+                marker="*",
+                markersize=12,
+                color="lime",
+                markeredgecolor="black",
+                markeredgewidth=1.0,
+                zorder=10,
+            )
+            # Mark endpoint with star
+            ax.plot(
+                xs[-1],
+                ys[-1],
+                marker="*",
+                markersize=12,
+                color="red",
+                markeredgecolor="black",
+                markeredgewidth=1.0,
+                zorder=10,
+            )
+
+        # Add slack labels if requested
+        if show_slack_labels and len(points) >= 2:
+            # Get slack value for label
+            slack_ps = path.get("slack_ps", 0)
+            slack_label = f"{slack_ps}ps"
+
+            # Position label at midpoint of path (or slightly offset to avoid overlap)
+            mid_idx = len(points) // 2
+            label_x = xs[mid_idx]
+            label_y = ys[mid_idx]
+
+            # Add text annotation with background
+            ax.text(
+                label_x,
+                label_y,
+                slack_label,
+                color="white",
+                fontsize=9,
+                fontweight="bold",
+                ha="center",
+                va="center",
+                bbox=dict(
+                    boxstyle="round,pad=0.4",
+                    facecolor="black",
+                    alpha=0.7,
+                    edgecolor=path_colors[i],
+                    linewidth=1.5,
+                ),
+                zorder=11,
+            )
+
     # Add legend if paths were drawn
     if paths_to_draw:
         ax.legend(
@@ -1249,4 +1309,6 @@ def render_heatmap_with_critical_path_overlay(
         "path_count_limit": path_count,
         "total_paths_available": len(critical_paths),
         "color_by": color_by,
+        "show_endpoints": show_endpoints,
+        "show_slack_labels": show_slack_labels,
     }

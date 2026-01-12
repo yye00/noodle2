@@ -4778,7 +4778,7 @@
       "Step 6: Identify top 3 most effective ECO classes",
       "Step 7: Identify bottom 3 least effective or harmful ECOs",
       "Step 8: Perform parameter sensitivity analysis for tunable ECOs",
-      "Step 9: Generate effectiveness heatmap (ECO type \u00d7 base case)",
+      "Step 9: Generate effectiveness heatmap (ECO type × base case)",
       "Step 10: Identify which ECOs work best for which problem types",
       "Step 11: Export ECO priors for future Study initialization",
       "Step 12: Generate ECO recommendation report for similar designs"
@@ -6918,7 +6918,7 @@
       "Step 2: Generate stage_progression.png",
       "Step 3: Verify each stage is shown with trial count and survivors",
       "Step 4: Verify WNS and hot_ratio deltas are shown per stage",
-      "Step 5: Verify visual flow shows progression S0 \u2192 S1 \u2192 S2",
+      "Step 5: Verify visual flow shows progression S0 → S1 → S2",
       "Step 6: Verify final winner is highlighted"
     ],
     "priority": "high",
@@ -7131,7 +7131,7 @@
       "Step 3: Verify comparison report is generated",
       "Step 4: Verify overall metrics comparison table is present",
       "Step 5: Verify final WNS, TNS, hot_ratio deltas are calculated",
-      "Step 6: Verify delta percentages and direction indicators (\u25b2/\u25bc)"
+      "Step 6: Verify delta percentages and direction indicators (▲/▼)"
     ],
     "priority": "high",
     "passes": false,
@@ -7875,7 +7875,7 @@
     "spec_version_added": 2,
     "category": "functional",
     "depends_on": [],
-    "description": "Execute Nangate45 extreme \u2192 fixed demo with complete artifact generation",
+    "description": "Execute Nangate45 extreme → fixed demo with complete artifact generation",
     "steps": [
       "Step 1: Execute: ./demo_nangate45_extreme.sh",
       "Step 2: Verify demo completes within 30 minutes",
@@ -7887,8 +7887,8 @@
       "Step 8: Verify demo_output/nangate45_extreme_demo/summary.json exists"
     ],
     "priority": "critical",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T00:10:50Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -7906,7 +7906,7 @@
     "spec_version_added": 2,
     "category": "functional",
     "depends_on": [],
-    "description": "Execute ASAP7 extreme \u2192 fixed demo with ASAP7-specific validation",
+    "description": "Execute ASAP7 extreme → fixed demo with ASAP7-specific validation",
     "steps": [
       "Step 1: Execute: ./demo_asap7_extreme.sh",
       "Step 2: Verify demo completes within 60 minutes",
@@ -7937,7 +7937,7 @@
     "spec_version_added": 2,
     "category": "functional",
     "depends_on": [],
-    "description": "Execute Sky130 extreme \u2192 fixed demo with production-realistic validation",
+    "description": "Execute Sky130 extreme → fixed demo with production-realistic validation",
     "steps": [
       "Step 1: Execute: ./demo_sky130_extreme.sh",
       "Step 2: Verify demo completes within 45 minutes",

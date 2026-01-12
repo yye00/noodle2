@@ -1,0 +1,41 @@
+{
+  "diagnosis_type": "initial_extreme_state",
+  "timestamp": "2026-01-11T19:10:38-05:00",
+  "timing_diagnosis": {
+    "wns_ps": -2500,
+    "critical_region": {
+      "llx": 10.0,
+      "lly": 10.0,
+      "urx": 90.0,
+      "ury": 90.0
+    },
+    "problem_nets": ["clk_net", "data_path_0", "data_path_1"],
+    "wire_delay_pct": [0.65, 0.72, 0.68],
+    "slack_histogram": {
+      "-3000_to_-2000": 120,
+      "-2000_to_-1000": 180,
+      "-1000_to_0": 150
+    }
+  },
+  "congestion_diagnosis": {
+    "hot_ratio": 0.35,
+    "overflow_total": 1200,
+    "hotspots": [
+      {"x": 45, "y": 50, "severity": "critical"},
+      {"x": 30, "y": 40, "severity": "high"},
+      {"x": 60, "y": 55, "severity": "high"}
+    ]
+  },
+  "suggested_ecos": [
+    {
+      "eco_type": "insert_buffers",
+      "priority": 1,
+      "reasoning": "High wire delay (>65%) indicates buffer insertion needed"
+    },
+    {
+      "eco_type": "reduce_placement_density",
+      "priority": 2,
+      "reasoning": "hot_ratio 0.35 indicates severe congestion"
+    }
+  ]
+}

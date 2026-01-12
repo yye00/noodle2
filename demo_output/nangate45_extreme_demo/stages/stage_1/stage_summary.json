@@ -1,0 +1,14 @@
+{
+  "stage_id": 1,
+  "stage_name": "placement_refinement",
+  "timestamp": "2026-01-11T19:10:38-05:00",
+  "trials_executed": 10,
+  "survivors": 3,
+  "best_wns_ps": -1200,
+  "best_hot_ratio": 0.18,
+  "eco_applications": {
+    "insert_buffers": 4,
+    "reduce_placement_density": 3,
+    "resize_cells": 3
+  }
+}

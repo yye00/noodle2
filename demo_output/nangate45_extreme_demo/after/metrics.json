@@ -1,0 +1,14 @@
+{
+  "wns_ps": -950,
+  "tns_ps": -42000,
+  "hot_ratio": 0.11,
+  "overflow_total": 180,
+  "num_critical_paths": 85,
+  "timestamp": "2026-01-11T19:10:38-05:00",
+  "improvements": {
+    "wns_improvement_percent": 62.0,
+    "wns_improvement_ps": 1550,
+    "hot_ratio_improvement_percent": 68.6,
+    "hot_ratio_reduction": 0.24
+  }
+}

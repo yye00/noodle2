@@ -322,6 +322,129 @@ def create_asap7_demo_study(
     return study
 
 
+def create_nangate45_extreme_demo_study(
+    snapshot_path: str | None = None,
+    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+) -> StudyConfig:
+    """Create an 'extreme' broken design demo Study for Nangate45.
+
+    This creates a demo Study designed to showcase Noodle 2's ability to
+    fix extremely broken designs with:
+    - Starting WNS ~ -2000ps (very negative slack)
+    - Starting hot_ratio > 0.3 (severe congestion)
+    - Auto-diagnosis to identify bottlenecks
+    - Multi-stage ECO application to systematically fix the design
+    - Complete visualization suite showing before/after comparison
+
+    The demo generates complete artifacts including:
+    - before/ directory with initial metrics and visualizations
+    - after/ directory with final improved metrics
+    - comparison/ directory with differential heatmaps
+    - stage-by-stage progression tracking
+    - Pareto frontier evolution
+
+    Args:
+        snapshot_path: Path to Nangate45 extreme design snapshot.
+                      If None, uses default 'studies/nangate45_extreme'
+        safety_domain: Safety domain for the Study (default: GUARDED)
+
+    Returns:
+        StudyConfig: Extreme demo Study configuration
+
+    Example:
+        >>> demo = create_nangate45_extreme_demo_study()
+        >>> demo.validate()
+        >>> # Execute to demonstrate fixing extremely broken design
+    """
+    if snapshot_path is None:
+        # Default to studies/nangate45_extreme relative to project root
+        snapshot_path = str(Path("studies") / "nangate45_extreme")
+
+    # Stage 0: Aggressive exploration to find any improvements
+    # Start with topology-neutral ECOs which are safest
+    stage_0 = StageConfig(
+        name="aggressive_exploration",
+        execution_mode=ExecutionMode.STA_CONGESTION,  # Need both metrics
+        trial_budget=15,  # More trials needed for extreme case
+        survivor_count=4,  # Keep more survivors initially
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+        ],
+        abort_threshold_wns_ps=-150000,  # -150ns - very permissive
+        visualization_enabled=True,
+        timeout_seconds=600,  # 10 minutes per trial
+    )
+
+    # Stage 1: Refinement with placement-affecting ECOs
+    stage_1 = StageConfig(
+        name="placement_refinement",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=10,
+        survivor_count=3,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+        ],
+        abort_threshold_wns_ps=-200000,  # -200ns
+        visualization_enabled=True,
+        timeout_seconds=900,  # 15 minutes per trial
+    )
+
+    # Stage 2: Final closure with all available ECOs
+    stage_2 = StageConfig(
+        name="aggressive_closure",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=8,
+        survivor_count=2,
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+            ECOClass.ROUTING_AFFECTING,
+        ],
+        abort_threshold_wns_ps=None,  # No abort in final stage
+        visualization_enabled=True,
+        timeout_seconds=1200,  # 20 minutes per trial
+    )
+
+    # Create the complete Study configuration
+    study = StudyConfig(
+        name="nangate45_extreme_demo",
+        safety_domain=safety_domain,
+        base_case_name="nangate45_extreme",
+        pdk="Nangate45",
+        stages=[stage_0, stage_1, stage_2],
+        snapshot_path=snapshot_path,
+        metadata={
+            "purpose": "Demonstrate fixing extremely broken Nangate45 design",
+            "design": "AES or similar complex design with severe timing/congestion issues",
+            "expected_behavior": "Improve WNS by >50%, reduce hot_ratio from >0.3 to <0.12",
+            "version": "1.0.0",
+            "initial_state": {
+                "wns_ps_range": [-3000, -2000],
+                "hot_ratio_range": [0.30, 0.45],
+            },
+            "target_improvements": {
+                "wns_improvement_percent": 50,
+                "hot_ratio_target": 0.12,
+            },
+        },
+        author="Noodle2 Team",
+        description=(
+            "Extreme broken design demo Study for Nangate45. Showcases Noodle 2's "
+            "ability to systematically fix a design with severe timing violations "
+            "(WNS ~ -2000ps) and congestion issues (hot_ratio > 0.3) through "
+            "multi-stage ECO application, auto-diagnosis, and comprehensive "
+            "before/after visualizations."
+        ),
+        tags=["demo", "nangate45", "extreme", "before-after", "visualization"],
+    )
+
+    # Validate configuration before returning
+    study.validate()
+
+    return study
+
+
 def save_demo_study_config(output_path: Path) -> None:
     """Save demo Study configuration to JSON file.
 

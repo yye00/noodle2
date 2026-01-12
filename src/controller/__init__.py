@@ -91,6 +91,7 @@ from src.controller.demo_study import (
     create_asap7_demo_study,
     create_minimal_demo_study,
     create_nangate45_demo_study,
+    create_nangate45_extreme_demo_study,
     get_demo_study_expected_metrics,
     save_demo_study_config,
 )
@@ -160,6 +161,7 @@ __all__ = [
     "create_ci_config",
     "create_asap7_demo_study",
     "create_nangate45_demo_study",
+    "create_nangate45_extreme_demo_study",
     "create_minimal_demo_study",
     "get_demo_study_expected_metrics",
     "save_demo_study_config",

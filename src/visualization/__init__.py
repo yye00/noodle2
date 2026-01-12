@@ -17,6 +17,11 @@ from .pareto_plot import (
     plot_pareto_frontier_2d,
     save_pareto_plot,
 )
+from .stage_progression_plot import (
+    generate_stage_progression_visualization,
+    plot_stage_progression,
+    save_stage_progression_plot,
+)
 from .trajectory_plot import (
     generate_hot_ratio_trajectory_chart,
     generate_wns_trajectory_chart,
@@ -42,4 +47,7 @@ __all__ = [
     "save_trajectory_plot",
     "generate_wns_trajectory_chart",
     "generate_hot_ratio_trajectory_chart",
+    "plot_stage_progression",
+    "save_stage_progression_plot",
+    "generate_stage_progression_visualization",
 ]

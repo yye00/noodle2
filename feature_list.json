@@ -8199,10 +8199,11 @@
       "Step 6: Verify all artifacts are from real execution (not mocked)",
       "Step 7: Complete study_summary.json with real data"
     ],
-    "passes": false,
+    "passes": true,
     "depends_on": [
       "F277"
-    ]
+    ],
+    "passed_at": "2026-01-12T05:19:55.981364+00:00"
   },
   {
     "id": "F279",

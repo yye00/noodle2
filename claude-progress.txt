@@ -2586,3 +2586,71 @@ Implemented F219: "Track hotspot resolution in differential congestion heatmaps"
 - Tests written: 27 (13 for F218, 14 for F219)
 - All 41 visualization tests passing
 - Clean commits with comprehensive messages
+
+## Session 372 - F222 Critical Path Overlay (2026-01-11)
+
+### Feature Completed
+
+**Status:** FEATURE COMPLETE - F222 Implemented
+**Achievement:** Critical Path Overlay on Placement Density Heatmap
+**Project Completion:** 216/271 features (79.7%)
+**New Passing Features:** 1 (F222)
+**Test Suite:** All tests passing (17 new tests, 109 related tests verified)
+
+### Implementation Summary
+
+Implemented F222: Generate critical path overlay on placement density heatmap
+
+**Added to src/visualization/heatmap_renderer.py:**
+1. render_heatmap_with_critical_path_overlay() - Overlays critical paths on heatmaps
+   - Accepts csv_path (heatmap data) and critical_paths (list of path dicts)
+   - Configurable path_count parameter (default: 10) to limit overlay
+   - Uses matplotlib to render base heatmap then overlay paths
+   - Paths drawn with distinct red-yellow color scheme (contrasts with viridis)
+   - Each path rendered as line with markers and labeled in legend
+   - Returns comprehensive metadata including paths_drawn count
+   
+2. Visual Design:
+   - Base heatmap uses viridis colormap (blue-green-yellow)
+   - Critical paths use Reds colormap (red-yellow) for high contrast
+   - Paths include markers (dots) and connecting lines
+   - Legend shows path number and slack value for each path
+   - Grid overlay for spatial reference
+
+3. Robust Edge Case Handling:
+   - Empty paths list -> renders heatmap only
+   - Fewer paths than path_count -> draws all available
+   - Paths with < 2 points -> skipped gracefully
+   - Paths missing points key -> skipped gracefully
+   - Output directory creation if needed
+
+**Updated src/visualization/__init__.py:**
+- Added render_heatmap_with_critical_path_overlay to exports
+
+**Created test_f222_critical_path_overlay.py:**
+- 17 comprehensive test cases
+- All 6 verification steps from feature_list.json covered
+
+### Testing Results
+
+**F222 Test Suite:** 17 passed in 3.14s
+
+**Regression Testing:** 109 related visualization tests passed in 4.38s
+
+All tests passing - No regressions introduced
+
+### Next Steps
+
+**Ready for implementation (high priority):**
+- F226: Annotate hotspots on congestion heatmap with IDs and severity
+- F229: Generate Pareto frontier evolution animation across stages
+- F231: Generate WNS improvement trajectory chart across stages
+
+**Project Status:**
+- 216/271 features passing (79.7%)
+- 55 features remaining
+
+### Commits
+
+1. 500dc57 - Implement F222: Generate critical path overlay on placement density heatmap
+

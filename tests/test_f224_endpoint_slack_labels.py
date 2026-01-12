@@ -375,6 +375,7 @@ class TestF224EndpointSlackLabels:
                 path_count=5,
                 show_endpoints=True,
                 show_slack_labels=True,
+                skip_overlay_if_no_timing_issue=False,  # Force overlay for edge case testing
             )
 
             # Should handle gracefully, defaulting to 0ps

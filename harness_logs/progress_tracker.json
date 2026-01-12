@@ -485,6 +485,15 @@
     {
       "session_num": 79,
       "started_at": "2026-01-12T08:07:47.973161",
+      "ended_at": "2026-01-12T08:19:13.209193",
+      "passing_at_start": 280,
+      "passing_at_end": 280,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 80,
+      "started_at": "2026-01-12T08:19:17.216435",
       "ended_at": null,
       "passing_at_start": 280,
       "passing_at_end": null,
@@ -943,7 +952,7 @@
     ]
   },
   "last_passing_count": 280,
-  "sessions_without_progress": 1,
+  "sessions_without_progress": 2,
   "stuck_features": [],
   "created_at": "2026-01-11T22:30:54.902059",
   "reset_at": "2026-01-11T22:30:54.902060"

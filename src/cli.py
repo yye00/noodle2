@@ -311,6 +311,47 @@ Generates:
         help="Output directory (default: studies/<name>)",
     )
 
+    # === REPLAY command ===
+    replay_parser = subparsers.add_parser(
+        "replay",
+        help="Replay a specific trial with verbose output",
+        description="""
+Re-execute a specific trial from a completed Study.
+
+This command:
+  • Loads trial configuration from telemetry
+  • Re-executes the trial with same parameters
+  • Shows verbose execution details
+  • Does not modify Study state
+  • Useful for debugging and verification
+
+The trial is executed in isolation and does not affect
+the original Study's state or telemetry.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    replay_parser.add_argument(
+        "--case",
+        type=str,
+        required=True,
+        help="Case name to replay (e.g., nangate45_1_5)",
+    )
+    replay_parser.add_argument(
+        "--trial",
+        type=int,
+        help="Specific trial index to replay (default: first trial)",
+    )
+    replay_parser.add_argument(
+        "--verbose",
+        action="store_true",
+        help="Show detailed execution steps and logging",
+    )
+    replay_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output directory for replay artifacts (default: replay_output)",
+    )
+
     return parser
 
 
@@ -424,6 +465,50 @@ def cmd_init(args: argparse.Namespace) -> int:
     return 1
 
 
+def cmd_replay(args: argparse.Namespace) -> int:
+    """Execute replay command."""
+    from src.replay.trial_replay import replay_trial, ReplayConfig
+
+    print(f"🔄 Replaying Trial from Case: {args.case}")
+    if args.trial is not None:
+        print(f"   Trial index: {args.trial}")
+    if args.verbose:
+        print(f"   Verbose: enabled")
+    if args.output:
+        print(f"   Output: {args.output}")
+    print()
+
+    # Create replay configuration
+    config = ReplayConfig(
+        case_name=args.case,
+        trial_index=args.trial,
+        verbose=args.verbose,
+        output_dir=args.output or Path("replay_output"),
+    )
+
+    try:
+        result = replay_trial(config)
+        if result.success:
+            print()
+            print("✅ Replay completed successfully")
+            print(f"   Runtime: {result.runtime_seconds:.2f}s")
+            print(f"   Output: {result.output_dir}")
+            return 0
+        else:
+            print()
+            print("❌ Replay failed")
+            print(f"   Return code: {result.return_code}")
+            if result.error_message:
+                print(f"   Error: {result.error_message}")
+            return 1
+    except Exception as e:
+        print(f"❌ Error during replay: {e}")
+        import traceback
+        if args.verbose:
+            traceback.print_exc()
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
@@ -444,6 +529,7 @@ def main() -> int:
         "export": cmd_export,
         "progress": cmd_progress,
         "init": cmd_init,
+        "replay": cmd_replay,
     }
 
     handler = command_map.get(args.command)

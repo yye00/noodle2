@@ -7,6 +7,7 @@ from .heatmap_renderer import (
     parse_heatmap_csv,
     render_all_heatmaps,
     render_heatmap_png,
+    render_heatmap_with_critical_path_overlay,
 )
 from .pareto_plot import (
     generate_pareto_visualization,
@@ -19,6 +20,7 @@ __all__ = [
     "render_heatmap_png",
     "render_all_heatmaps",
     "get_recommended_colormap",
+    "render_heatmap_with_critical_path_overlay",
     "plot_pareto_frontier_2d",
     "save_pareto_plot",
     "generate_pareto_visualization",

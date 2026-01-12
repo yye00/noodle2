@@ -750,3 +750,150 @@ def generate_eco_impact_heatmaps(
             print(f"Warning: Failed to generate diff for {heatmap_name}: {e}")
 
     return results
+
+
+def render_heatmap_with_critical_path_overlay(
+    csv_path: str | Path,
+    output_path: str | Path,
+    critical_paths: list[dict[str, Any]],
+    title: str | None = None,
+    colormap: str = "viridis",
+    dpi: int = 150,
+    figsize: tuple[int, int] = (8, 6),
+    path_count: int = 10,
+) -> dict[str, Any]:
+    """
+    Render heatmap with critical paths overlaid as lines.
+
+    Critical paths are drawn as distinct colored lines on top of the heatmap
+    to show their spatial routing through the design. This helps identify
+    correlation between congestion hotspots and timing-critical paths.
+
+    Args:
+        csv_path: Path to heatmap CSV file (typically placement_density)
+        output_path: Path where PNG should be saved
+        critical_paths: List of critical path dictionaries with 'points' key
+                        Each path should have: {'slack_ps': int, 'startpoint': str,
+                        'endpoint': str, 'points': [(x1, y1), (x2, y2), ...]}
+        title: Optional title for the plot
+        colormap: Matplotlib colormap name for heatmap (default: 'viridis')
+        dpi: Resolution in dots per inch (default: 150)
+        figsize: Figure size in inches (width, height)
+        path_count: Number of paths to overlay (default: 10, uses top N paths)
+
+    Returns:
+        Metadata dictionary with rendering information including path count
+
+    Raises:
+        FileNotFoundError: If CSV file doesn't exist
+        ValueError: If CSV format is invalid or critical_paths is malformed
+
+    Example:
+        >>> critical_paths = [
+        ...     {
+        ...         'slack_ps': -2150,
+        ...         'startpoint': 'input_A',
+        ...         'endpoint': 'reg_data[31]',
+        ...         'points': [(0, 0), (5, 5), (10, 10)]
+        ...     }
+        ... ]
+        >>> render_heatmap_with_critical_path_overlay(
+        ...     'placement_density.csv',
+        ...     'critical_paths.png',
+        ...     critical_paths,
+        ...     path_count=10
+        ... )
+    """
+    csv_path = Path(csv_path)
+    output_path = Path(output_path)
+
+    # Parse CSV
+    data, metadata = parse_heatmap_csv(csv_path)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+
+    # Render base heatmap
+    im = ax.imshow(data, cmap=colormap, interpolation="nearest", aspect="auto")
+
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label("Value", rotation=270, labelpad=20)
+
+    # Limit to top N paths
+    paths_to_draw = critical_paths[:path_count]
+
+    # Overlay critical paths
+    # Use distinct colors that stand out from the heatmap
+    # Red-to-yellow spectrum for visibility on viridis/plasma colormaps
+    path_colors = plt.cm.Reds(np.linspace(0.5, 1.0, len(paths_to_draw)))
+
+    for i, path in enumerate(paths_to_draw):
+        if "points" not in path:
+            continue
+
+        points = path["points"]
+        if len(points) < 2:
+            continue
+
+        # Extract x and y coordinates
+        xs = [p[0] for p in points]
+        ys = [p[1] for p in points]
+
+        # Draw path as line with distinctive styling
+        ax.plot(
+            xs,
+            ys,
+            color=path_colors[i],
+            linewidth=2.0,
+            alpha=0.8,
+            marker="o",
+            markersize=4,
+            label=f"Path {i+1}: {path.get('slack_ps', 0)}ps",
+        )
+
+    # Add legend if paths were drawn
+    if paths_to_draw:
+        ax.legend(
+            loc="upper right",
+            fontsize=8,
+            framealpha=0.9,
+            bbox_to_anchor=(1.0, 1.0),
+        )
+
+    # Set title
+    if title:
+        ax.set_title(title)
+    else:
+        ax.set_title(f"Heatmap with Critical Paths: {csv_path.stem}")
+
+    # Add axis labels
+    ax.set_xlabel("X Bin")
+    ax.set_ylabel("Y Bin")
+
+    # Add grid for clarity
+    ax.grid(True, alpha=0.2, linestyle="--", linewidth=0.5)
+
+    # Tight layout to prevent label cutoff
+    plt.tight_layout()
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save figure
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+    plt.close(fig)
+
+    # Return metadata
+    return {
+        "csv_path": str(csv_path),
+        "png_path": str(output_path),
+        "data_shape": metadata["shape"],
+        "value_range": [metadata["min_value"], metadata["max_value"]],
+        "colormap": colormap,
+        "dpi": dpi,
+        "figsize": figsize,
+        "paths_drawn": len(paths_to_draw),
+        "path_count_limit": path_count,
+        "total_paths_available": len(critical_paths),
+    }

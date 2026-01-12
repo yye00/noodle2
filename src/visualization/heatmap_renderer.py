@@ -530,6 +530,161 @@ def generate_improvement_summary_json(
     return summary
 
 
+def track_hotspot_resolution(
+    baseline_diagnosis: dict[str, Any],
+    comparison_diagnosis: dict[str, Any],
+    diff_metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """
+    Track hotspot resolution between baseline and comparison diagnoses.
+
+    Identifies which hotspots were resolved, which persist, and which are new
+    after applying an ECO. Hotspots are matched by their bounding box locations.
+
+    Args:
+        baseline_diagnosis: Congestion diagnosis dict from before ECO (must have 'hotspots' key)
+        comparison_diagnosis: Congestion diagnosis dict from after ECO (must have 'hotspots' key)
+        diff_metadata: Optional differential heatmap metadata for cross-referencing
+
+    Returns:
+        Dictionary with hotspot resolution tracking:
+        - resolved_hotspots: List of hotspot IDs that no longer appear
+        - persisting_hotspots: List of hotspot IDs that still appear (may have reduced severity)
+        - new_hotspots: List of new hotspot IDs that appeared after ECO
+        - resolution_rate: Percentage of baseline hotspots that were resolved
+        - severity_changes: Dict mapping hotspot ID to severity change (improved/same/worsened)
+    """
+    baseline_hotspots = baseline_diagnosis.get("hotspots", [])
+    comparison_hotspots = comparison_diagnosis.get("hotspots", [])
+
+    # Create mapping of hotspot bounding boxes to IDs for matching
+    def bbox_key(hotspot: dict[str, Any]) -> tuple[int, int, int, int]:
+        """Extract bounding box as hashable key."""
+        bbox = hotspot.get("bbox", {})
+        return (
+            bbox.get("x1", 0),
+            bbox.get("y1", 0),
+            bbox.get("x2", 0),
+            bbox.get("y2", 0),
+        )
+
+    # Build lookup maps
+    baseline_by_bbox = {bbox_key(h): h for h in baseline_hotspots}
+    comparison_by_bbox = {bbox_key(h): h for h in comparison_hotspots}
+
+    # Track hotspot changes
+    resolved_hotspots: list[int] = []
+    persisting_hotspots: list[int] = []
+    new_hotspots: list[int] = []
+    severity_changes: dict[int, str] = {}
+
+    # Define severity ordering for comparison
+    severity_order = {"minor": 1, "moderate": 2, "critical": 3}
+
+    # Check baseline hotspots
+    for bbox, baseline_hs in baseline_by_bbox.items():
+        baseline_id = baseline_hs.get("id", -1)
+
+        if bbox in comparison_by_bbox:
+            # Hotspot persists (may have changed severity)
+            persisting_hotspots.append(baseline_id)
+
+            # Check severity change
+            baseline_sev = baseline_hs.get("severity", "unknown")
+            comparison_sev = comparison_by_bbox[bbox].get("severity", "unknown")
+
+            baseline_level = severity_order.get(baseline_sev, 0)
+            comparison_level = severity_order.get(comparison_sev, 0)
+
+            if comparison_level < baseline_level:
+                severity_changes[baseline_id] = "improved"
+            elif comparison_level > baseline_level:
+                severity_changes[baseline_id] = "worsened"
+            else:
+                severity_changes[baseline_id] = "same"
+        else:
+            # Hotspot resolved
+            resolved_hotspots.append(baseline_id)
+
+    # Check for new hotspots
+    for bbox, comparison_hs in comparison_by_bbox.items():
+        if bbox not in baseline_by_bbox:
+            new_hotspots.append(comparison_hs.get("id", -1))
+
+    # Calculate resolution rate
+    total_baseline = len(baseline_hotspots)
+    resolution_rate = (
+        (len(resolved_hotspots) / total_baseline * 100) if total_baseline > 0 else 0.0
+    )
+
+    return {
+        "resolved_hotspots": resolved_hotspots,
+        "persisting_hotspots": persisting_hotspots,
+        "new_hotspots": new_hotspots,
+        "resolution_rate": resolution_rate,
+        "severity_changes": severity_changes,
+        "baseline_hotspot_count": total_baseline,
+        "comparison_hotspot_count": len(comparison_hotspots),
+        "net_hotspot_reduction": total_baseline - len(comparison_hotspots),
+    }
+
+
+def generate_improvement_summary_with_hotspots(
+    baseline_csv: str | Path,
+    comparison_csv: str | Path,
+    baseline_diagnosis: dict[str, Any],
+    comparison_diagnosis: dict[str, Any],
+    output_path: str | Path,
+) -> dict[str, Any]:
+    """
+    Generate improvement summary with hotspot resolution tracking.
+
+    Extends the basic improvement summary with congestion hotspot tracking,
+    identifying which specific hotspots were resolved by the ECO.
+
+    Args:
+        baseline_csv: Path to baseline heatmap CSV
+        comparison_csv: Path to comparison heatmap CSV
+        baseline_diagnosis: Baseline congestion diagnosis dict
+        comparison_diagnosis: Comparison congestion diagnosis dict
+        output_path: Path where improvement_summary.json should be saved
+
+    Returns:
+        Improvement summary dictionary with hotspot tracking added
+    """
+    import json
+
+    baseline_csv = Path(baseline_csv)
+    comparison_csv = Path(comparison_csv)
+    output_path = Path(output_path)
+
+    # Compute basic improvement summary
+    diff, metadata = compute_heatmap_diff(baseline_csv, comparison_csv)
+    summary = compute_improvement_summary(diff, metadata)
+
+    # Add hotspot resolution tracking
+    hotspot_tracking = track_hotspot_resolution(
+        baseline_diagnosis, comparison_diagnosis, metadata
+    )
+
+    # Merge tracking into summary
+    summary["hotspot_resolution"] = hotspot_tracking
+
+    # Add file paths
+    summary["baseline_csv"] = str(baseline_csv)
+    summary["comparison_csv"] = str(comparison_csv)
+    summary["heatmap_shape"] = list(diff.shape)
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write JSON
+    with open(output_path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    return summary
+
+
 def generate_eco_impact_heatmaps(
     baseline_heatmaps_dir: str | Path,
     comparison_heatmaps_dir: str | Path,

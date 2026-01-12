@@ -4318,3 +4318,97 @@ SESSION 384 UPDATE - F241 Also Completed
 - F244: Comparison visualization
 - F245: Pareto frontier comparison
 
+
+================================================================================
+SESSION 385 UPDATE - F242 Completed
+================================================================================
+
+## Feature Completed
+
+**F242 [high]**: Study comparison includes ECO effectiveness comparison
+- Status: ✅ PASSING (15/15 tests)
+- Tests: tests/test_f242_eco_effectiveness_comparison.py
+- Extends F241 study comparison with ECO effectiveness tracking
+
+## Session Summary
+
+**Features Completed:** 1 (F242)
+**Tests Added:** 15
+**Overall Progress:** 235/280 (83.9%)
+**Remaining:** 45 features
+
+### Implementation Details
+
+**ECO Effectiveness Comparison:**
+- Loads ECO leaderboard data from artifacts directory
+- Compares success rates per ECO between two study versions
+- Calculates deltas showing improvement/regression
+- Direction indicators: ▲ (improved), ▼ (regressed), = (stable)
+- Backward compatible with studies lacking ECO data
+
+**Data Structures:**
+- ECOEffectivenessData: Single ECO metrics from one study
+- ECOEffectivenessComparison: ECO comparison between two studies
+- Extended StudyComparisonReport with eco_effectiveness_comparisons field
+
+**Integration:**
+- load_eco_effectiveness_data(): Load from eco_leaderboard.json
+- compare_studies(): Extended with artifacts_root parameter
+- format_comparison_report(): Added ECO effectiveness table
+- write_comparison_report(): Includes ECO data in JSON output
+
+**Testing Coverage:**
+- Step 1: Study comparison with ECO data (2 tests)
+- Step 2: ECO effectiveness table in reports (2 tests)
+- Step 3: Success rate comparison logic (4 tests)
+- Step 4: Delta and direction indicators (4 tests)
+- Step 5: JSON output and data structures (2 tests)
+- Integration: Complete workflow test (1 test)
+
+## Quality Verification
+
+- ✅ All 15 F242 tests passing
+- ✅ All 25 F241 tests still passing (no regressions)
+- ✅ Backward compatible with studies without ECO data
+- ✅ Proper error handling for missing leaderboard files
+
+## Technical Notes
+
+**ECO Success Rate Delta:**
+- Delta = study2_success_rate - study1_success_rate
+- Improvement threshold: > 1% (0.01)
+- Regression threshold: < -1% (-0.01)
+- Stable: within ±1%
+
+**Report Format:**
+```
+ECO EFFECTIVENESS COMPARISON
+--------------------------------------------------------------------------------
+ECO Name                       V1 Rate      V2 Rate      Delta        Dir
+--------------------------------------------------------------------------------
+buffer_insertion               70.0%        90.0%        +20.0%         ▲
+gate_sizing                    80.0%        50.0%        -30.0%         ▼
+```
+
+## Next Priority Features
+
+High-priority features ready for implementation:
+1. **F244 [high]**: Study comparison generates visualization comparison charts
+2. **F246 [high]**: Support diverse_top_n survivor selection
+3. **F249 [high]**: Support human approval gate stage
+4. **F252 [high]**: Support compound ECOs
+5. **F256 [high]**: ECO preconditions with diagnosis integration
+
+## Dependencies Unblocked
+
+F242 completion unblocks:
+- F243: Statistical significance testing in comparisons (depends on F242)
+- F244: Comparison visualization charts (depends on F242)
+
+## Notes for Next Session
+
+- F242 successfully implemented with comprehensive ECO comparison
+- Study comparison now tracks both metrics AND ECO effectiveness
+- Ready to move on to F244 (visualization) or other high-priority features
+- All comparison infrastructure in place for advanced analysis
+

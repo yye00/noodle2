@@ -5970,3 +5970,49 @@ values without consulting separate timing reports. The star markers are highly
 visible with black edges, and labels use contrasting backgrounds for readability.
 
 All tests passing. Codebase in excellent, clean state. Progress: 91.4% complete.
+
+=== SESSION 397 CONTINUED: F227 Completed ===
+
+**Second Feature Completed:** F227
+
+**F227: Hotspot annotations include cause labels**
+- Extended F226 hotspot annotations to include cause information
+- Helps diagnose root cause of congestion hotspots
+  
+- Implementation:
+  * Added cause extraction: `cause = hotspot.get("cause", None)`
+  * Dynamic annotation text:
+    - With cause: "[HS-{id}]\n{severity}\n{cause}"
+    - Without cause: "[HS-{id}]\n{severity}" (F226 format)
+  * Supported causes: pins, density, macro_proximity
+  
+- Quality features:
+  * Full backward compatibility with F226
+  * Handles missing cause field gracefully
+  * Handles empty cause strings (treated as no cause)
+  * Works with realistic diagnosis output structures
+  * Extra diagnostic fields ignored (only id, bbox, severity, cause extracted)
+  
+- Test coverage: 14 tests
+  * 5 feature step verification tests
+  * 9 edge case tests (no cause, mixed, empty, many hotspots, F226 compat)
+  * All F226 tests still pass (12/12)
+  
+- Code changes:
+  * heatmap_renderer.py: +14 lines (cause labeling logic)
+  * test_f227_hotspot_cause_labels.py: +435 lines (comprehensive tests)
+
+**Session Summary - 2 Features Completed:**
+1. F224: Critical path overlay shows endpoints and slack labels (16 tests)
+2. F227: Hotspot annotations include cause labels (14 tests)
+
+**Session Statistics:**
+- 2 features completed (F224, F227)
+- 30 tests written (all passing)
+- 82 lines implementation (68 + 14)
+- 952 lines tests (517 + 435)
+- 2 clean git commits
+- 100% test pass rate maintained
+- Full backward compatibility verified (F222, F223, F226 all still pass)
+
+**Progress: 257/280 (91.8%)**

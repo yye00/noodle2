@@ -1,0 +1,33 @@
+{
+  "features": {
+    "F272": {
+      "feature_id": "F272",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-11T22:54:17.889122",
+      "updated_at": "2026-01-11T22:54:17.889126"
+    },
+    "F273": {
+      "feature_id": "F273",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-11T22:54:17.919254",
+      "updated_at": "2026-01-11T22:54:17.919261"
+    }
+  },
+  "updated_at": "2026-01-11T22:54:17.919289"
+}

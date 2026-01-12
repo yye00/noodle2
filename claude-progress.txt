@@ -2868,3 +2868,112 @@ High-priority features ready for implementation (dependencies satisfied):
 ✓ Code quality verified (mypy, ruff)
 ✓ Changes committed with proper documentation
 ✓ Project at 80.4% completion (218/271 features)
+
+## Session 375 - WNS Trajectory Visualization (2026-01-12)
+
+### Session Summary
+
+**Status:** ✅ FEATURE COMPLETE - F231 Implemented
+**Achievement:** WNS improvement trajectory chart across multi-stage studies
+**Project Completion:** 219/271 features (80.8%)
+**New Passing Features:** 1 (F231)
+**Test Suite:** All F231 tests passing (18/18), no regressions
+
+### Implementation Summary
+
+Implemented F231: "Generate WNS improvement trajectory chart across stages"
+
+**Created:**
+1. **trajectory_plot.py Module** (+426 lines, new file)
+   - plot_wns_trajectory() - Generate WNS trajectory with best/median/worst bands
+   - plot_hot_ratio_trajectory() - Generate hot_ratio trajectory (ready for F232)
+   - save_trajectory_plot() - Save trajectory plots to PNG
+   - generate_wns_trajectory_chart() - High-level API for F231
+   - generate_hot_ratio_trajectory_chart() - High-level API for F232
+   - Supports custom titles, figsize, DPI settings
+   - Automatic trend line calculation with linear regression
+   - Best/median/worst visualization with fill bands
+
+2. **test_f231_wns_trajectory.py** (+506 lines, new file)
+   - 18 comprehensive tests covering all F231 verification steps
+   - Tests multi-stage study WNS tracking and improvement
+   - Validates chart generation with correct data bands
+   - Tests edge cases: empty data, single stage, many stages
+   - Custom settings: title, figsize, DPI, filename
+   - All tests passing
+
+### Key Features
+
+**WNS Trajectory Visualization:**
+- Tracks WNS values across multiple stages (S0 -> S1 -> ... -> SN)
+- Displays best/median/worst bands as filled area
+- Plots median line as primary trend indicator
+- Shows best (green dashed) and worst (red dashed) bounds
+- Generates trend line using linear regression
+- Adds zero line reference for timing closure
+- Stage names on x-axis with rotation for readability
+
+**Chart Elements:**
+- Best/worst range: filled blue area
+- Median WNS: solid blue line with circle markers
+- Best WNS: green dashed line with up-triangle markers
+- Worst WNS: red dashed line with down-triangle markers
+- Trend: orange dotted line showing improvement direction
+- Grid, legend, and proper axis labels
+
+### Verification Results
+
+All 6 F231 verification steps passing:
+- ✅ Step 1: Run multi-stage study
+- ✅ Step 2: Track WNS metric per stage
+- ✅ Step 3: Generate improvement_trajectory.png
+- ✅ Step 4: Verify chart shows WNS progression from S0 to final
+- ✅ Step 5: Verify best/median/worst bands are shown
+- ✅ Step 6: Verify trend line shows improvement
+
+### Test Results
+
+All 18 F231 tests passing in 0.86s
+All 32 visualization tests passing (F229 + F231, no regressions)
+
+### Files Modified
+
+- src/visualization/trajectory_plot.py (+426 lines, new file)
+- src/visualization/__init__.py (added 5 trajectory exports)
+- tests/test_f231_wns_trajectory.py (+506 lines, new file)
+- pyproject.toml (added TRY003 ignore for trajectory_plot.py)
+- feature_list.json (F231 marked passing)
+
+### Code Quality
+
+- ✅ Type hints validated with mypy (no errors)
+- ✅ Code style validated with ruff (all checks passed)
+- ✅ No regressions in existing tests
+- ✅ Comprehensive test coverage (18 tests)
+- ✅ Clean commit with descriptive message
+
+### Bonus Implementation
+
+Also implemented hot_ratio trajectory visualization (ready for F232):
+- plot_hot_ratio_trajectory() function complete
+- generate_hot_ratio_trajectory_chart() API ready
+- Reduces F232 implementation time significantly
+
+### Next Steps
+
+High-priority features ready for implementation (dependencies satisfied):
+- F232: Generate hot_ratio improvement trajectory chart (mostly done!)
+- F234: Generate stage progression visualization summary
+- F236: Replay specific trial with verbose output
+- F239: Generate detailed debug report for specific trial
+- F241: Compare two studies and generate comparison report
+
+### Session Outcome
+
+✓ F231 fully implemented and tested
+✓ All verification steps passing
+✓ No regressions in existing tests
+✓ Code quality verified (mypy, ruff)
+✓ Changes committed with proper documentation
+✓ Bonus: F232 implementation 90% complete
+✓ Project at 80.8% completion (219/271 features)

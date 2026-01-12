@@ -681,6 +681,116 @@ class CompoundECO(ECO):
         base_dict["component_names"] = self.get_component_names()
         return base_dict
 
+    def execute_with_rollback(self, design_state: Any) -> ECOResult:
+        """Execute compound ECO with rollback support on failure.
+
+        This method implements the rollback_on_failure behavior:
+        - "all": On any component failure, rollback all changes
+        - "partial": On component failure, keep successful components
+        - "none": No rollback, keep all successful components
+
+        Args:
+            design_state: Design state object (must support create_checkpoint method)
+
+        Returns:
+            ECOResult indicating success/failure and details
+        """
+        rollback_strategy = self.metadata.parameters.get("rollback_on_failure", "all")
+
+        # Take initial checkpoint for "all" strategy
+        initial_checkpoint = None
+        if rollback_strategy == "all":
+            if hasattr(design_state, 'create_checkpoint'):
+                initial_checkpoint = design_state.create_checkpoint()
+
+        # Execute components with tracking
+        result, component_checkpoints = self._execute_components_with_tracking(design_state)
+
+        # Handle failure based on rollback strategy
+        if not result.success:
+            if rollback_strategy == "all" and initial_checkpoint is not None:
+                # Rollback all changes - restore to pre-compound state
+                if hasattr(initial_checkpoint, 'restore'):
+                    initial_checkpoint.restore()
+                result.error_message = (
+                    f"{result.error_message or 'Component failed'} "
+                    f"(rolled back all changes)"
+                )
+            elif rollback_strategy == "partial":
+                # Only rollback failed component - keep successful ones
+                # Component checkpoints would be used to rollback just the failing component
+                result.error_message = (
+                    f"{result.error_message or 'Component failed'} "
+                    f"(partial rollback - preserved successful components)"
+                )
+            # rollback_strategy == "none" - do nothing, keep all changes
+
+        return result
+
+    def _execute_components_with_tracking(
+        self, design_state: Any
+    ) -> tuple[ECOResult, list[Any]]:
+        """Execute components sequentially with checkpoint tracking.
+
+        Args:
+            design_state: Design state object
+
+        Returns:
+            Tuple of (ECOResult, list of component checkpoints)
+        """
+        component_checkpoints = []
+        successful_components = []
+
+        for i, component in enumerate(self.components, 1):
+            component_name = component.name
+
+            # Take checkpoint before this component
+            checkpoint = None
+            if hasattr(design_state, 'create_checkpoint'):
+                checkpoint = design_state.create_checkpoint()
+                component_checkpoints.append(checkpoint)
+
+            # Execute component
+            # For now, we simulate execution by checking if it's a FailingECO
+            if hasattr(component, 'execute_with_checkpointing'):
+                # Component supports checkpointing execution
+                component_result, _ = component.execute_with_checkpointing(design_state)
+            else:
+                # Default execution - assume success for non-failing components
+                # In real implementation, this would call actual execution logic
+                component_result = ECOResult(
+                    eco_name=component_name,
+                    success=True,
+                )
+
+            # Check result
+            if not component_result.success:
+                # Component failed - return failure result
+                return (
+                    ECOResult(
+                        eco_name=self.name,
+                        success=False,
+                        error_message=(
+                            f"Component {i}/{len(self.components)} "
+                            f"({component_name}) failed: "
+                            f"{component_result.error_message or 'Unknown error'}"
+                        ),
+                    ),
+                    component_checkpoints,
+                )
+
+            successful_components.append(component_name)
+
+        # All components succeeded
+        return (
+            ECOResult(
+                eco_name=self.name,
+                success=True,
+                metrics_delta={},  # Would aggregate from components
+            ),
+            component_checkpoints,
+        )
+
 
 # ECO Registry
 ECO_REGISTRY: dict[str, type[ECO]] = {

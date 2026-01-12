@@ -3222,3 +3222,128 @@ All 6 F237 verification steps passing:
 - F239: Generate detailed debug report for specific trial
 - F241: Compare two studies and generate comparison report
 - 48 features remaining
+
+## Session 377 - F239: Debug Report Generation (2026-01-12)
+
+### Session Summary
+
+**Status:** ✅ FEATURE COMPLETE - F239 Implemented
+**Achievement:** Comprehensive debug report generation for trial analysis
+**Project Completion:** 224/271 features (82.7%)
+**New Passing Features:** 1 (F239)
+**Test Suite:** All F239 tests passing (14/14)
+
+### Implementation Summary
+
+Implemented F239: "Generate detailed debug report for specific trial"
+
+**Created:**
+1. **debug_report.py** - Comprehensive debug report generator
+   - `DebugReportConfig` and `DebugReportResult` dataclasses
+   - `generate_debug_report()` main function
+   - Generates 9 different report artifacts
+   - Full execution trace with step-by-step logging
+   - TCL command log with exact commands sent to OpenROAD
+   - OpenROAD stdout/stderr capture
+   - Before/after metrics comparison
+   - Automated diagnosis at execution
+   - Detailed ECO parameter documentation
+   - Full heatmap visualization set
+
+2. **CLI Integration** - Added 'noodle2 debug' command
+   - `--case CASE` (required) - Case name to debug
+   - `--trial TRIAL` (optional) - Specific trial index
+   - `--output OUTPUT` (optional) - Custom output directory
+   - `--no-heatmaps` (optional) - Skip heatmap generation
+
+3. **test_debug_report.py** - Comprehensive test suite
+   - 14 tests covering all F239 verification steps
+   - Tests for all 9 report components
+   - CLI integration tests
+   - Error handling tests
+   - All tests passing
+
+### Key Features
+
+**Debug Report Components:**
+1. execution_trace.json - Step-by-step execution log with 6 stages
+2. tcl_commands.log - Exact TCL commands sent to OpenROAD
+3. openroad_stdout.log - Captured stdout from OpenROAD
+4. openroad_stderr.log - Captured stderr (warnings/errors)
+5. metrics_before.json - Metrics before ECO application
+6. metrics_after.json - Metrics after ECO application
+7. diagnosis_at_execution.json - Automated diagnosis with recommendations
+8. eco_parameters_used.json - Detailed ECO parameters with metadata
+9. all_heatmaps/ - Full visualization set (5 heatmap types)
+
+**Verification Steps Completed:**
+- ✅ Step 1: Execute noodle2 debug command
+- ✅ Step 2: Verify debug_report/ directory created
+- ✅ Step 3: Verify execution_trace.json with step-by-step log
+- ✅ Step 4: Verify tcl_commands.log with exact TCL
+- ✅ Step 5: Verify openroad_stdout.log and stderr.log captured
+- ✅ Step 6: Verify metrics_before.json and metrics_after.json present
+- ✅ Step 7: Verify diagnosis_at_execution.json included
+- ✅ Step 8: Verify eco_parameters_used.json is detailed
+- ✅ Step 9: Verify all_heatmaps/ subdirectory with full visualization set
+
+### Integration with Existing System
+
+The debug report generator integrates with:
+- Trial replay infrastructure (reuses telemetry loading)
+- CLI command system (new 'debug' command)
+- Telemetry data structure (reads from telemetry/)
+- Diagnosis system (generates diagnosis output)
+- Visualization system (heatmap metadata)
+
+### Testing
+
+**Test Coverage:**
+- 14 tests total, all passing
+- Tests execution for all 9 report steps
+- CLI argument parsing and help text
+- Error handling for missing cases
+- Report regeneration (overwrite handling)
+
+**Test Execution:**
+```bash
+uv run pytest tests/test_debug_report.py -v
+# 14 passed in 0.24s
+
+uv run pytest tests/test_f236_trial_replay.py tests/test_f237_replay_with_params.py tests/test_debug_report.py -v
+# 46 passed in 2.42s (no regressions)
+```
+
+### Files Changed
+
+**New Files:**
+- src/replay/debug_report.py (541 lines)
+- tests/test_debug_report.py (512 lines)
+
+**Modified Files:**
+- src/cli.py - Added 'debug' command and handler
+- src/replay/__init__.py - Exported debug report functions
+- feature_list.json - Marked F239 as passing
+
+### Next Steps
+
+**Remaining High-Priority Features:**
+1. F241: Compare two studies and generate comparison report
+2. F246: Support diverse_top_n survivor selection with eco_path_distance metric
+3. F249: Support human approval gate stage between execution stages
+4. F252: Support compound ECOs with sequential component application
+
+**Project Status:**
+- 224 features passing (82.7%)
+- 47 features remaining
+- 0 features need reverification
+- Strong foundation for debugging and analysis workflows
+
+### Notes
+
+- Debug report generation is fully functional and tested
+- All report components are generated correctly
+- CLI integration is clean and follows existing patterns
+- No regressions in existing replay functionality
+- Ready for production use
+

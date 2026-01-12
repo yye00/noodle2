@@ -6344,3 +6344,58 @@ Stages Completed          5               4               -1                  â–
 1bc7c90 - Implement F245: Study comparison quantifies total trials and runtime efficiency
 
 ================================================================================
+
+================================================================================
+SESSION 401 - F247 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F247 - Diversity-aware selection supports elitism (always keep best)
+
+**Implementation Summary:**
+The elitism functionality was already implemented in the codebase (in src/controller/ranking.py).
+This session added comprehensive tests to verify the feature works correctly across all scenarios.
+
+**Existing Implementation (src/controller/ranking.py):**
+- DiversityConfig dataclass has always_keep_best bool field (default True)
+- rank_diverse_top_n() function checks this flag (lines 499-501)
+- When enabled, best trial is always selected first
+- Remaining survivors are then chosen with diversity constraints
+- Works even when diversity is disabled
+
+**Test Coverage (tests/test_f247_elitism.py - 13 tests):**
+
+Step 1: Enable elitism configuration
+- test_create_diversity_config_with_elitism
+- test_elitism_enabled_by_default
+- test_can_disable_elitism
+
+Steps 2 and 3: Best performer always selected
+- test_best_trial_always_in_survivors_even_if_not_diverse
+- test_best_trial_selected_first
+
+Step 4: Remaining survivors chosen for diversity
+- test_remaining_survivors_maintain_diversity
+- test_diversity_constraint_applied_to_non_best_trials
+
+Step 5: Elitism can be logged/serialized
+- test_get_eco_sequence_from_trial_metadata
+- test_elitism_config_can_be_serialized
+
+Edge cases:
+- test_always_keep_best_honored_even_with_diversity_disabled
+- test_best_not_guaranteed_when_elitism_disabled
+- test_single_survivor_with_elitism
+- test_all_survivors_with_elitism
+
+**Current Status:**
+- Features passing: 264/280 (94.3%)
+- Remaining features: 16
+- Two features completed this session (F245, F247)
+
+**Commits:**
+1a664a9 - Implement F247: Diversity-aware selection supports elitism
+1bc7c90 - Implement F245: Study comparison quantifies efficiency
+
+================================================================================

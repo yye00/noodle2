@@ -1048,6 +1048,7 @@ def render_heatmap_with_critical_path_overlay(
     dpi: int = 150,
     figsize: tuple[int, int] = (8, 6),
     path_count: int = 10,
+    color_by: str = "slack",
 ) -> dict[str, Any]:
     """
     Render heatmap with critical paths overlaid as lines.
@@ -1061,12 +1062,15 @@ def render_heatmap_with_critical_path_overlay(
         output_path: Path where PNG should be saved
         critical_paths: List of critical path dictionaries with 'points' key
                         Each path should have: {'slack_ps': int, 'startpoint': str,
-                        'endpoint': str, 'points': [(x1, y1), (x2, y2), ...]}
+                        'endpoint': str, 'points': [(x1, y1), (x2, y2), ...],
+                        'wire_delay_pct': float (optional), 'cell_delay_pct': float (optional)}
         title: Optional title for the plot
         colormap: Matplotlib colormap name for heatmap (default: 'viridis')
         dpi: Resolution in dots per inch (default: 150)
         figsize: Figure size in inches (width, height)
         path_count: Number of paths to overlay (default: 10, uses top N paths)
+        color_by: Color mode for paths: 'slack' (red=worst, yellow=moderate),
+                  'wire_delay' (by wire delay percentage), or 'cell_delay' (by cell delay percentage)
 
     Returns:
         Metadata dictionary with rendering information including path count
@@ -1110,10 +1114,61 @@ def render_heatmap_with_critical_path_overlay(
     # Limit to top N paths
     paths_to_draw = critical_paths[:path_count]
 
-    # Overlay critical paths
-    # Use distinct colors that stand out from the heatmap
-    # Red-to-yellow spectrum for visibility on viridis/plasma colormaps
-    path_colors = plt.cm.Reds(np.linspace(0.5, 1.0, len(paths_to_draw)))
+    # Validate color_by parameter
+    valid_color_modes = ["slack", "wire_delay", "cell_delay"]
+    if color_by not in valid_color_modes:
+        raise ValueError(
+            f"Invalid color_by '{color_by}'. Must be one of: {valid_color_modes}"
+        )
+
+    # Determine colors based on color_by mode
+    if color_by == "slack":
+        # Color by slack: red=worst (most negative), yellow=moderate
+        # Extract slack values
+        slack_values = [path.get("slack_ps", 0) for path in paths_to_draw]
+        if slack_values:
+            min_slack = min(slack_values)
+            max_slack = max(slack_values)
+            slack_range = max_slack - min_slack if max_slack != min_slack else 1.0
+
+            # Normalize to 0-1, where 0=worst (most negative), 1=best
+            normalized = [
+                (slack - min_slack) / slack_range for slack in slack_values
+            ]
+            # Use RdYlGn_r (reversed Red-Yellow-Green) for red=worst, yellow/green=better
+            path_colors = plt.cm.RdYlGn(normalized)
+        else:
+            path_colors = plt.cm.Reds(np.linspace(0.5, 1.0, len(paths_to_draw)))
+
+    elif color_by == "wire_delay":
+        # Color by wire delay percentage
+        wire_delays = [path.get("wire_delay_pct", 50.0) for path in paths_to_draw]
+        if wire_delays:
+            min_delay = min(wire_delays)
+            max_delay = max(wire_delays)
+            delay_range = max_delay - min_delay if max_delay != min_delay else 1.0
+
+            # Normalize to 0-1
+            normalized = [(delay - min_delay) / delay_range for delay in wire_delays]
+            # Use plasma colormap for wire delay
+            path_colors = plt.cm.plasma(normalized)
+        else:
+            path_colors = plt.cm.Reds(np.linspace(0.5, 1.0, len(paths_to_draw)))
+
+    elif color_by == "cell_delay":
+        # Color by cell delay percentage
+        cell_delays = [path.get("cell_delay_pct", 50.0) for path in paths_to_draw]
+        if cell_delays:
+            min_delay = min(cell_delays)
+            max_delay = max(cell_delays)
+            delay_range = max_delay - min_delay if max_delay != min_delay else 1.0
+
+            # Normalize to 0-1
+            normalized = [(delay - min_delay) / delay_range for delay in cell_delays]
+            # Use viridis colormap for cell delay
+            path_colors = plt.cm.viridis(normalized)
+        else:
+            path_colors = plt.cm.Reds(np.linspace(0.5, 1.0, len(paths_to_draw)))
 
     for i, path in enumerate(paths_to_draw):
         if "points" not in path:
@@ -1127,6 +1182,16 @@ def render_heatmap_with_critical_path_overlay(
         xs = [p[0] for p in points]
         ys = [p[1] for p in points]
 
+        # Create label based on color_by mode
+        if color_by == "slack":
+            label_text = f"Path {i+1}: {path.get('slack_ps', 0)}ps"
+        elif color_by == "wire_delay":
+            label_text = f"Path {i+1}: {path.get('wire_delay_pct', 0):.1f}% wire"
+        elif color_by == "cell_delay":
+            label_text = f"Path {i+1}: {path.get('cell_delay_pct', 0):.1f}% cell"
+        else:
+            label_text = f"Path {i+1}"
+
         # Draw path as line with distinctive styling
         ax.plot(
             xs,
@@ -1136,7 +1201,7 @@ def render_heatmap_with_critical_path_overlay(
             alpha=0.8,
             marker="o",
             markersize=4,
-            label=f"Path {i+1}: {path.get('slack_ps', 0)}ps",
+            label=label_text,
         )
 
     # Add legend if paths were drawn
@@ -1183,4 +1248,5 @@ def render_heatmap_with_critical_path_overlay(
         "paths_drawn": len(paths_to_draw),
         "path_count_limit": path_count,
         "total_paths_available": len(critical_paths),
+        "color_by": color_by,
     }

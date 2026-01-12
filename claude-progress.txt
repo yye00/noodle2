@@ -6987,3 +6987,76 @@ Key Behaviors:
 4. F235: Publication-quality stage progression charts
 
 Project is in excellent shape for final push to 100% completion!
+
+========================================
+SESSION 409 - January 12, 2026
+========================================
+
+**Status: 277/280 tests passing (98.9%)**
+
+**Features Completed:**
+- F265: Warm-start priors inspection CLI (15 tests)
+
+**Implementation Details:**
+
+F265: Warm-start Priors Can Be Inspected Before Study Execution
+- Added 'noodle2 show-priors' command to CLI
+- Loads and displays ECO priors from prior repository JSON files
+- Shows comprehensive information:
+  * Source study provenance (study ID, export timestamp, snapshot hash)
+  * ECO effectiveness data for each ECO
+  * Total applications, successful/failed counts, success rates
+  * WNS improvement statistics (average, best, worst)
+  * Prior classifications (TRUSTED, MIXED, etc.)
+- Supports two output formats:
+  * Text format: Human-readable with sections and formatting
+  * JSON format: Machine-readable structured data
+- ECO filtering: --eco flag to show details for specific ECO only
+- Robust error handling:
+  * Nonexistent files
+  * Invalid JSON format
+  * Non-JSON files
+  * Invalid ECO names (with helpful "available ECOs" message)
+- Comprehensive help documentation
+
+Test Coverage:
+- All 6 feature steps verified
+- JSON format output validated
+- ECO-specific filtering tested
+- Error handling for all failure modes
+- Help documentation verified
+- End-to-end workflow validated
+- 15 tests total, all passing
+
+Key Implementation Points:
+- Command integrated into main CLI with argument parser
+- Uses existing PriorRepository infrastructure
+- Clean separation: header only printed for text format (not JSON)
+- Success rate calculation for confidence assessment
+- Formatted output for operator decision-making
+- Lists available ECOs when invalid ECO requested
+
+**Current Status:**
+- Features passing: 277/280 (98.9%)
+- Features remaining: 3 (all low priority)
+  * F225: Critical path overlay only when timing issue exists
+  * F228: Hotspot bounding boxes rendered on heatmap
+  * F235: Stage progression chart publication-quality
+
+**Test Statistics:**
+- F265: 15 new tests
+- All prior-related tests passing (no regressions)
+- CLI tests all passing
+
+**Next Session Priorities:**
+1. F225: Conditional critical path overlay generation
+2. F228: Hotspot bounding box rendering on heatmaps
+3. F235: Publication-quality stage progression charts
+
+**Notes:**
+- F265 enables operators to review ECO priors before committing to study
+- Provides transparency into warm-start data sources
+- Helps operators make informed decisions about prior weighting
+- Clean integration with existing prior sharing infrastructure
+- Project is 98.9% complete, approaching final milestone
+

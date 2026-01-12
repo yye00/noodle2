@@ -1060,6 +1060,7 @@ def render_heatmap_with_critical_path_overlay(
     color_by: str = "slack",
     show_endpoints: bool = False,
     show_slack_labels: bool = False,
+    skip_overlay_if_no_timing_issue: bool = True,
 ) -> dict[str, Any]:
     """
     Render heatmap with critical paths overlaid as lines.
@@ -1084,9 +1085,13 @@ def render_heatmap_with_critical_path_overlay(
                   'wire_delay' (by wire delay percentage), or 'cell_delay' (by cell delay percentage)
         show_endpoints: If True, mark path endpoints with visible symbols (stars)
         show_slack_labels: If True, display slack values labeled on paths
+        skip_overlay_if_no_timing_issue: If True (default), skip overlay rendering when no
+                                         timing violations exist (all slack values >= 0).
+                                         Saves computational resources when timing is clean.
 
     Returns:
-        Metadata dictionary with rendering information including path count
+        Metadata dictionary with rendering information including path count.
+        If overlay was skipped, includes 'overlay_skipped': True and 'skip_reason'.
 
     Raises:
         FileNotFoundError: If CSV file doesn't exist
@@ -1113,6 +1118,66 @@ def render_heatmap_with_critical_path_overlay(
 
     # Parse CSV
     data, metadata = parse_heatmap_csv(csv_path)
+
+    # Check if overlay should be skipped due to no timing violations
+    has_timing_violation = False
+    if skip_overlay_if_no_timing_issue and critical_paths:
+        # Check if any path has negative slack (timing violation)
+        slack_values = [p.get("slack_ps", 0) for p in critical_paths]
+        has_timing_violation = any(slack < 0 for slack in slack_values)
+
+        if not has_timing_violation:
+            # No timing violations - skip overlay and return metadata
+            # Still create a basic heatmap without overlay
+            fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+            im = ax.imshow(data, cmap=colormap, interpolation="nearest", aspect="auto")
+            cbar = plt.colorbar(im, ax=ax)
+            cbar.set_label("Value", rotation=270, labelpad=20)
+
+            # Add note that overlay was skipped
+            note_text = "No timing violations (WNS ≥ 0)\nCritical path overlay skipped"
+            ax.text(
+                0.5,
+                0.95,
+                note_text,
+                transform=ax.transAxes,
+                fontsize=10,
+                verticalalignment="top",
+                horizontalalignment="center",
+                bbox=dict(boxstyle="round", facecolor="lightgreen", alpha=0.8),
+            )
+
+            if title:
+                ax.set_title(title)
+            else:
+                ax.set_title(f"Heatmap: {csv_path.stem} (No Timing Issues)")
+
+            ax.set_xlabel("X Bin")
+            ax.set_ylabel("Y Bin")
+            ax.grid(True, alpha=0.2, linestyle="--", linewidth=0.5)
+            plt.tight_layout()
+
+            # Save figure
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            plt.savefig(output_path, dpi=dpi, bbox_inches="tight")
+            plt.close(fig)
+
+            # Return metadata indicating overlay was skipped
+            return {
+                "csv_path": str(csv_path),
+                "png_path": str(output_path),
+                "data_shape": metadata["shape"],
+                "value_range": [metadata["min_value"], metadata["max_value"]],
+                "colormap": colormap,
+                "dpi": dpi,
+                "figsize": figsize,
+                "overlay_skipped": True,
+                "skip_reason": "no_timing_violations",
+                "best_slack_ps": max(slack_values) if slack_values else 0,
+                "paths_drawn": 0,
+                "path_count_limit": path_count,
+                "total_paths_available": len(critical_paths),
+            }
 
     # Create figure
     fig, ax = plt.subplots(figsize=figsize, dpi=dpi)

@@ -538,6 +538,40 @@ def rank_diverse_top_n(
                 if len(survivors) >= survivor_count:
                     break
 
+    # Step 3: Add random survivors for exploration (F248)
+    if diversity_config.random_survivors > 0:
+        # Determine how many random survivors to add
+        max_random = min(diversity_config.random_survivors, survivor_count)
+
+        # Reserve slots for random survivors
+        # If we have more survivors than needed, replace some with random ones
+        if len(survivors) >= survivor_count:
+            # Keep best + diversity-selected, but replace last ones with random
+            num_to_replace = min(max_random, len(survivors) - 1)  # Always keep at least the best
+            if num_to_replace > 0:
+                survivors = survivors[:-num_to_replace]  # Remove last N survivors
+
+        # Get candidate pool (trials not yet selected)
+        candidate_pool = [
+            trial for trial, _ in sorted_trials
+            if trial.config.case_name not in survivors
+        ]
+
+        if candidate_pool:
+            # Use deterministic random selection with seed for reproducibility
+            # Seed based on number of survivors to ensure consistent results
+            import random
+            rng = random.Random(len(survivors))
+
+            # Randomly sample from candidate pool
+            num_random_to_add = min(max_random, len(candidate_pool), survivor_count - len(survivors))
+            random_selections = rng.sample(candidate_pool, num_random_to_add)
+
+            for trial in random_selections:
+                survivors.append(trial.config.case_name)
+                if len(survivors) >= survivor_count:
+                    break
+
     return survivors[:survivor_count]
 
 

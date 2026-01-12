@@ -6794,3 +6794,89 @@ Test Coverage: 13 tests passing
 - F214 required only configuration layer - analysis logic already existed
 - F215 (hotspot threshold) is complementary and partially done (threshold in DiagnosisConfig)
 
+
+================================================================================
+SESSION 408 - TWO FEATURES COMPLETED (F215, F212)
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Session Summary:**
+Completed two low-priority features (F215 and F212) through comprehensive testing
+of existing implementations. Both features were already implemented but lacked
+dedicated test coverage.
+
+**1. Feature F215: Diagnosis Hotspot Threshold is Configurable**
+
+Implementation Status: Already implemented
+- DiagnosisConfig had hotspot_threshold field (default 0.7)
+- diagnose_congestion() supported hotspot_threshold parameter
+- Threshold validated to (0.0, 1.0] range
+
+Test Coverage: 10 tests passing
+Core Feature Steps (6/6):
+- Set hotspot_threshold: 0.7 ✓
+- Run congestion diagnosis ✓
+- Verify only bins with congestion >= threshold marked as hotspots ✓
+- Change threshold to 0.5 ✓
+- Verify more hotspots detected with lower threshold ✓
+- Adjust threshold for desired sensitivity ✓
+
+Additional Tests (4):
+- DiagnosisConfig validation (range checks) ✓
+- Boundary value testing (exact threshold match) ✓
+- Threshold affects diagnosis severity ✓
+- Integration with StudyConfig ✓
+
+Key Behavior:
+- Critical hotspots created when hot_ratio >= threshold
+- Lower threshold → more sensitive detection
+- Higher threshold → stricter detection
+
+**2. Feature F212: Timing Diagnosis Confidence Scoring**
+
+Implementation Status: Already implemented
+- TimingDiagnosis had confidence field
+- diagnose_timing() calculated confidence based on path analysis
+- Confidence ranges 0.0-1.0 indicating certainty of dominant issue
+
+Test Coverage: 11 tests passing
+Core Feature Steps (5/5):
+- Run timing diagnosis ✓
+- Verify confidence score included (0.0 to 1.0) ✓
+- Verify high confidence (>0.8) for clear wire-dominated ✓
+- Verify lower confidence for mixed bottlenecks ✓
+- Use confidence to prioritize ECO selection ✓
+
+Additional Tests (6):
+- Wire-dominated confidence calculation ✓
+- Cell-dominated confidence calculation ✓
+- Mixed bottleneck confidence calculation ✓
+- Mixed with slight bias confidence range ✓
+- Zero confidence when no paths ✓
+- Confidence in serialized JSON ✓
+
+Confidence Calculation:
+- Wire-dominated: confidence = wire_ratio
+- Cell-dominated: confidence = 1.0 - wire_ratio
+- Mixed: confidence = 0.5 + abs(wire_ratio - 0.5)
+- Unknown: confidence = 0.0
+
+**Current Status:**
+- Features passing: 275/280 (98.2%)
+- Features remaining: 5 (all low priority)
+  * F225: Critical path overlay only generated when timing issue exists
+  * F228: Hotspot bounding boxes are rendered on heatmap
+  * F235: Stage progression chart is clear and publication-quality
+  * F248: Diversity-aware selection supports random survivors
+  * F265: Warm-start priors can be inspected before study execution
+
+**Commits:**
+- a952a7a: Implement F215: Diagnosis hotspot threshold is configurable - 10 tests
+- af032fe: Implement F212: Timing diagnosis confidence scoring - 11 tests
+
+**Notes:**
+- Both features required only test implementation, no code changes
+- Project approaching completion: 98.2% features passing
+- All remaining features are low priority
+- Test suite remains stable and comprehensive

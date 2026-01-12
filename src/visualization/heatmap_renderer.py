@@ -411,6 +411,125 @@ def render_diff_heatmap(
     }
 
 
+def compute_improvement_summary(
+    diff_array: np.ndarray,
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
+    """
+    Compute improvement summary statistics from differential heatmap.
+
+    Quantifies the spatial impact of an ECO by analyzing the differential heatmap.
+    Positive values indicate improvement (reduced congestion/density).
+    Negative values indicate worsening (increased congestion/density).
+
+    Args:
+        diff_array: Differential heatmap array (baseline - comparison)
+        metadata: Metadata from compute_heatmap_diff
+
+    Returns:
+        Dictionary with improvement summary statistics including:
+        - improved_bins: Count of bins with positive diff (improvement)
+        - worsened_bins: Count of bins with negative diff (degradation)
+        - unchanged_bins: Count of bins with zero diff
+        - net_improvement_pct: Percentage of bins improved minus worsened
+        - max_improvement_value: Largest improvement value
+        - max_improvement_location: (row, col) of max improvement
+        - total_bins: Total number of bins in heatmap
+    """
+    # Count bins by impact type
+    improved_bins = int(np.sum(diff_array > 0))
+    worsened_bins = int(np.sum(diff_array < 0))
+    unchanged_bins = int(np.sum(diff_array == 0))
+    total_bins = int(diff_array.size)
+
+    # Compute net improvement percentage
+    # (improved - worsened) / total * 100
+    net_improvement_pct = (
+        ((improved_bins - worsened_bins) / total_bins * 100) if total_bins > 0 else 0.0
+    )
+
+    # Find maximum improvement location
+    max_improvement_value = float(np.max(diff_array))
+    max_improvement_idx = np.unravel_index(np.argmax(diff_array), diff_array.shape)
+    max_improvement_location = {
+        "row": int(max_improvement_idx[0]),
+        "col": int(max_improvement_idx[1]),
+    }
+
+    # Find maximum degradation location (for completeness)
+    max_degradation_value = float(np.min(diff_array))
+    max_degradation_idx = np.unravel_index(np.argmin(diff_array), diff_array.shape)
+    max_degradation_location = {
+        "row": int(max_degradation_idx[0]),
+        "col": int(max_degradation_idx[1]),
+    }
+
+    return {
+        "improved_bins": improved_bins,
+        "worsened_bins": worsened_bins,
+        "unchanged_bins": unchanged_bins,
+        "total_bins": total_bins,
+        "net_improvement_pct": net_improvement_pct,
+        "max_improvement_value": max_improvement_value,
+        "max_improvement_location": max_improvement_location,
+        "max_degradation_value": max_degradation_value,
+        "max_degradation_location": max_degradation_location,
+        "mean_diff": metadata.get("mean_diff", 0.0),
+        "total_improvement": metadata.get("total_improvement", 0.0),
+        "total_degradation": metadata.get("total_degradation", 0.0),
+    }
+
+
+def generate_improvement_summary_json(
+    baseline_csv: str | Path,
+    comparison_csv: str | Path,
+    output_path: str | Path,
+) -> dict[str, Any]:
+    """
+    Generate improvement summary JSON from differential heatmap analysis.
+
+    Computes differential heatmap and exports quantified improvement metrics
+    as a JSON file for programmatic consumption and dashboard integration.
+
+    Args:
+        baseline_csv: Path to baseline heatmap CSV (before ECO)
+        comparison_csv: Path to comparison heatmap CSV (after ECO)
+        output_path: Path where improvement_summary.json should be saved
+
+    Returns:
+        Improvement summary dictionary with all metrics
+
+    Raises:
+        FileNotFoundError: If either CSV file doesn't exist
+        ValueError: If CSV formats are invalid or dimensions don't match
+    """
+    import json
+
+    baseline_csv = Path(baseline_csv)
+    comparison_csv = Path(comparison_csv)
+    output_path = Path(output_path)
+
+    # Compute differential heatmap
+    diff, metadata = compute_heatmap_diff(baseline_csv, comparison_csv)
+
+    # Compute improvement summary
+    summary = compute_improvement_summary(diff, metadata)
+
+    # Add file paths to summary
+    summary["baseline_csv"] = str(baseline_csv)
+    summary["comparison_csv"] = str(comparison_csv)
+    summary["heatmap_shape"] = list(diff.shape)
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Write JSON
+    with open(output_path, "w") as f:
+        json.dump(summary, f, indent=2)
+
+    return summary
+
+
 def generate_eco_impact_heatmaps(
     baseline_heatmaps_dir: str | Path,
     comparison_heatmaps_dir: str | Path,

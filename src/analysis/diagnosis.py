@@ -762,3 +762,69 @@ def generate_complete_diagnosis(
         congestion_diagnosis=congestion_diagnosis,
         diagnosis_summary=diagnosis_summary,
     )
+
+
+def filter_eco_suggestions_by_preconditions(
+    suggestions: list[ECOSuggestion],
+    eco_registry: dict[str, Any],
+    design_metrics: dict[str, Any],
+) -> tuple[list[ECOSuggestion], dict[str, dict[str, Any]]]:
+    """
+    Filter ECO suggestions based on their preconditions.
+
+    This function evaluates ECO preconditions against the current design metrics
+    and filters out ECOs whose preconditions are not satisfied. This implements
+    F211: Auto-diagnosis respects preconditions defined in ECO definitions.
+
+    Args:
+        suggestions: List of ECO suggestions from diagnosis
+        eco_registry: Dictionary mapping ECO names to ECO instances
+        design_metrics: Current design state metrics (wns_ps, hot_ratio, etc.)
+
+    Returns:
+        Tuple of (filtered_suggestions, evaluation_log)
+        - filtered_suggestions: ECO suggestions with satisfied preconditions
+        - evaluation_log: Dict mapping ECO name to evaluation details
+          {
+            "eco_name": {
+              "all_satisfied": bool,
+              "failed": list[str],  # Names of failed preconditions
+              "precondition_count": int
+            }
+          }
+    """
+    filtered: list[ECOSuggestion] = []
+    evaluation_log: dict[str, dict[str, Any]] = {}
+
+    for suggestion in suggestions:
+        eco_name = suggestion.eco
+
+        # Check if ECO exists in registry
+        if eco_name not in eco_registry:
+            # ECO not in registry - assume no preconditions, keep it
+            filtered.append(suggestion)
+            evaluation_log[eco_name] = {
+                "all_satisfied": True,
+                "failed": [],
+                "precondition_count": 0,
+                "note": "ECO not in registry, assumed no preconditions",
+            }
+            continue
+
+        eco = eco_registry[eco_name]
+
+        # Evaluate preconditions
+        all_satisfied, failed_preconditions = eco.evaluate_preconditions(design_metrics)
+
+        # Log evaluation
+        evaluation_log[eco_name] = {
+            "all_satisfied": all_satisfied,
+            "failed": failed_preconditions,
+            "precondition_count": len(eco.metadata.preconditions),
+        }
+
+        # Only include if preconditions satisfied
+        if all_satisfied:
+            filtered.append(suggestion)
+
+    return filtered, evaluation_log

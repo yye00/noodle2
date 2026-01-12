@@ -6749,8 +6749,8 @@
       "Step 5: Verify boxes are visually distinct (colored border)"
     ],
     "priority": "low",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T12:45:27Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -6952,8 +6952,8 @@
       "Step 5: Verify chart is suitable for presentation/publication"
     ],
     "priority": "low",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T12:47:33Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

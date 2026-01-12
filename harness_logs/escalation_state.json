@@ -55,7 +55,21 @@
       "sub_features": [],
       "created_at": "2026-01-11T23:20:36.454052",
       "updated_at": "2026-01-11T23:20:36.454064"
+    },
+    "F276": {
+      "feature_id": "F276",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-11T23:35:22.202556",
+      "updated_at": "2026-01-11T23:35:22.202560"
     }
   },
-  "updated_at": "2026-01-11T23:20:36.454112"
+  "updated_at": "2026-01-11T23:35:22.202578"
 }

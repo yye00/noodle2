@@ -1,0 +1,61 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- /home/captain/work/PhysicalDesign/noodle2/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/captain/work/PhysicalDesign/noodle2
+configfile: pyproject.toml
+plugins: cov-7.0.0
+collecting ... collected 28 items
+
+tests/test_f277_heatmap_generation.py::TestStep1StartXvfb::test_xvfb_is_started_in_container PASSED [  3%]
+tests/test_f277_heatmap_generation.py::TestStep1StartXvfb::test_xvfb_display_number_configurable PASSED [  7%]
+tests/test_f277_heatmap_generation.py::TestStep1StartXvfb::test_xvfb_resolution_sufficient PASSED [ 10%]
+tests/test_f277_heatmap_generation.py::TestStep2RunOpenROADWithGUI::test_openroad_runs_with_gui_flag PASSED [ 14%]
+tests/test_f277_heatmap_generation.py::TestStep2RunOpenROADWithGUI::test_display_environment_set PASSED [ 17%]
+tests/test_f277_heatmap_generation.py::TestStep2RunOpenROADWithGUI::test_database_loads_in_gui_mode PASSED [ 21%]
+tests/test_f277_heatmap_generation.py::TestStep3SelectHeatmap::test_select_placement_density_heatmap PASSED [ 25%]
+tests/test_f277_heatmap_generation.py::TestStep3SelectHeatmap::test_select_routing_congestion_heatmap PASSED [ 28%]
+tests/test_f277_heatmap_generation.py::TestStep3SelectHeatmap::test_heatmap_type_parameter_used PASSED [ 32%]
+tests/test_f277_heatmap_generation.py::TestStep4DumpHeatmapCSV::test_dump_heatmap_creates_csv PASSED [ 35%]
+tests/test_f277_heatmap_generation.py::TestStep4DumpHeatmapCSV::test_csv_file_not_empty PASSED [ 39%]
+tests/test_f277_heatmap_generation.py::TestStep4DumpHeatmapCSV::test_csv_format_valid PASSED [ 42%]
+tests/test_f277_heatmap_generation.py::TestStep4DumpHeatmapCSV::test_output_path_configurable PASSED [ 46%]
+tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_csv_contains_grid_data FAILED [ 50%]
+tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_has_real_values FAILED [ 53%]
+tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_verify_heatmap_is_real_function PASSED [ 57%]
+tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_not_suspiciously_uniform FAILED [ 60%]
+tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_dimensions_reasonable FAILED [ 64%]
+tests/test_f277_heatmap_generation.py::TestStep6GeneratePNG::test_generate_png_from_csv FAILED [ 67%]
+tests/test_f277_heatmap_generation.py::TestStep6GeneratePNG::test_generate_heatmap_with_png_function PASSED [ 71%]
+tests/test_f277_heatmap_generation.py::TestStep6GeneratePNG::test_png_format_valid PASSED [ 75%]
+tests/test_f277_heatmap_generation.py::TestStep6GeneratePNG::test_png_auto_path_generation PASSED [ 78%]
+tests/test_f277_heatmap_generation.py::TestF277Integration::test_complete_f277_workflow FAILED [ 82%]
+tests/test_f277_heatmap_generation.py::TestF277Integration::test_f277_all_steps_pass FAILED [ 85%]
+tests/test_f277_heatmap_generation.py::TestF277Integration::test_multiple_heatmap_types PASSED [ 89%]
+tests/test_f277_heatmap_generation.py::TestErrorHandling::test_missing_odb_file PASSED [ 92%]
+tests/test_f277_heatmap_generation.py::TestErrorHandling::test_timeout_handling PASSED [ 96%]
+tests/test_f277_heatmap_generation.py::TestErrorHandling::test_output_directory_created PASSED [100%]
+
+=================================== FAILURES ===================================
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+E   ValueError: could not convert string to float: 'x0'
+/home/captain/work/PhysicalDesign/noodle2/src/visualization/heatmap_renderer.py:45: ValueError: could not convert string to float: 'x0'
+=========================== short test summary info ============================
+FAILED tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_csv_contains_grid_data - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_has_real_values - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_not_suspiciously_uniform - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestStep5VerifyRealData::test_heatmap_dimensions_reasonable - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestStep6GeneratePNG::test_generate_png_from_csv - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestF277Integration::test_complete_f277_workflow - ValueError: could not convert string to float: 'x0'
+FAILED tests/test_f277_heatmap_generation.py::TestF277Integration::test_f277_all_steps_pass - ValueError: could not convert string to float: 'x0'
+=================== 7 failed, 21 passed in 235.72s (0:03:55) ===================

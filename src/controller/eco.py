@@ -11,7 +11,7 @@ This module provides the core ECO abstraction layer that enables:
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any
+from typing import Any, Callable
 
 from .types import ECOClass
 
@@ -27,6 +27,75 @@ class ECOPrior(str, Enum):
 
 
 @dataclass
+class ECOPrecondition:
+    """Precondition that must be satisfied before applying an ECO.
+
+    Preconditions enable ECOs to skip execution when the design state
+    doesn't warrant the change, improving efficiency and safety.
+    """
+
+    name: str  # Human-readable name for this precondition
+    description: str  # What this precondition checks
+    check: Callable[[dict[str, Any]], bool]  # Function that evaluates the precondition
+    parameters: dict[str, Any] = field(default_factory=dict)  # Configuration
+
+    def evaluate(self, design_metrics: dict[str, Any]) -> bool:
+        """Evaluate precondition against design metrics.
+
+        Args:
+            design_metrics: Current design state metrics (wns_ps, congestion, etc.)
+
+        Returns:
+            True if precondition is satisfied, False otherwise
+        """
+        return self.check(design_metrics)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "parameters": self.parameters,
+        }
+
+
+@dataclass
+class ECOPostcondition:
+    """Postcondition that must be verified after applying an ECO.
+
+    Postconditions enable ECOs to verify they achieved their intended
+    effect and didn't introduce unintended side effects.
+    """
+
+    name: str  # Human-readable name for this postcondition
+    description: str  # What this postcondition verifies
+    check: Callable[[dict[str, Any], dict[str, Any]], bool]  # Function that evaluates postcondition
+    parameters: dict[str, Any] = field(default_factory=dict)  # Configuration
+
+    def evaluate(
+        self, before_metrics: dict[str, Any], after_metrics: dict[str, Any]
+    ) -> bool:
+        """Evaluate postcondition by comparing before/after metrics.
+
+        Args:
+            before_metrics: Design metrics before ECO application
+            after_metrics: Design metrics after ECO application
+
+        Returns:
+            True if postcondition is satisfied, False otherwise
+        """
+        return self.check(before_metrics, after_metrics)
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "description": self.description,
+            "parameters": self.parameters,
+        }
+
+
+@dataclass
 class ECOMetadata:
     """Metadata describing an ECO's properties and constraints."""
 
@@ -37,6 +106,8 @@ class ECOMetadata:
     version: str = "1.0"  # For tracking ECO evolution
     author: str = ""  # Optional provenance
     tags: list[str] = field(default_factory=list)  # For categorization
+    preconditions: list[ECOPrecondition] = field(default_factory=list)  # Preconditions
+    postconditions: list[ECOPostcondition] = field(default_factory=list)  # Postconditions
 
     def __post_init__(self) -> None:
         """Validate metadata."""
@@ -57,6 +128,11 @@ class ECOResult:
     log_excerpt: str | None = None
     execution_time_seconds: float = 0.0
     artifacts_generated: list[str] = field(default_factory=list)
+    preconditions_satisfied: bool = True  # Were all preconditions met?
+    precondition_failures: list[str] = field(default_factory=list)  # Which preconditions failed
+    skipped_due_to_preconditions: bool = False  # Was ECO skipped?
+    postconditions_satisfied: bool = True  # Were all postconditions met?
+    postcondition_failures: list[str] = field(default_factory=list)  # Which postconditions failed
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -68,6 +144,11 @@ class ECOResult:
             "log_excerpt": self.log_excerpt,
             "execution_time_seconds": self.execution_time_seconds,
             "artifacts_generated": self.artifacts_generated,
+            "preconditions_satisfied": self.preconditions_satisfied,
+            "precondition_failures": self.precondition_failures,
+            "skipped_due_to_preconditions": self.skipped_due_to_preconditions,
+            "postconditions_satisfied": self.postconditions_satisfied,
+            "postcondition_failures": self.postcondition_failures,
         }
 
 
@@ -112,6 +193,13 @@ class ECOEffectiveness:
         # Update prior based on evidence
         self._update_prior()
 
+    @property
+    def success_rate(self) -> float:
+        """Calculate success rate (0.0 to 1.0)."""
+        if self.total_applications == 0:
+            return 0.0
+        return self.successful_applications / self.total_applications
+
     def _update_prior(self) -> None:
         """Update prior classification based on accumulated evidence."""
         if self.total_applications < 3:
@@ -119,7 +207,7 @@ class ECOEffectiveness:
             self.prior = ECOPrior.UNKNOWN
             return
 
-        success_rate = self.successful_applications / self.total_applications
+        success_rate = self.success_rate
 
         # Classification heuristics
         if success_rate >= 0.8 and self.average_wns_improvement_ps > 0:
@@ -193,6 +281,63 @@ class ECO(ABC):
         """
         pass
 
+    def evaluate_preconditions(
+        self, design_metrics: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
+        """Evaluate all preconditions against current design metrics.
+
+        Args:
+            design_metrics: Current design state metrics (wns_ps, congestion, etc.)
+
+        Returns:
+            Tuple of (all_satisfied, failed_preconditions)
+            - all_satisfied: True if all preconditions pass
+            - failed_preconditions: List of names of failed preconditions
+        """
+        if not self.metadata.preconditions:
+            # No preconditions means always satisfied
+            return True, []
+
+        failed = []
+        for precondition in self.metadata.preconditions:
+            try:
+                if not precondition.evaluate(design_metrics):
+                    failed.append(precondition.name)
+            except Exception as e:
+                # Treat evaluation errors as failures
+                failed.append(f"{precondition.name} (error: {str(e)})")
+
+        return len(failed) == 0, failed
+
+    def evaluate_postconditions(
+        self, before_metrics: dict[str, Any], after_metrics: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
+        """Evaluate all postconditions by comparing before/after metrics.
+
+        Args:
+            before_metrics: Design metrics before ECO application
+            after_metrics: Design metrics after ECO application
+
+        Returns:
+            Tuple of (all_satisfied, failed_postconditions)
+            - all_satisfied: True if all postconditions pass
+            - failed_postconditions: List of names of failed postconditions
+        """
+        if not self.metadata.postconditions:
+            # No postconditions means always satisfied
+            return True, []
+
+        failed = []
+        for postcondition in self.metadata.postconditions:
+            try:
+                if not postcondition.evaluate(before_metrics, after_metrics):
+                    failed.append(postcondition.name)
+            except Exception as e:
+                # Treat evaluation errors as failures
+                failed.append(f"{postcondition.name} (error: {str(e)})")
+
+        return len(failed) == 0, failed
+
     def to_dict(self) -> dict[str, Any]:
         """Convert ECO to dictionary for serialization."""
         return {
@@ -203,6 +348,8 @@ class ECO(ABC):
             "version": self.metadata.version,
             "author": self.metadata.author,
             "tags": self.metadata.tags,
+            "preconditions": [p.to_dict() for p in self.metadata.preconditions],
+            "postconditions": [p.to_dict() for p in self.metadata.postconditions],
         }
 
 

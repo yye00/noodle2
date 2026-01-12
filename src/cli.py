@@ -365,6 +365,54 @@ the original Study's state or telemetry.
         help="ECO parameter override (can be used multiple times, e.g., --param size=1.8)",
     )
 
+    # === DEBUG command ===
+    debug_parser = subparsers.add_parser(
+        "debug",
+        help="Generate detailed debug report for specific trial",
+        description="""
+Generate comprehensive debug report for a specific trial.
+
+This command creates a detailed debug report including:
+  • execution_trace.json - Step-by-step execution log
+  • tcl_commands.log - Exact TCL commands sent to OpenROAD
+  • openroad_stdout.log - OpenROAD stdout capture
+  • openroad_stderr.log - OpenROAD stderr capture
+  • metrics_before.json - Metrics before ECO application
+  • metrics_after.json - Metrics after ECO application
+  • diagnosis_at_execution.json - Diagnosis results
+  • eco_parameters_used.json - Detailed ECO parameters
+  • all_heatmaps/ - Full visualization set
+
+This is useful for:
+  • Debugging trial failures
+  • Understanding ECO behavior
+  • Analyzing timing and congestion issues
+  • Generating reports for documentation
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    debug_parser.add_argument(
+        "--case",
+        type=str,
+        required=True,
+        help="Case name to debug (e.g., nangate45_1_5)",
+    )
+    debug_parser.add_argument(
+        "--trial",
+        type=int,
+        help="Specific trial index to debug (default: first trial)",
+    )
+    debug_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output directory for debug report (default: debug_report/)",
+    )
+    debug_parser.add_argument(
+        "--no-heatmaps",
+        action="store_true",
+        help="Skip heatmap generation to reduce output size",
+    )
+
     return parser
 
 
@@ -548,6 +596,54 @@ def cmd_replay(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_debug(args: argparse.Namespace) -> int:
+    """Execute debug command."""
+    from src.replay.debug_report import generate_debug_report, DebugReportConfig
+
+    print(f"🔍 Generating Debug Report for Case: {args.case}")
+    if args.trial is not None:
+        print(f"   Trial index: {args.trial}")
+    if args.output:
+        print(f"   Output: {args.output}")
+    if args.no_heatmaps:
+        print(f"   Heatmaps: disabled")
+    print()
+
+    # Create debug report configuration
+    config = DebugReportConfig(
+        case_name=args.case,
+        trial_index=args.trial,
+        output_dir=args.output or Path("debug_report"),
+        include_heatmaps=not args.no_heatmaps,
+    )
+
+    try:
+        result = generate_debug_report(config)
+        if result.success:
+            print()
+            print("✅ Debug report generated successfully")
+            print(f"   Output directory: {result.output_dir}")
+            print(f"   Files generated: {len(result.files_generated)}")
+            print()
+            print("   Generated files:")
+            for file_path in result.files_generated:
+                print(f"     • {file_path}")
+            print()
+            print("Tip: Review the execution_trace.json for step-by-step execution details")
+            return 0
+        else:
+            print()
+            print("❌ Debug report generation failed")
+            if result.error_message:
+                print(f"   Error: {result.error_message}")
+            return 1
+    except Exception as e:
+        print(f"❌ Error during debug report generation: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
@@ -569,6 +665,7 @@ def main() -> int:
         "progress": cmd_progress,
         "init": cmd_init,
         "replay": cmd_replay,
+        "debug": cmd_debug,
     }
 
     handler = command_map.get(args.command)

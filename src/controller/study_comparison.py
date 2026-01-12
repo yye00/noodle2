@@ -133,6 +133,16 @@ class ECOEffectivenessComparison:
 
 
 @dataclass
+class ConfigurationDifference:
+    """A single configuration difference between two studies."""
+
+    category: str  # e.g., "warm_start", "survivor_selection", "diagnosis"
+    description: str  # Human-readable description of the difference
+    study1_value: str | None  # Configuration value in study 1
+    study2_value: str | None  # Configuration value in study 2
+
+
+@dataclass
 class StudyComparisonReport:
     """Comprehensive comparison report between two studies."""
 
@@ -142,6 +152,7 @@ class StudyComparisonReport:
     study2_summary: StudyMetricsSummary
     metric_comparisons: list[MetricComparison] = field(default_factory=list)
     eco_effectiveness_comparisons: list[ECOEffectivenessComparison] = field(default_factory=list)
+    configuration_differences: list[ConfigurationDifference] = field(default_factory=list)
     overall_improvement: bool | None = None
     comparison_timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -269,6 +280,87 @@ def load_study_summary(study_name: str, telemetry_root: Path = Path("telemetry")
     )
 
 
+def compare_study_configurations(
+    study1_summary: StudyMetricsSummary,
+    study2_summary: StudyMetricsSummary,
+) -> list[ConfigurationDifference]:
+    """
+    Compare configuration differences between two studies.
+
+    Args:
+        study1_summary: Summary for first study
+        study2_summary: Summary for second study
+
+    Returns:
+        List of configuration differences
+    """
+    differences = []
+
+    # Extract configuration from metadata
+    study1_config = study1_summary.metadata
+    study2_config = study2_summary.metadata
+
+    # Check warm_start usage
+    study1_warm_start = study1_config.get("warm_start", {})
+    study2_warm_start = study2_config.get("warm_start", {})
+
+    study1_ws_enabled = study1_warm_start.get("enabled", False)
+    study2_ws_enabled = study2_warm_start.get("enabled", False)
+
+    if study1_ws_enabled != study2_ws_enabled:
+        differences.append(
+            ConfigurationDifference(
+                category="warm_start",
+                description="Warm-start configuration",
+                study1_value="enabled" if study1_ws_enabled else "disabled",
+                study2_value="enabled" if study2_ws_enabled else "disabled",
+            )
+        )
+    elif study1_ws_enabled and study2_ws_enabled:
+        # Both enabled, check if source study differs
+        study1_source = study1_warm_start.get("source_study", "")
+        study2_source = study2_warm_start.get("source_study", "")
+        if study1_source != study2_source:
+            differences.append(
+                ConfigurationDifference(
+                    category="warm_start",
+                    description="Warm-start source study",
+                    study1_value=study1_source or "none",
+                    study2_value=study2_source or "none",
+                )
+            )
+
+    # Check survivor selection method
+    study1_selection = study1_config.get("survivor_selection_method", "top_n")
+    study2_selection = study2_config.get("survivor_selection_method", "top_n")
+
+    if study1_selection != study2_selection:
+        differences.append(
+            ConfigurationDifference(
+                category="survivor_selection",
+                description="Survivor selection method",
+                study1_value=study1_selection,
+                study2_value=study2_selection,
+            )
+        )
+
+    # Check auto-diagnosis enablement
+    study1_diagnosis = study1_config.get("auto_diagnosis_enabled", True)
+    study2_diagnosis = study2_config.get("auto_diagnosis_enabled", True)
+
+    if study1_diagnosis != study2_diagnosis:
+        differences.append(
+            ConfigurationDifference(
+                category="diagnosis",
+                description="Auto-diagnosis",
+                study1_value="enabled" if study1_diagnosis else "disabled",
+                study2_value="enabled" if study2_diagnosis else "disabled",
+            )
+        )
+
+    return differences
+
+
 def compare_studies(
     study1_name: str,
     study2_name: str,
@@ -354,6 +446,9 @@ def compare_studies(
             )
         )
 
+    # Compare configurations
+    config_differences = compare_study_configurations(study1_summary, study2_summary)
+
     # Determine overall improvement
     # Study improved if majority of metrics improved
     improvements = [c.improved for c in comparisons if c.improved is not None]
@@ -369,6 +464,7 @@ def compare_studies(
         study2_summary=study2_summary,
         metric_comparisons=comparisons,
         eco_effectiveness_comparisons=eco_comparisons,
+        configuration_differences=config_differences,
         overall_improvement=overall_improvement,
     )
 
@@ -408,6 +504,18 @@ def format_comparison_report(report: StudyComparisonReport) -> str:
     else:
         lines.append("Overall: Insufficient data for overall assessment")
     lines.append("")
+
+    # Key differences section
+    if report.configuration_differences:
+        lines.append("KEY DIFFERENCES")
+        lines.append("-" * 80)
+        for diff in report.configuration_differences:
+            lines.append(f"{diff.description}:")
+            lines.append(f"  Study 1: {diff.study1_value or 'N/A'}")
+            lines.append(f"  Study 2: {diff.study2_value or 'N/A'}")
+            lines.append("")
+        lines.append("-" * 80)
+        lines.append("")
 
     # Metrics comparison table
     lines.append("METRICS COMPARISON")
@@ -533,6 +641,15 @@ def write_comparison_report(
                 "improved": e.improved,
             }
             for e in report.eco_effectiveness_comparisons
+        ],
+        "configuration_differences": [
+            {
+                "category": d.category,
+                "description": d.description,
+                "study1_value": d.study1_value,
+                "study2_value": d.study2_value,
+            }
+            for d in report.configuration_differences
         ],
         "overall_improvement": report.overall_improvement,
         "comparison_timestamp": report.comparison_timestamp,

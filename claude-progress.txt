@@ -5205,3 +5205,102 @@ ECO definitions with configurable parameters that are substituted at runtime.
 - Proper type hints and documentation
 - Clean git commit
 
+
+================================================================================
+SESSION 392 CONTINUED - F262 Completed
+================================================================================
+
+COMPLETED: F262 - Support warm-start prior loading from source studies with weighting
+
+**Feature Summary:**
+Implemented warm-start prior loading infrastructure that enables new studies
+to initialize ECO effectiveness priors from completed studies with configurable
+weighting, allowing historical knowledge to inform new experiments.
+
+**Implementation Details:**
+
+1. **SourceStudyConfig Class:**
+   - Configuration for individual source studies
+   - name, weight (0.0-1.0), prior_repository_path
+   - Weight validation (must be in [0.0, 1.0])
+   - Serialization via to_dict()
+
+2. **WarmStartConfig Class:**
+   - Overall configuration for warm-start loading
+   - mode: "warm_start" (vs "cold_start")
+   - List of source studies with individual weights
+   - normalize_weights(): ensures weights sum to 1.0
+   - merge_strategy: "weighted_avg", "max", etc.
+
+3. **WarmStartLoader Class:**
+   - load_priors(): Main entry point
+     - Loads from multiple source repositories
+     - Applies weighting to each source
+     - Merges using configured strategy
+     - Generates audit trail
+   - _scale_effectiveness(): Weight-based scaling
+     - Counts (applications, successes, failures) scaled by weight
+     - Averages (WNS improvement) preserved (they're ratios)
+     - Best/worst extremes preserved
+   - _merge_priors(): Multi-source combination
+   - _merge_weighted_average(): Weighted averaging strategy
+     - Sums scaled counts from all sources
+     - Weighted average for improvement metrics
+     - Most conservative prior classification
+   - _write_audit_trail(): Full provenance tracking
+
+**Key Design Decisions:**
+
+1. **Weighting Semantics:**
+   - Weight scales confidence (number of observations)
+   - Averages remain unchanged (they're inherent properties)
+   - 0.8 weight = 80% confidence in the historical data
+
+2. **Multi-Source Merging:**
+   - Counts are summed (already scaled by weight)
+   - Averages use weighted average
+   - Best/worst take extremes across all sources
+   - Prior classification uses most conservative
+
+3. **Audit Trail:**
+   - Full timestamp and provenance
+   - List of all source studies with weights
+   - ECO count and names
+   - Merge strategy used
+
+**Test Coverage: 16 tests (all passing)**
+- All 7 feature steps verified
+- Config creation and validation
+- Single and multi-source loading
+- Weight scaling (counts vs averages)
+- Weight normalization
+- Prior merging strategies
+- Edge cases: zero weights, missing repos, empty sources
+
+**Verification Results:**
+- All 16 new tests passing ✅
+- All 214 prior/ECO tests passing (no regressions) ✅
+- F262 marked as passing with timestamp
+
+**Files Created:**
+- src/controller/warm_start.py (291 lines)
+- tests/test_warm_start_priors.py (585 lines)
+
+**Feature Progress:**
+- Total: 280 features
+- Passing: 247 (was 246, +2 this session)
+- Failing: 33 (was 34)
+- Completion: 88.2%
+
+**Session Summary:**
+- Features completed: 2 (F258, F262)
+- Tests written: 34 (18 + 16)
+- Lines added: ~2,100
+- All tests passing, no regressions
+- Clean git commits with detailed messages
+
+**Next High-Priority Features:**
+1. F263 [high]: Warm-start supports multiple source studies with conflict resolution
+2. F207 [medium]: Congestion diagnosis correlates congestion with placement density
+3. F210 [medium]: Diagnosis history is tracked and saved across stages
+

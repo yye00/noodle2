@@ -118,9 +118,9 @@ class WarmStartLoader:
             return {}
 
         # Load priors from each source
-        source_priors: dict[str, list[tuple[ECOEffectiveness, float]]] = {}
+        source_priors: dict[str, list[tuple[ECOEffectiveness, float, int]]] = {}
 
-        for source_config in self.config.source_studies:
+        for source_idx, source_config in enumerate(self.config.source_studies):
             # Load repository
             if not source_config.prior_repository_path.exists():
                 raise FileNotFoundError(
@@ -139,7 +139,8 @@ class WarmStartLoader:
                 if eco_name not in source_priors:
                     source_priors[eco_name] = []
 
-                source_priors[eco_name].append((scaled, source_config.weight))
+                # Store: (effectiveness, weight, source_index)
+                source_priors[eco_name].append((scaled, source_config.weight, source_idx))
 
         # Merge priors using configured strategy
         merged_priors = self._merge_priors(source_priors)
@@ -181,12 +182,12 @@ class WarmStartLoader:
         )
 
     def _merge_priors(
-        self, source_priors: dict[str, list[tuple[ECOEffectiveness, float]]]
+        self, source_priors: dict[str, list[tuple[ECOEffectiveness, float, int]]]
     ) -> dict[str, ECOEffectiveness]:
         """Merge priors from multiple sources.
 
         Args:
-            source_priors: Map of ECO names to list of (effectiveness, weight) tuples
+            source_priors: Map of ECO names to list of (effectiveness, weight, source_idx) tuples
 
         Returns:
             Dictionary of merged ECO effectiveness data
@@ -201,45 +202,49 @@ class WarmStartLoader:
                 # Multiple sources, merge based on strategy
                 if self.config.merge_strategy == "weighted_avg":
                     merged[eco_name] = self._merge_weighted_average(priors_list)
+                elif self.config.merge_strategy == "highest_weight":
+                    merged[eco_name] = self._merge_highest_weight(priors_list)
+                elif self.config.merge_strategy == "newest":
+                    merged[eco_name] = self._merge_newest(priors_list)
                 else:
-                    # Default to first source
-                    merged[eco_name] = priors_list[0][0]
+                    # Default to weighted average
+                    merged[eco_name] = self._merge_weighted_average(priors_list)
 
         return merged
 
     def _merge_weighted_average(
-        self, priors_list: list[tuple[ECOEffectiveness, float]]
+        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
     ) -> ECOEffectiveness:
         """Merge multiple ECO effectiveness records using weighted average.
 
         Args:
-            priors_list: List of (effectiveness, weight) tuples
+            priors_list: List of (effectiveness, weight, source_idx) tuples
 
         Returns:
             Merged effectiveness data
         """
         # Sum up counts from all sources (already scaled by weight)
-        total_apps = sum(eff.total_applications for eff, _ in priors_list)
-        successful_apps = sum(eff.successful_applications for eff, _ in priors_list)
-        failed_apps = sum(eff.failed_applications for eff, _ in priors_list)
+        total_apps = sum(eff.total_applications for eff, _, _ in priors_list)
+        successful_apps = sum(eff.successful_applications for eff, _, _ in priors_list)
+        failed_apps = sum(eff.failed_applications for eff, _, _ in priors_list)
 
         # Weighted average for improvement metrics
-        total_weight = sum(weight for _, weight in priors_list)
+        total_weight = sum(weight for _, weight, _ in priors_list)
 
         if total_weight > 0:
             avg_wns = sum(
                 eff.average_wns_improvement_ps * weight
-                for eff, weight in priors_list
+                for eff, weight, _ in priors_list
             ) / total_weight
         else:
             avg_wns = 0.0
 
         # Best and worst across all sources
-        best_wns = max(eff.best_wns_improvement_ps for eff, _ in priors_list)
-        worst_wns = min(eff.worst_wns_degradation_ps for eff, _ in priors_list)
+        best_wns = max(eff.best_wns_improvement_ps for eff, _, _ in priors_list)
+        worst_wns = min(eff.worst_wns_degradation_ps for eff, _, _ in priors_list)
 
         # Use the most conservative prior
-        priors = [eff.prior for eff, _ in priors_list]
+        priors = [eff.prior for eff, _, _ in priors_list]
         if ECOPrior.SUSPICIOUS in priors or ECOPrior.BLACKLISTED in priors:
             merged_prior = ECOPrior.SUSPICIOUS
         elif ECOPrior.MIXED in priors:
@@ -262,6 +267,52 @@ class WarmStartLoader:
             worst_wns_degradation_ps=worst_wns,
             prior=merged_prior,
         )
+
+    def _merge_highest_weight(
+        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
+    ) -> ECOEffectiveness:
+        """Merge by selecting the prior from the source with highest weight.
+
+        Args:
+            priors_list: List of (effectiveness, weight, source_idx) tuples
+
+        Returns:
+            Effectiveness data from source with highest weight
+        """
+        # Find source with highest weight
+        highest_weight_idx = max(range(len(priors_list)), key=lambda i: priors_list[i][1])
+        return priors_list[highest_weight_idx][0]
+
+    def _merge_newest(
+        self, priors_list: list[tuple[ECOEffectiveness, float, int]]
+    ) -> ECOEffectiveness:
+        """Merge by selecting the prior from the most recent source.
+
+        Uses timestamp from source config metadata to determine recency.
+
+        Args:
+            priors_list: List of (effectiveness, weight, source_idx) tuples
+
+        Returns:
+            Effectiveness data from most recent source
+        """
+        # Find the source with the newest timestamp using source_idx
+        newest_timestamp = None
+        newest_prior = None
+
+        for eff, weight, source_idx in priors_list:
+            source_config = self.config.source_studies[source_idx]
+            timestamp = source_config.metadata.get("timestamp", "1970-01-01T00:00:00Z")
+
+            if newest_timestamp is None or timestamp > newest_timestamp:
+                newest_timestamp = timestamp
+                newest_prior = eff
+
+        # Fallback to first prior if no timestamp found
+        if newest_prior is None:
+            newest_prior = priors_list[0][0]
+
+        return newest_prior
 
     def _write_audit_trail(
         self,

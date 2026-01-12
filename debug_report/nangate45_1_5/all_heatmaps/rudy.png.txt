@@ -1,0 +1,2 @@
+Placeholder for rudy heatmap visualization
+In production, this would be a PNG image.

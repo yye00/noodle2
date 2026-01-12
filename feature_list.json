@@ -8074,5 +8074,163 @@
         "description": "NEW: Demo success criteria validation"
       }
     ]
+  },
+  {
+    "id": "F272",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Pull openroad/orfs:latest Docker container and verify OpenROAD is available",
+    "steps": [
+      "Step 1: Execute 'docker pull openroad/orfs:latest'",
+      "Step 2: Execute 'docker run --rm openroad/orfs:latest openroad -version' and verify output",
+      "Step 3: Execute 'docker run --rm openroad/orfs:latest which openroad' to confirm PATH",
+      "Step 4: Create a verification script that checks container availability"
+    ],
+    "passes": true,
+    "depends_on": [],
+    "passed_at": "2026-01-12T03:45:19.439984+00:00"
+  },
+  {
+    "id": "F273",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Clone OpenROAD-flow-scripts (ORFS) and verify PDK/design availability",
+    "steps": [
+      "Step 1: Clone https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts.git to ./orfs/",
+      "Step 2: Verify Nangate45 platform exists at orfs/flow/platforms/nangate45/",
+      "Step 3: Verify ASAP7 platform exists at orfs/flow/platforms/asap7/",
+      "Step 4: Verify Sky130 platform exists at orfs/flow/platforms/sky130hd/",
+      "Step 5: Verify GCD design exists for Nangate45",
+      "Step 6: Create script to verify ORFS installation"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F272"
+    ]
+  },
+  {
+    "id": "F274",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Create real Nangate45 design snapshot by running ORFS flow through placement",
+    "steps": [
+      "Step 1: Run ORFS synthesis for Nangate45 GCD design",
+      "Step 2: Run ORFS floorplan for Nangate45 GCD design",
+      "Step 3: Run ORFS placement for Nangate45 GCD design",
+      "Step 4: Verify .odb file is created with real design data",
+      "Step 5: Copy snapshot to studies/nangate45_base/ directory",
+      "Step 6: Verify snapshot can be loaded by OpenROAD"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F272",
+      "F273"
+    ]
+  },
+  {
+    "id": "F275",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Execute real OpenROAD report_checks on Nangate45 snapshot and parse timing",
+    "steps": [
+      "Step 1: Load Nangate45 snapshot in OpenROAD via Docker",
+      "Step 2: Execute report_checks command",
+      "Step 3: Capture timing report output to file",
+      "Step 4: Parse WNS and TNS from report",
+      "Step 5: Verify parsed metrics are real numbers (not mocked)",
+      "Step 6: Store metrics in metrics.json"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F274"
+    ]
+  },
+  {
+    "id": "F276",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Execute real global_route and generate actual congestion metrics",
+    "steps": [
+      "Step 1: Load Nangate45 snapshot in OpenROAD",
+      "Step 2: Execute global_route -congestion_report_file congestion.txt",
+      "Step 3: Parse congestion report for overflow and hot_ratio",
+      "Step 4: Verify metrics are from real routing (not mocked)",
+      "Step 5: Store congestion metrics in metrics.json"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F275"
+    ]
+  },
+  {
+    "id": "F277",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Generate real heatmap using gui::dump_heatmap with Xvfb headless mode",
+    "steps": [
+      "Step 1: Start Xvfb inside container",
+      "Step 2: Run openroad -gui with DISPLAY set to Xvfb",
+      "Step 3: Execute gui::select_heatmap 'Placement Density'",
+      "Step 4: Execute gui::dump_heatmap placement_density heatmap.csv",
+      "Step 5: Verify CSV file contains real grid data (not mocked)",
+      "Step 6: Generate PNG visualization from CSV data"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F276"
+    ]
+  },
+  {
+    "id": "F278",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Run complete single-trial Nangate45 Study with real OpenROAD execution",
+    "steps": [
+      "Step 1: Create Study definition for Nangate45 single-stage",
+      "Step 2: Launch trial via Ray with Docker container",
+      "Step 3: Execute real OpenROAD commands inside container",
+      "Step 4: Capture real timing and congestion metrics",
+      "Step 5: Generate real heatmaps",
+      "Step 6: Verify all artifacts are from real execution (not mocked)",
+      "Step 7: Complete study_summary.json with real data"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F277"
+    ]
+  },
+  {
+    "id": "F279",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Create real ASAP7 design snapshot with ASAP7-specific workarounds",
+    "steps": [
+      "Step 1: Run ORFS flow for ASAP7 GCD design",
+      "Step 2: Apply ASAP7 workarounds (routing layers, site, utilization)",
+      "Step 3: Verify .odb snapshot is created",
+      "Step 4: Execute report_checks and verify real timing data",
+      "Step 5: Copy to studies/asap7_base/"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F278"
+    ]
+  },
+  {
+    "id": "F280",
+    "category": "infrastructure",
+    "priority": "critical",
+    "description": "Create real Sky130 design snapshot using sky130hd platform",
+    "steps": [
+      "Step 1: Run ORFS flow for Sky130 design",
+      "Step 2: Verify sky130_fd_sc_hd library is used",
+      "Step 3: Verify .odb snapshot is created",
+      "Step 4: Execute report_checks and verify real timing data",
+      "Step 5: Copy to studies/sky130_base/"
+    ],
+    "passes": false,
+    "depends_on": [
+      "F278"
+    ]
   }
 ]

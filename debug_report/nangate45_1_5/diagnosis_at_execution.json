@@ -1,0 +1,26 @@
+{
+  "diagnosis_timestamp": "2026-01-12T03:38:14.586355+00:00",
+  "case_name": "nangate45_1_5",
+  "trial_index": 0,
+  "primary_issue": "timing",
+  "secondary_issue": "none",
+  "timing_diagnosis": {
+    "wns_ps": -450,
+    "severity": "moderate",
+    "critical_paths": 5,
+    "timing_paths_analyzed": 20
+  },
+  "congestion_diagnosis": {
+    "hot_ratio": 0.35,
+    "severity": "minor",
+    "hotspot_count": 35
+  },
+  "recommendations": [
+    {
+      "type": "eco",
+      "action": "buffer_insertion",
+      "priority": 1,
+      "reasoning": "Critical timing violations detected"
+    }
+  ]
+}

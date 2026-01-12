@@ -1,0 +1,66 @@
+{
+  "trial_execution_trace": {
+    "case_name": "nangate45_1_5",
+    "trial_index": 0,
+    "start_time": "2026-01-12T03:38:14.586352+00:00",
+    "end_time": "2026-01-12T03:38:14.586355+00:00",
+    "runtime_seconds": 10.5,
+    "return_code": 0,
+    "success": true
+  },
+  "execution_steps": [
+    {
+      "step": 1,
+      "action": "load_base_snapshot",
+      "description": "Load base case snapshot",
+      "status": "completed"
+    },
+    {
+      "step": 2,
+      "action": "apply_eco",
+      "description": "Apply ECO: buffer_insertion",
+      "eco_class": "buffer_insertion",
+      "eco_params": {
+        "target_net": "critical_net_42",
+        "buffer_type": "BUF_X4"
+      },
+      "status": "completed"
+    },
+    {
+      "step": 3,
+      "action": "execute_openroad",
+      "description": "Execute OpenROAD flow",
+      "timeout_seconds": 3600,
+      "status": "completed"
+    },
+    {
+      "step": 4,
+      "action": "extract_metrics",
+      "description": "Extract metrics from OpenROAD output",
+      "metrics_extracted": [
+        "wns_ps",
+        "tns_ps",
+        "hot_ratio",
+        "total_power_mw"
+      ],
+      "status": "completed"
+    },
+    {
+      "step": 5,
+      "action": "run_diagnosis",
+      "description": "Run automated diagnosis",
+      "diagnosis_enabled": true,
+      "status": "completed"
+    },
+    {
+      "step": 6,
+      "action": "save_telemetry",
+      "description": "Save trial telemetry",
+      "status": "completed"
+    }
+  ],
+  "metadata": {
+    "generated_at": "2026-01-12T03:38:14.586361+00:00",
+    "generator": "noodle2_debug_report"
+  }
+}

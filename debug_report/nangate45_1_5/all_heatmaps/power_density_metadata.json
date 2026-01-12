@@ -1,0 +1,12 @@
+{
+  "heatmap_type": "power_density",
+  "case_name": "nangate45_1_5",
+  "trial_index": 0,
+  "generated_at": "2026-01-12T03:38:14.587302+00:00",
+  "description": "Heatmap visualization for power_density",
+  "format": "png",
+  "dimensions": {
+    "width": 800,
+    "height": 600
+  }
+}

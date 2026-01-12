@@ -413,6 +413,52 @@ This is useful for:
         help="Skip heatmap generation to reduce output size",
     )
 
+    # === COMPARE command ===
+    compare_parser = subparsers.add_parser(
+        "compare",
+        help="Compare two studies and generate comparison report",
+        description="""
+Compare two completed Studies and generate comparison report.
+
+This command:
+  • Loads final metrics from both Studies
+  • Compares key metrics (WNS, TNS, hot_ratio, power)
+  • Calculates deltas and percent changes
+  • Shows direction indicators (▲ for improvement, ▼ for regression)
+  • Determines overall improvement/regression
+
+The comparison helps evaluate:
+  • Impact of ECO strategy changes
+  • Effect of parameter tuning
+  • Progress between iterations
+  • A/B testing of different approaches
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    compare_parser.add_argument(
+        "--study1",
+        type=str,
+        required=True,
+        help="First Study name for comparison",
+    )
+    compare_parser.add_argument(
+        "--study2",
+        type=str,
+        required=True,
+        help="Second Study name for comparison",
+    )
+    compare_parser.add_argument(
+        "--output",
+        type=Path,
+        help="Output file for comparison report (default: stdout)",
+    )
+    compare_parser.add_argument(
+        "--format",
+        choices=["text", "json", "both"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
     return parser
 
 
@@ -644,6 +690,75 @@ def cmd_debug(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Execute compare command."""
+    from src.controller.study_comparison import (
+        compare_studies,
+        format_comparison_report,
+        write_comparison_report,
+    )
+
+    print(f"📊 Comparing Studies: {args.study1} vs {args.study2}")
+    print()
+
+    try:
+        # Generate comparison report
+        report = compare_studies(args.study1, args.study2)
+
+        # Format and display/save report
+        if args.format in ["text", "both"]:
+            formatted_report = format_comparison_report(report)
+
+            if args.output and args.format == "text":
+                # Write to file
+                text_output = args.output
+                with open(text_output, "w") as f:
+                    f.write(formatted_report)
+                print(f"✅ Comparison report written to: {text_output}")
+                print()
+            else:
+                # Print to stdout
+                print(formatted_report)
+                print()
+
+        if args.format in ["json", "both"]:
+            # Write JSON report
+            if args.output:
+                json_output = (
+                    args.output.with_suffix(".json")
+                    if args.format == "both"
+                    else args.output
+                )
+            else:
+                json_output = Path(f"comparison_{args.study1}_vs_{args.study2}.json")
+
+            write_comparison_report(report, json_output)
+            print(f"✅ JSON comparison report written to: {json_output}")
+            print()
+
+        # Print summary
+        if report.overall_improvement is not None:
+            if report.overall_improvement:
+                print("✅ Study 2 shows overall improvement over Study 1")
+            else:
+                print("⚠️  Study 2 shows regression from Study 1")
+        else:
+            print("ℹ️  Insufficient data for overall assessment")
+
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+        print()
+        print("Tip: Ensure both Studies have completed and have telemetry data")
+        return 1
+    except Exception as e:
+        print(f"❌ Error during comparison: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
@@ -666,6 +781,7 @@ def main() -> int:
         "init": cmd_init,
         "replay": cmd_replay,
         "debug": cmd_debug,
+        "compare": cmd_compare,
     }
 
     handler = command_map.get(args.command)

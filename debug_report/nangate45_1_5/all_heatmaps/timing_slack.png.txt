@@ -1,0 +1,2 @@
+Placeholder for timing_slack heatmap visualization
+In production, this would be a PNG image.

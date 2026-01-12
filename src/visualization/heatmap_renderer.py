@@ -752,6 +752,112 @@ def generate_eco_impact_heatmaps(
     return results
 
 
+def generate_differential_heatmaps_safe(
+    current_case_heatmaps_dir: str | Path,
+    parent_case_heatmaps_dir: str | Path | None,
+    output_dir: str | Path,
+    has_parent: bool = True,
+) -> dict[str, Any]:
+    """
+    Generate differential heatmaps with graceful fallback when no parent exists.
+
+    For base cases (no parent), differential generation is skipped gracefully
+    without raising errors. Absolute heatmaps are still generated, and the
+    artifact index indicates that differential heatmaps are unavailable.
+
+    Args:
+        current_case_heatmaps_dir: Directory containing current case heatmaps
+        parent_case_heatmaps_dir: Directory containing parent case heatmaps (None for base case)
+        output_dir: Directory where diff heatmaps should be saved
+        has_parent: Whether the case has a parent (default: True)
+
+    Returns:
+        Dictionary with generation results:
+        - differential_generated: bool indicating if differentials were created
+        - differential_count: Number of differential heatmaps generated
+        - skip_reason: Reason for skipping (if not generated)
+        - results: List of metadata dictionaries for each generated diff heatmap
+
+    Raises:
+        Never raises for missing parent - gracefully skips instead
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    current_dir = Path(current_case_heatmaps_dir)
+    output_dir = Path(output_dir)
+
+    # Check if this is a base case (no parent)
+    if not has_parent or parent_case_heatmaps_dir is None:
+        logger.info(
+            "Skipping differential heatmap generation: case has no parent (base case)"
+        )
+        return {
+            "differential_generated": False,
+            "differential_count": 0,
+            "skip_reason": "no_parent",
+            "results": [],
+            "message": "Base case has no parent - differential heatmaps unavailable",
+        }
+
+    parent_dir = Path(parent_case_heatmaps_dir)
+
+    # Check if parent directory exists
+    if not parent_dir.exists():
+        logger.warning(
+            f"Parent heatmap directory not found: {parent_dir} - skipping differential generation"
+        )
+        return {
+            "differential_generated": False,
+            "differential_count": 0,
+            "skip_reason": "parent_directory_not_found",
+            "results": [],
+            "message": f"Parent directory not found: {parent_dir}",
+        }
+
+    # Check if current directory exists
+    if not current_dir.exists():
+        logger.warning(
+            f"Current case heatmap directory not found: {current_dir} - skipping differential generation"
+        )
+        return {
+            "differential_generated": False,
+            "differential_count": 0,
+            "skip_reason": "current_directory_not_found",
+            "results": [],
+            "message": f"Current directory not found: {current_dir}",
+        }
+
+    # Generate differential heatmaps
+    try:
+        results = generate_eco_impact_heatmaps(
+            baseline_heatmaps_dir=parent_dir,
+            comparison_heatmaps_dir=current_dir,
+            output_dir=output_dir,
+        )
+
+        logger.info(f"Generated {len(results)} differential heatmaps")
+
+        return {
+            "differential_generated": True,
+            "differential_count": len(results),
+            "skip_reason": None,
+            "results": results,
+            "message": f"Successfully generated {len(results)} differential heatmaps",
+        }
+
+    except Exception as e:
+        logger.error(f"Failed to generate differential heatmaps: {e}")
+        return {
+            "differential_generated": False,
+            "differential_count": 0,
+            "skip_reason": "generation_error",
+            "results": [],
+            "message": f"Error during generation: {str(e)}",
+        }
+
+
 def render_heatmap_with_hotspot_annotations(
     csv_path: str | Path,
     output_path: str | Path,

@@ -7267,3 +7267,57 @@ The Noodle 2 project is ready for production deployment.
 - Session 409: 278/280 (99.3%)
 - Session 410: 280/280 (100.0%) ← PROJECT COMPLETE! 🎉
 
+
+
+---
+
+## SESSION 411 - TEST REGRESSION FIX
+
+**Date:** 2026-01-12
+**Starting Status:** 280/280 features passing (100.0%)
+**Session Goal:** Fix test regression in F224 edge case test
+
+### Issues Found and Fixed
+
+#### Test Regression: F224 Edge Case Test Failure
+**Test:** test_edge_case_path_with_missing_slack_value
+**Location:** tests/test_f224_endpoint_slack_labels.py
+**Status:** FIXED
+
+**Problem:**
+- Test was checking for graceful handling of paths with missing slack_ps field
+- When slack_ps is missing, it defaults to 0 via .get("slack_ps", 0)
+- The function has skip_overlay_if_no_timing_issue=True by default
+- Since 0 is not < 0, no timing violation is detected
+- Overlay is skipped, returning paths_drawn: 0
+- Test expected paths_drawn == 1
+
+**Root Cause:**
+The test was designed to verify graceful handling of missing slack values,
+but didn't account for the overlay skip optimization that was added later.
+
+**Solution:**
+Added skip_overlay_if_no_timing_issue=False parameter to the test call
+to force overlay rendering even when there are no timing violations.
+This allows the edge case test to verify the graceful handling behavior.
+
+**Files Modified:**
+- tests/test_f224_endpoint_slack_labels.py (1 line changed)
+
+**Verification:**
+- All 16 F224 tests passing
+- Test now correctly validates graceful handling of missing slack fields
+- No impact on production code behavior
+- Only test harness updated to properly exercise edge case
+
+### Status After Session
+
+**Feature Coverage:** 280/280 (100.0%)
+**Test Status:** All passing (4438 tests)
+**Regressions Fixed:** 1
+**New Issues:** 0
+
+The project remains at 100% completion with all tests passing.
+
+**Commit:** d3e469d
+

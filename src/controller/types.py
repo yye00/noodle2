@@ -34,6 +34,13 @@ class ECOClass(str, Enum):
     GLOBAL_DISRUPTIVE = "global_disruptive"
 
 
+class StageType(str, Enum):
+    """Type of stage - execution or approval gate."""
+
+    EXECUTION = "execution"  # Normal execution stage with trials
+    HUMAN_APPROVAL = "human_approval"  # Human approval gate between stages
+
+
 class ExecutionMode(str, Enum):
     """Execution mode for a Stage."""
 
@@ -68,22 +75,44 @@ class StageConfig:
     """Configuration for a single Stage within a Study."""
 
     name: str
-    execution_mode: ExecutionMode
-    trial_budget: int
-    survivor_count: int
-    allowed_eco_classes: list[ECOClass]
+    stage_type: StageType = StageType.EXECUTION  # Type of stage
+    # Execution stage fields
+    execution_mode: ExecutionMode | None = None
+    trial_budget: int = 0
+    survivor_count: int = 0
+    allowed_eco_classes: list[ECOClass] = field(default_factory=list)
     abort_threshold_wns_ps: int | None = None  # If WNS worse than this, abort
     visualization_enabled: bool = False
     timeout_seconds: int = 3600  # 1 hour default (hard timeout)
     soft_timeout_seconds: int | None = None  # Optional warning threshold
+    # Human approval gate fields
+    required_approvers: int = 1  # Number of required approvers
+    timeout_hours: int = 24  # Timeout for approval in hours
 
     def __post_init__(self) -> None:
-        """Validate timeout configuration."""
-        if self.soft_timeout_seconds is not None:
-            if self.soft_timeout_seconds <= 0:
-                raise TimeoutConfigError("soft_timeout_seconds must be positive")
-            if self.soft_timeout_seconds >= self.timeout_seconds:
-                raise TimeoutConfigError("soft_timeout_seconds must be less than timeout_seconds (hard timeout)")
+        """Validate stage configuration based on stage type."""
+        if self.stage_type == StageType.EXECUTION:
+            # Validate execution stage fields
+            if self.execution_mode is None:
+                raise ValueError("execution_mode is required for execution stages")
+            if self.trial_budget <= 0:
+                raise ValueError("trial_budget must be positive for execution stages")
+            if self.survivor_count <= 0:
+                raise ValueError("survivor_count must be positive for execution stages")
+            if self.survivor_count > self.trial_budget:
+                raise ValueError(f"survivor_count ({self.survivor_count}) cannot exceed trial_budget ({self.trial_budget})")
+            # Validate timeout configuration
+            if self.soft_timeout_seconds is not None:
+                if self.soft_timeout_seconds <= 0:
+                    raise TimeoutConfigError("soft_timeout_seconds must be positive")
+                if self.soft_timeout_seconds >= self.timeout_seconds:
+                    raise TimeoutConfigError("soft_timeout_seconds must be less than timeout_seconds (hard timeout)")
+        elif self.stage_type == StageType.HUMAN_APPROVAL:
+            # Validate approval gate fields
+            if self.required_approvers < 1:
+                raise ValueError("required_approvers must be at least 1")
+            if self.timeout_hours < 1:
+                raise ValueError("timeout_hours must be at least 1")
 
 
 @dataclass
@@ -126,16 +155,18 @@ class StudyConfig:
         if not self.snapshot_path:
             raise SnapshotPathError()
 
-        # Validate stage indices are sequential
+        # Validate stage configurations
         for idx, stage in enumerate(self.stages):
-            if stage.trial_budget <= 0:
-                raise TrialBudgetError(idx)
-            if stage.survivor_count <= 0:
-                raise SurvivorCountError(idx)
-            if stage.survivor_count > stage.trial_budget:
-                raise SurvivorBudgetMismatchError(
-                    idx, stage.survivor_count, stage.trial_budget
-                )
+            # Only validate execution-specific fields for execution stages
+            if stage.stage_type == StageType.EXECUTION:
+                if stage.trial_budget <= 0:
+                    raise TrialBudgetError(idx)
+                if stage.survivor_count <= 0:
+                    raise SurvivorCountError(idx)
+                if stage.survivor_count > stage.trial_budget:
+                    raise SurvivorBudgetMismatchError(
+                        idx, stage.survivor_count, stage.trial_budget
+                    )
 
         # Validate ECO blacklist and whitelist are mutually sensible
         if self.eco_whitelist is not None and self.eco_blacklist:

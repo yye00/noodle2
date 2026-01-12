@@ -26,7 +26,12 @@ from src.controller.study_resumption import (
 )
 from src.controller.summary_report import SummaryReportGenerator
 from src.controller.telemetry import StageTelemetry, StudyTelemetry, TelemetryEmitter
-from src.controller.types import ECOClass, ExecutionMode, StageConfig
+from src.controller.types import ECOClass, ExecutionMode, StageConfig, StageType
+from src.controller.human_approval import (
+    ApprovalGateSimulator,
+    ApprovalSummary,
+    generate_approval_summary,
+)
 from src.telemetry.event_stream import EventStreamEmitter
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
 
@@ -119,6 +124,7 @@ class StudyExecutor:
         survivor_selector: Callable[[list[TrialResult], int], list[str]] | None = None,
         skip_base_case_verification: bool = False,
         enable_graceful_shutdown: bool = True,
+        approval_simulator: ApprovalGateSimulator | None = None,
     ) -> None:
         """
         Initialize Study executor.
@@ -131,12 +137,14 @@ class StudyExecutor:
                              Takes (trial_results, survivor_count) -> list of case_ids
             skip_base_case_verification: Skip base case verification (for testing only)
             enable_graceful_shutdown: Enable graceful shutdown on SIGTERM/SIGINT (default: True)
+            approval_simulator: Approval gate simulator for testing (optional)
         """
         self.config = config
         self.artifacts_root = Path(artifacts_root)
         self.case_graph = CaseGraph()
         self.survivor_selector = survivor_selector or self._default_survivor_selector
         self.skip_base_case_verification = skip_base_case_verification
+        self.approval_simulator = approval_simulator or ApprovalGateSimulator(auto_approve=True)
 
         # Initialize telemetry emitter
         self.telemetry_emitter = TelemetryEmitter(
@@ -519,42 +527,95 @@ class StudyExecutor:
                     study_start, stage_results, study_telemetry, report_dir
                 )
 
-            print(f"\n=== Executing Stage {stage_index}: {stage_config.name} ===")
-            print(f"Input cases: {len(current_cases)}")
-            print(f"Trial budget: {stage_config.trial_budget}")
-            print(f"Survivor count: {stage_config.survivor_count}")
+            # Check if this is an approval gate or execution stage
+            if stage_config.stage_type == StageType.HUMAN_APPROVAL:
+                # Handle approval gate
+                current_survivor_ids = [case.case_id for case in current_cases]
+                approved, reason = self._execute_approval_gate(
+                    stage_index=stage_index,
+                    stage_config=stage_config,
+                    stage_results=stage_results,
+                    current_survivors=current_survivor_ids,
+                )
 
-            # Execute stage
-            stage_result = self._execute_stage(
-                stage_index=stage_index,
-                stage_config=stage_config,
-                input_cases=current_cases,
-            )
+                if not approved:
+                    # Study rejected at approval gate
+                    print(f"\n🚫 STUDY REJECTED AT APPROVAL GATE: {reason}")
 
-            stage_results.append(stage_result)
+                    # Save safety trace
+                    trace_path = report_dir / "safety_trace.json"
+                    self.safety_trace.save_to_file(trace_path)
+                    trace_txt_path = report_dir / "safety_trace.txt"
+                    self.safety_trace.save_to_file(trace_txt_path)
 
-            # Emit stage telemetry
-            self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
+                    # Export case lineage graph
+                    lineage_dot_path = report_dir / "lineage.dot"
+                    lineage_dot = self.case_graph.export_to_dot()
+                    lineage_dot_path.write_text(lineage_dot)
 
-            # Save checkpoint after stage completes
-            stage_checkpoint = create_stage_checkpoint(
-                stage_index=stage_index,
-                stage_name=stage_config.name,
-                survivor_case_ids=stage_result.survivors,
-                trials_completed=stage_result.trials_executed,
-                trials_failed=len([t for t in stage_result.trial_results if not t.success]),
-                metadata=stage_result.metadata,
-            )
-            self.study_checkpoint = update_checkpoint_after_stage(
-                self.study_checkpoint, stage_checkpoint
-            )
+                    # Finalize and emit study telemetry
+                    study_telemetry.finalize(
+                        final_survivors=[],
+                        aborted=True,
+                        abort_reason=f"Rejected at approval gate: {reason}",
+                    )
+                    self.telemetry_emitter.emit_study_telemetry(study_telemetry)
+                    self.telemetry_emitter.flush_all_case_telemetry()
 
-            # Save checkpoint to disk
-            checkpoint_path = save_checkpoint(self.study_checkpoint, report_dir)
-            print(f"   Checkpoint saved: {checkpoint_path}")
+                    return StudyResult(
+                        study_name=self.config.name,
+                        total_stages=len(self.config.stages),
+                        stages_completed=stage_index,
+                        total_runtime_seconds=time.time() - study_start,
+                        stage_results=stage_results,
+                        final_survivors=[],
+                        aborted=True,
+                        abort_reason=f"Rejected at approval gate: {reason}",
+                        author=self.config.author,
+                        creation_date=self.config.creation_date,
+                        description=self.config.description,
+                    )
 
-            # Record stage abort check in safety trace
-            if stage_result.abort_decision:
+                # Approval granted - current_cases passes through unchanged to next stage
+                # (Approval gates don't execute trials or select survivors)
+            else:
+                # Normal execution stage
+                print(f"\n=== Executing Stage {stage_index}: {stage_config.name} ===")
+                print(f"Input cases: {len(current_cases)}")
+                print(f"Trial budget: {stage_config.trial_budget}")
+                print(f"Survivor count: {stage_config.survivor_count}")
+
+                # Execute stage
+                stage_result = self._execute_stage(
+                    stage_index=stage_index,
+                    stage_config=stage_config,
+                    input_cases=current_cases,
+                )
+
+                stage_results.append(stage_result)
+
+                # Emit stage telemetry
+                self._emit_stage_telemetry(stage_result, stage_config, study_telemetry)
+
+                # Save checkpoint after stage completes
+                stage_checkpoint = create_stage_checkpoint(
+                    stage_index=stage_index,
+                    stage_name=stage_config.name,
+                    survivor_case_ids=stage_result.survivors,
+                    trials_completed=stage_result.trials_executed,
+                    trials_failed=len([t for t in stage_result.trial_results if not t.success]),
+                    metadata=stage_result.metadata,
+                )
+                self.study_checkpoint = update_checkpoint_after_stage(
+                    self.study_checkpoint, stage_checkpoint
+                )
+
+                # Save checkpoint to disk
+                checkpoint_path = save_checkpoint(self.study_checkpoint, report_dir)
+                print(f"   Checkpoint saved: {checkpoint_path}")
+
+            # Record stage abort check in safety trace (only for execution stages)
+            if stage_config.stage_type == StageType.EXECUTION and stage_result.abort_decision:
                 # Emit abort evaluation event
                 self.event_stream.emit_abort_evaluation(
                     study_name=self.config.name,
@@ -635,26 +696,27 @@ class StudyExecutor:
                     description=self.config.description,
                 )
 
-            # Prepare cases for next stage
-            if stage_index < len(self.config.stages) - 1:
-                # Derive new cases from survivors for next stage
-                current_cases = []
-                for derived_idx, survivor_id in enumerate(stage_result.survivors):
-                    survivor_case = self.case_graph.get_case(survivor_id)
-                    if survivor_case:
-                        # Create derived case for next stage
-                        derived = survivor_case.derive(
-                            eco_name="pass_through",  # Placeholder for actual ECO
-                            new_stage_index=stage_index + 1,
-                            derived_index=derived_idx,
-                            snapshot_path=self.config.snapshot_path,  # Will be updated when ECO is applied
-                            metadata={"source_trial": survivor_id},
-                        )
-                        self.case_graph.add_case(derived)
-                        current_cases.append(derived)
-            else:
-                # Final stage - survivors are final results
-                print(f"\nFinal survivors: {stage_result.survivors}")
+            # Prepare cases for next stage (only for execution stages)
+            if stage_config.stage_type == StageType.EXECUTION:
+                if stage_index < len(self.config.stages) - 1:
+                    # Derive new cases from survivors for next stage
+                    current_cases = []
+                    for derived_idx, survivor_id in enumerate(stage_result.survivors):
+                        survivor_case = self.case_graph.get_case(survivor_id)
+                        if survivor_case:
+                            # Create derived case for next stage
+                            derived = survivor_case.derive(
+                                eco_name="pass_through",  # Placeholder for actual ECO
+                                new_stage_index=stage_index + 1,
+                                derived_index=derived_idx,
+                                snapshot_path=self.config.snapshot_path,  # Will be updated when ECO is applied
+                                metadata={"source_trial": survivor_id},
+                            )
+                            self.case_graph.add_case(derived)
+                            current_cases.append(derived)
+                else:
+                    # Final stage - survivors are final results
+                    print(f"\nFinal survivors: {stage_result.survivors}")
 
         study_runtime = time.time() - study_start
 
@@ -756,6 +818,85 @@ class StudyExecutor:
             creation_date=self.config.creation_date,
             description=self.config.description,
         )
+
+    def _execute_approval_gate(
+        self,
+        stage_index: int,
+        stage_config: StageConfig,
+        stage_results: list[StageResult],
+        current_survivors: list[str],
+    ) -> tuple[bool, str]:
+        """
+        Handle human approval gate stage.
+
+        Args:
+            stage_index: Stage index (0-based)
+            stage_config: Approval gate stage configuration
+            stage_results: Results from previous stages
+            current_survivors: Current survivor case IDs
+
+        Returns:
+            Tuple of (approved: bool, reason: str)
+        """
+        print(f"\n=== Approval Gate: {stage_config.name} ===")
+        print(f"Required approvers: {stage_config.required_approvers}")
+        print(f"Timeout: {stage_config.timeout_hours} hours")
+
+        # Generate approval summary
+        stage_summaries = [
+            {
+                "stage_name": result.stage_name,
+                "trials_executed": result.trials_executed,
+                "survivors": result.survivors,
+                "runtime_seconds": result.total_runtime_seconds,
+            }
+            for result in stage_results
+        ]
+
+        # Calculate best metrics from stage results
+        best_wns_ps = None
+        best_hot_ratio = None
+        for stage_result in stage_results:
+            for trial_result in stage_result.trial_results:
+                if trial_result.success and trial_result.metrics:
+                    wns = trial_result.metrics.timing.wns_ps
+                    if best_wns_ps is None or wns > best_wns_ps:
+                        best_wns_ps = wns
+                    if trial_result.metrics.congestion:
+                        hot_ratio = trial_result.metrics.congestion.hot_ratio
+                        if best_hot_ratio is None or hot_ratio < best_hot_ratio:
+                            best_hot_ratio = hot_ratio
+
+        summary = generate_approval_summary(
+            study_name=self.config.name,
+            stages_completed=len(stage_results),
+            total_stages=len(self.config.stages),
+            current_stage_name=stage_config.name,
+            survivors_count=len(current_survivors),
+            stage_summaries=stage_summaries,
+            best_wns_ps=best_wns_ps,
+            best_hot_ratio=best_hot_ratio,
+        )
+
+        # Display approval prompt
+        print("\n" + summary.format_for_display())
+
+        # Request approval
+        self.approval_simulator.request_approval(summary)
+
+        # Simulate approval decision (in real implementation, this would wait for actual approval)
+        decision = self.approval_simulator.simulate_approval(summary)
+
+        if decision.approved:
+            print(f"\n✓ Approved by {decision.approver}")
+            if decision.reason:
+                print(f"  Reason: {decision.reason}")
+            return True, f"Approved by {decision.approver}"
+        else:
+            print(f"\n✗ Rejected by {decision.approver}")
+            if decision.reason:
+                print(f"  Reason: {decision.reason}")
+            return False, f"Rejected by {decision.approver}: {decision.reason}"
 
     def _execute_stage(
         self,

@@ -167,7 +167,63 @@
       "sub_features": [],
       "created_at": "2026-01-12T01:22:29.430882",
       "updated_at": "2026-01-12T01:22:29.430886"
+    },
+    "F269": {
+      "feature_id": "F269",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T01:29:52.296793",
+      "updated_at": "2026-01-12T01:29:52.296797"
+    },
+    "F270": {
+      "feature_id": "F270",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T01:29:52.311075",
+      "updated_at": "2026-01-12T01:29:52.311081"
+    },
+    "F271": {
+      "feature_id": "F271",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T01:29:52.311329",
+      "updated_at": "2026-01-12T01:29:52.311333"
+    },
+    "F246": {
+      "feature_id": "F246",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T01:46:35.567990",
+      "updated_at": "2026-01-12T01:46:35.567995"
     }
   },
-  "updated_at": "2026-01-12T01:22:29.430905"
+  "updated_at": "2026-01-12T01:46:35.568024"
 }

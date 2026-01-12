@@ -7561,8 +7561,8 @@
       "Step 5: Verify compound ECO is rejected (routing_affecting not allowed in locked)"
     ],
     "priority": "medium",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T11:09:01.208962+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

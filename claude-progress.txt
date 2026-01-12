@@ -6459,3 +6459,59 @@ Additional tests for defaults and tracking
 7d24e65 - Implement F251: Approval gate enforces dependency with requires_approval field
 
 ================================================================================
+
+================================================================================
+SESSION 404 - F254 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F254 - Compound ECO supports rollback_on_failure: partial
+
+**Implementation Summary:**
+Implemented partial rollback functionality for compound ECOs. When a component 
+fails with partial rollback strategy, only that component's changes are rolled 
+back while preserving all previous successful components.
+
+**Changes Made:**
+
+1. Enhanced execute_with_rollback() in src/controller/eco.py (lines 866-874):
+   - Added actual checkpoint restoration for 'partial' strategy
+   - Uses the last checkpoint in the list (taken before failed component)
+   - Restores only the failed component's state
+   - Preserves all successful component changes
+
+2. Rollback strategies comparison:
+   - "all": Restores initial checkpoint (before any components)
+   - "partial": Restores checkpoint before failed component (new implementation)
+   - "none": No restoration, keeps all changes
+
+**Test Coverage (tests/test_f254_partial_rollback.py - 12 tests passing):**
+
+Step 1: Define compound ECO with rollback_on_failure: partial
+Step 2: Configure third component to fail
+Step 3: Apply compound ECO
+Step 4: Verify first and second components applied successfully
+Step 5: Verify third component fails
+Step 6: Verify only third component rolled back
+Step 7: Verify first and second components remain applied
+
+Additional tests:
+- Comparison with "all" and "none" strategies
+- Edge cases: first/middle component failures
+- All components succeed case
+
+**Verification:**
+- All 12 new tests pass
+- All 17 existing F252 tests pass (compound ECO basics)
+- All 13 existing F253 tests pass (rollback: all)
+- Total: 42 tests covering compound ECO functionality
+
+**Current Status:**
+- Features passing: 267/280 (95.4%)
+- Features remaining: 13
+
+**Commit:**
+5a4559a - Implement F254: Compound ECO supports rollback_on_failure: partial
+
+================================================================================

@@ -61,3 +61,4 @@ logs/
 !init.sh
 !README.md
 !app_spec.txt
+demo_output/

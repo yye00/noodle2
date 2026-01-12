@@ -1951,3 +1951,94 @@ All 8 verification steps passing:
 - Clean git history with detailed commit message
 
 ---
+
+## Session 367 - F202 Critical Path Extraction Implementation (2026-01-11)
+
+### Session Summary
+
+**Status:** ✅ FEATURE COMPLETE - F202 Implemented
+**Achievement:** Critical Path Information Extraction with Bounding Box Identification
+**Project Completion:** 205/271 features (75.6%)
+**New Passing Features:** 1 (F202)
+**Test Suite:** All tests passing
+
+### Implementation Summary
+
+Implemented F202: "Extract critical path information from timing diagnosis"
+
+**Enhanced:**
+1. **diagnose_timing()** in src/analysis/diagnosis.py
+   - Added critical_region (BoundingBox) identification
+   - Added critical_region_description with contextual information
+   - Region identifies area with concentrated timing failures
+   - Description varies based on dominant_issue type (wire/cell dominated)
+
+**Verification Steps (All Passing):**
+✅ Step 1: Run timing diagnosis on failing design
+✅ Step 2: Verify critical_region bbox is identified
+✅ Step 3: Verify problem_nets list is populated
+✅ Step 4: Verify wire_delay_pct is calculated for problem nets
+✅ Step 5: Verify slack_histogram is generated
+
+### Code Changes
+
+**Modified Files:**
+- src/analysis/diagnosis.py: Added critical region bbox identification logic
+- feature_list.json: Marked F202 as passing
+
+**New Files:**
+- tests/test_critical_path_extraction.py (14 comprehensive tests)
+
+### Test Results
+
+**F202 Tests (14/14 passing):**
+```
+tests/test_critical_path_extraction.py
+  ✅ test_step_1_run_timing_diagnosis_on_failing_design
+  ✅ test_step_2_verify_critical_region_bbox_identified
+  ✅ test_step_3_verify_problem_nets_list_populated
+  ✅ test_step_4_verify_wire_delay_pct_calculated
+  ✅ test_step_5_verify_slack_histogram_generated
+  ✅ test_critical_region_not_created_without_paths
+  ✅ test_critical_region_description_includes_issue_type
+  ✅ test_problem_nets_include_slack_values
+  ✅ test_wire_delay_pct_varies_by_slack_severity
+  ✅ test_slack_histogram_bins_span_from_wns_to_zero
+  ✅ test_critical_region_serializes_to_dict
+  ✅ test_problem_nets_serialize_with_delay_percentages
+  ✅ test_slack_histogram_serializes_correctly
+  ✅ test_complete_f202_workflow
+```
+
+**Existing Timing Diagnosis Tests (12/12 still passing):**
+All F201 tests continue to pass, confirming no regressions.
+
+### Technical Details
+
+**Critical Region Identification:**
+- Analyzed when timing paths exist with slack < -500ps
+- BoundingBox created with x1, y1, x2, y2 coordinates
+- Description includes:
+  - Number of critical paths in region
+  - Dominant issue type (wire vs cell)
+  - Contextual guidance for ECO selection
+
+**Data Structures Verified:**
+1. critical_region: BoundingBox with valid coordinates
+2. problem_nets: List with name, slack_ps, wire_delay_pct, cell_delay_pct
+3. slack_histogram: bins_ps and counts arrays
+4. All structures serialize correctly to JSON
+
+### Next Steps
+
+**Priority Order:**
+1. **F203** [high]: Timing diagnosis suggests appropriate ECOs based on bottlenecks
+2. **F204** [high]: Generate congestion diagnosis report for high hot_ratio designs
+3. **F216-F217** [high]: Differential heatmap generation
+4. **F222** [high]: Critical path overlay visualization
+
+**Current Status:**
+- 205/271 features passing (75.6%)
+- 66 features remaining
+- 0 features need reverification
+- All test suites passing

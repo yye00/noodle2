@@ -5,6 +5,7 @@ This module provides functionality to:
 - Generate comparison reports showing overall improvements/regressions
 - Calculate deltas for key metrics (WNS, TNS, hot_ratio, etc.)
 - Provide delta percentages and direction indicators (▲/▼)
+- Compare ECO effectiveness between studies
 """
 
 import json
@@ -86,6 +87,52 @@ class MetricComparison:
 
 
 @dataclass
+class ECOEffectivenessData:
+    """ECO effectiveness metrics for a single ECO in one study."""
+
+    eco_name: str
+    total_applications: int = 0
+    successful_applications: int = 0
+    success_rate: float = 0.0
+    average_wns_improvement_ps: float = 0.0
+
+
+@dataclass
+class ECOEffectivenessComparison:
+    """Comparison of ECO effectiveness between two studies."""
+
+    eco_name: str
+    study1_success_rate: float | None
+    study2_success_rate: float | None
+    study1_applications: int | None
+    study2_applications: int | None
+    success_rate_delta: float | None = None
+    direction: str = ""  # "▲" for improvement, "▼" for regression, "=" for no change
+    improved: bool | None = None
+
+    def __post_init__(self) -> None:
+        """Calculate delta and direction for success rate."""
+        if self.study1_success_rate is not None and self.study2_success_rate is not None:
+            # Calculate delta (study2 - study1)
+            self.success_rate_delta = self.study2_success_rate - self.study1_success_rate
+
+            # For success rate: higher is better
+            if self.success_rate_delta > 0.01:  # 1% threshold
+                self.direction = "▲"
+                self.improved = True
+            elif self.success_rate_delta < -0.01:
+                self.direction = "▼"
+                self.improved = False
+            else:
+                self.direction = "="
+                self.improved = None
+        else:
+            self.success_rate_delta = None
+            self.direction = "N/A"
+            self.improved = None
+
+
+@dataclass
 class StudyComparisonReport:
     """Comprehensive comparison report between two studies."""
 
@@ -94,10 +141,51 @@ class StudyComparisonReport:
     study1_summary: StudyMetricsSummary
     study2_summary: StudyMetricsSummary
     metric_comparisons: list[MetricComparison] = field(default_factory=list)
+    eco_effectiveness_comparisons: list[ECOEffectivenessComparison] = field(default_factory=list)
     overall_improvement: bool | None = None
     comparison_timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )
+
+
+def load_eco_effectiveness_data(
+    study_name: str,
+    artifacts_root: Path = Path("artifacts"),
+) -> dict[str, ECOEffectivenessData]:
+    """
+    Load ECO effectiveness data from a completed Study.
+
+    Args:
+        study_name: Name of the Study
+        artifacts_root: Root directory for artifacts
+
+    Returns:
+        Dictionary mapping ECO name to effectiveness data
+    """
+    eco_map: dict[str, ECOEffectivenessData] = {}
+
+    # Look for eco_leaderboard.json
+    leaderboard_file = artifacts_root / study_name / "eco_leaderboard.json"
+
+    if not leaderboard_file.exists():
+        # No ECO leaderboard data available
+        return eco_map
+
+    with open(leaderboard_file) as f:
+        leaderboard_data = json.load(f)
+
+    # Extract ECO effectiveness from leaderboard entries
+    for entry in leaderboard_data.get("entries", []):
+        eco_name = entry.get("eco_name", "unknown")
+        eco_map[eco_name] = ECOEffectivenessData(
+            eco_name=eco_name,
+            total_applications=entry.get("total_applications", 0),
+            successful_applications=entry.get("successful_applications", 0),
+            success_rate=entry.get("success_rate", 0.0),
+            average_wns_improvement_ps=entry.get("average_wns_improvement_ps", 0.0),
+        )
+
+    return eco_map
 
 
 def load_study_summary(study_name: str, telemetry_root: Path = Path("telemetry")) -> StudyMetricsSummary:
@@ -185,6 +273,7 @@ def compare_studies(
     study1_name: str,
     study2_name: str,
     telemetry_root: Path = Path("telemetry"),
+    artifacts_root: Path = Path("artifacts"),
 ) -> StudyComparisonReport:
     """
     Compare two completed Studies and generate comparison report.
@@ -193,6 +282,7 @@ def compare_studies(
         study1_name: Name of first Study
         study2_name: Name of second Study
         telemetry_root: Root directory for telemetry data
+        artifacts_root: Root directory for artifacts (for ECO leaderboard data)
 
     Returns:
         StudyComparisonReport with detailed comparison
@@ -240,6 +330,30 @@ def compare_studies(
         )
     )
 
+    # Load ECO effectiveness data for both studies
+    study1_eco_data = load_eco_effectiveness_data(study1_name, artifacts_root)
+    study2_eco_data = load_eco_effectiveness_data(study2_name, artifacts_root)
+
+    # Create ECO effectiveness comparisons
+    eco_comparisons = []
+
+    # Get all unique ECO names from both studies
+    all_eco_names = set(study1_eco_data.keys()) | set(study2_eco_data.keys())
+
+    for eco_name in sorted(all_eco_names):
+        study1_eco = study1_eco_data.get(eco_name)
+        study2_eco = study2_eco_data.get(eco_name)
+
+        eco_comparisons.append(
+            ECOEffectivenessComparison(
+                eco_name=eco_name,
+                study1_success_rate=study1_eco.success_rate if study1_eco else None,
+                study2_success_rate=study2_eco.success_rate if study2_eco else None,
+                study1_applications=study1_eco.total_applications if study1_eco else None,
+                study2_applications=study2_eco.total_applications if study2_eco else None,
+            )
+        )
+
     # Determine overall improvement
     # Study improved if majority of metrics improved
     improvements = [c.improved for c in comparisons if c.improved is not None]
@@ -254,6 +368,7 @@ def compare_studies(
         study1_summary=study1_summary,
         study2_summary=study2_summary,
         metric_comparisons=comparisons,
+        eco_effectiveness_comparisons=eco_comparisons,
         overall_improvement=overall_improvement,
     )
 
@@ -318,6 +433,42 @@ def format_comparison_report(report: StudyComparisonReport) -> str:
 
     lines.append("-" * 80)
     lines.append("")
+
+    # ECO effectiveness comparison table
+    if report.eco_effectiveness_comparisons:
+        lines.append("ECO EFFECTIVENESS COMPARISON")
+        lines.append("-" * 80)
+        lines.append(
+            f"{'ECO Name':<30} {'V1 Rate':<12} {'V2 Rate':<12} {'Delta':<12} {'Dir':>5}"
+        )
+        lines.append("-" * 80)
+
+        for eco_comp in report.eco_effectiveness_comparisons:
+            eco_name = eco_comp.eco_name[:29]
+            v1_rate = (
+                f"{eco_comp.study1_success_rate * 100:.1f}%"
+                if eco_comp.study1_success_rate is not None
+                else "N/A"
+            )
+            v2_rate = (
+                f"{eco_comp.study2_success_rate * 100:.1f}%"
+                if eco_comp.study2_success_rate is not None
+                else "N/A"
+            )
+            delta = (
+                f"{eco_comp.success_rate_delta * 100:+.1f}%"
+                if eco_comp.success_rate_delta is not None
+                else "N/A"
+            )
+            direction = eco_comp.direction
+
+            lines.append(
+                f"{eco_name:<30} {v1_rate:<12} {v2_rate:<12} {delta:<12} {direction:>5}"
+            )
+
+        lines.append("-" * 80)
+        lines.append("")
+
     lines.append(f"Generated: {report.comparison_timestamp}")
     lines.append("")
 
@@ -369,6 +520,19 @@ def write_comparison_report(
                 "improved": c.improved,
             }
             for c in report.metric_comparisons
+        ],
+        "eco_effectiveness_comparisons": [
+            {
+                "eco_name": e.eco_name,
+                "study1_success_rate": e.study1_success_rate,
+                "study2_success_rate": e.study2_success_rate,
+                "study1_applications": e.study1_applications,
+                "study2_applications": e.study2_applications,
+                "success_rate_delta": e.success_rate_delta,
+                "direction": e.direction,
+                "improved": e.improved,
+            }
+            for e in report.eco_effectiveness_comparisons
         ],
         "overall_improvement": report.overall_improvement,
         "comparison_timestamp": report.comparison_timestamp,

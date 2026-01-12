@@ -865,7 +865,9 @@ class CompoundECO(ECO):
                 )
             elif rollback_strategy == "partial":
                 # Only rollback failed component - keep successful ones
-                # Component checkpoints would be used to rollback just the failing component
+                # The last checkpoint in the list is the one taken before the failed component
+                if component_checkpoints and hasattr(component_checkpoints[-1], 'restore'):
+                    component_checkpoints[-1].restore()
                 result.error_message = (
                     f"{result.error_message or 'Component failed'} "
                     f"(partial rollback - preserved successful components)"

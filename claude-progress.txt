@@ -4609,3 +4609,137 @@ Low-priority features remaining:
   * Compound ECOs (F252)
   * ECO preconditions/postconditions (F256-F257)
 - All tests passing, no regressions, clean state for next session
+
+=============================================================================
+SESSION 387 - 2026-01-12
+=============================================================================
+
+## Session Summary
+
+**Feature Completed:** F246 - Diverse survivor selection with eco_path_distance metric
+**Tests Added:** 29 comprehensive tests
+**Progress:** 239/280 → 240/280 (85.4% → 85.7%)
+
+### F246 Implementation Details
+
+Implemented diversity-aware survivor selection system that maintains diverse ECO application sequences while selecting high-quality trials.
+
+**Core Components:**
+
+1. **ECO Path Distance Metric:**
+   - Computes normalized Levenshtein (edit) distance between ECO sequences
+   - Distance ranges from 0.0 (identical) to 1.0 (completely different)
+   - Considers insertions, deletions, and substitutions
+   - Normalized by length of longer sequence
+
+2. **Diversity Configuration:**
+   - `DiversityConfig` dataclass with validation
+   - Configurable min_diversity threshold (0.0-1.0)
+   - `always_keep_best` ensures top trial is selected
+   - `random_survivors` option for exploration
+
+3. **Diverse Selection Algorithm:**
+   - Ranks trials using multi-objective scoring (WNS + congestion)
+   - Greedily selects survivors maintaining minimum pairwise diversity
+   - Checks all pairs to ensure diversity >= min_diversity
+   - Relaxes constraint if cannot meet survivor count
+   - Returns exactly requested number of survivors
+
+4. **Integration:**
+   - Added `DIVERSE_TOP_N` to RankingPolicy enum
+   - Added `ECO_PATH_DISTANCE` to DiversityMetric enum
+   - Updated `create_survivor_selector()` factory function
+   - Compatible with existing multi-objective ranking infrastructure
+
+**Test Coverage:**
+
+All 7 feature steps verified:
+1. ✅ Configure survivor_selection method: diverse_top_n
+2. ✅ Set diversity metric: eco_path_distance
+3. ✅ Set min_diversity: 0.3
+4. ✅ Run stage with 10 survivors
+5. ✅ Verify selected survivors have diverse ECO sequences
+6. ✅ Verify pairwise distance between survivors >= 0.3
+7. ✅ Verify diversity constraint is applied
+
+Additional tests:
+- ECO path distance computation (8 tests)
+- ECO sequence extraction from trial metadata (4 tests)
+- Diversity configuration validation (4 tests)
+- Diversity selection steps (7 tests)
+- Survivor selector factory (3 tests)
+- Edge cases (3 tests)
+
+**Quality Verification:**
+- All 29 F246 tests passing
+- All 51 existing ranking tests still passing
+- No regressions in multi-objective or trial ranking tests
+- Code follows existing patterns and conventions
+
+### Technical Approach
+
+**Levenshtein Distance Algorithm:**
+```
+For sequences A and B:
+1. Build DP table: dp[i][j] = edit distance for A[0:i], B[0:j]
+2. Base cases: dp[i][0] = i, dp[0][j] = j
+3. Recurrence:
+   - If A[i] == B[j]: dp[i][j] = dp[i-1][j-1]
+   - Else: dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1])
+4. Normalize: distance = dp[m][n] / max(m, n)
+```
+
+**Greedy Diversity Selection:**
+```
+1. Score all trials using multi-objective ranking
+2. Sort by score descending
+3. Always select best trial (if configured)
+4. For each remaining trial in order:
+   - Check diversity with all selected survivors
+   - If all pairwise distances >= min_diversity: select
+   - Stop when survivor_count reached
+5. If insufficient survivors: relax constraint and fill remainder
+```
+
+### Code Changes
+
+**src/controller/ranking.py:**
+- Added `DiversityMetric` enum
+- Added `DiversityConfig` dataclass with validation
+- Implemented `compute_eco_path_distance()` (44 lines)
+- Implemented `get_eco_sequence_from_trial()` (19 lines)
+- Implemented `rank_diverse_top_n()` (137 lines)
+- Updated `create_survivor_selector()` to support diverse_top_n
+- Total: +297 lines
+
+**tests/test_f246_diverse_survivor_selection.py:**
+- New file with 29 comprehensive tests
+- Tests all feature steps plus edge cases
+- Mock trial creation helpers
+- Total: +674 lines
+
+### Next Priority Features
+
+High-priority features ready for implementation:
+1. **F249 [high]**: Support human approval gate stage between execution stages
+2. **F252 [high]**: Support compound ECOs with sequential component application
+3. **F256 [high]**: ECO definition supports preconditions with diagnosis integration
+4. **F257 [high]**: ECO definition supports postconditions for verification
+5. **F258 [high]**: ECO definition supports parameterized TCL templates
+
+### Session Statistics
+
+**Duration:** ~1.5 hours
+**Features Completed:** 1 (F246)
+**Tests Written:** 29
+**Lines Added:** ~971 (297 implementation + 674 tests)
+**Tests Passing:** All tests passing (no regressions)
+
+### Notes for Next Session
+
+- F246 successfully completed with comprehensive testing
+- Diversity-aware selection infrastructure ready for use
+- Algorithm efficiently handles ECO sequence diversity
+- Ready to implement more advanced features (human gates, compound ECOs)
+- All tests passing, clean state for next session
+

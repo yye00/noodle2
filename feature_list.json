@@ -7649,8 +7649,8 @@
       "Step 6: Verify out-of-range parameters are rejected"
     ],
     "priority": "high",
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-12T07:39:53.724027+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

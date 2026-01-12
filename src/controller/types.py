@@ -94,18 +94,14 @@ class StageConfig:
     requires_approval: str | None = None  # Name of approval gate stage that must be completed before this stage can execute
 
     def __post_init__(self) -> None:
-        """Validate stage configuration based on stage type."""
+        """Validate stage configuration based on stage type.
+
+        Note: Most validation is deferred to StudyConfig.validate() where we have
+        access to the stage index for better error messages. This method only validates
+        fields that can provide good error messages without the index.
+        """
         if self.stage_type == StageType.EXECUTION:
-            # Validate execution stage fields
-            if self.execution_mode is None:
-                raise ValueError("execution_mode is required for execution stages")
-            if self.trial_budget <= 0:
-                raise ValueError("trial_budget must be positive for execution stages")
-            if self.survivor_count <= 0:
-                raise ValueError("survivor_count must be positive for execution stages")
-            if self.survivor_count > self.trial_budget:
-                raise ValueError(f"survivor_count ({self.survivor_count}) cannot exceed trial_budget ({self.trial_budget})")
-            # Validate timeout configuration
+            # Validate timeout configuration (can provide good error messages)
             if self.soft_timeout_seconds is not None:
                 if self.soft_timeout_seconds <= 0:
                     raise TimeoutConfigError("soft_timeout_seconds must be positive")
@@ -188,6 +184,8 @@ class StudyConfig:
         for idx, stage in enumerate(self.stages):
             # Only validate execution-specific fields for execution stages
             if stage.stage_type == StageType.EXECUTION:
+                if stage.execution_mode is None:
+                    raise ValueError(f"Stage {idx} execution_mode is required for execution stages")
                 if stage.trial_budget <= 0:
                     raise TrialBudgetError(idx)
                 if stage.survivor_count <= 0:

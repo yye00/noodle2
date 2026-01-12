@@ -7060,3 +7060,120 @@ Key Implementation Points:
 - Clean integration with existing prior sharing infrastructure
 - Project is 98.9% complete, approaching final milestone
 
+
+========================================
+SESSION 409 UPDATE - January 12, 2026
+========================================
+
+**Major Milestone: 99.3% Complete!**
+
+**Status: 278/280 tests passing (99.3%)**
+
+**Features Completed This Session:**
+1. F265: Warm-start priors inspection CLI (15 tests)
+2. F225: Conditional critical path overlay (12 tests)
+
+**Total Tests Added: 27 tests**
+
+---
+
+**F265: Warm-Start Priors Can Be Inspected Before Study Execution**
+
+Implementation:
+- Added 'noodle2 show-priors' command to CLI
+- Loads and displays ECO priors from prior repository JSON files
+- Comprehensive information display:
+  * Source study provenance (study ID, timestamp, snapshot hash)
+  * ECO effectiveness data for each ECO
+  * Applications, success rates, WNS improvements
+  * Prior classifications (TRUSTED, MIXED, etc.)
+- Dual output formats: text (human-readable) and JSON (machine-readable)
+- ECO filtering with --eco flag
+- Robust error handling with helpful messages
+
+Test Coverage: 15 tests
+- All 6 feature steps verified
+- JSON format validation
+- ECO-specific filtering
+- Comprehensive error handling
+- Help documentation
+- End-to-end workflow
+
+---
+
+**F225: Critical Path Overlay Only Generated When Timing Issue Exists**
+
+Implementation:
+- Modified render_heatmap_with_critical_path_overlay() function
+- Added skip_overlay_if_no_timing_issue parameter (default: True)
+- Conditional logic checks all slack values before rendering
+- When WNS >= 0 (no violations):
+  * Overlay generation skipped
+  * Basic heatmap created with explanatory green note
+  * Metadata indicates overlay_skipped: true
+- When WNS < 0 (violations exist):
+  * Full overlay generated as before
+  * Critical paths drawn with colors and labels
+- Zero slack treated as no violation
+- Backward compatible (can disable skip for old behavior)
+
+Test Coverage: 12 tests
+- All 5 feature steps verified
+- Positive WNS (skip) and negative WNS (generate) scenarios
+- Edge cases: mixed slack, zero slack, empty paths
+- Visual validation: PNG validity, note display
+- End-to-end workflow validation
+- No regressions (F222 tests still pass)
+
+---
+
+**Current Status:**
+- Features passing: 278/280 (99.3%)
+- Features remaining: 2 (both low priority)
+  * F228: Hotspot bounding boxes rendered on heatmap
+  * F235: Stage progression chart publication-quality
+
+**Dependencies:**
+- F228 depends on F226 (passing ✓)
+- F235 depends on F234 (passing ✓)
+- All dependencies satisfied for remaining features
+
+**Test Statistics:**
+- Session 409 tests added: 27
+- F265: 15 tests
+- F225: 12 tests
+- Zero regressions
+- All related tests passing
+
+**Code Quality:**
+- Type hints maintained
+- Comprehensive docstrings
+- Backward compatibility preserved
+- Error handling robust
+- Clean integration with existing code
+
+**Next Session Priorities:**
+1. F228: Hotspot bounding box rendering on heatmaps
+   - Requires matplotlib rectangle drawing
+   - Bbox coordinate matching with diagnosis
+   - Visual distinction (colored borders)
+   
+2. F235: Publication-quality stage progression charts
+   - Layout clarity
+   - Readable metrics
+   - Distinct stage boundaries
+   - Professional appearance
+
+**Project Trajectory:**
+- Started session at 98.6% (276/280)
+- Completed session at 99.3% (278/280)
+- 2 features remaining for 100% completion
+- All remaining features have satisfied dependencies
+- Both remaining features are visualization enhancements
+
+**Notable Achievements:**
+- Crossed 99% completion threshold
+- Only 2 features away from full project completion
+- All core functionality complete
+- Remaining work is visual polish
+

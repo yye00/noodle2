@@ -6207,3 +6207,51 @@ Next priorities:
 - F251: Approval gate enforces dependency
 - F259: ECO definition includes expected_effects
 - F260: ECO definition supports timeout_seconds
+
+================================================================================
+SESSION 400 - CRITICAL REGRESSION FIX
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**CRITICAL ISSUE DISCOVERED AND FIXED:**
+Found and fixed a critical regression in the executor that was causing F278
+to fail. The executor was still using mock trial execution instead of calling
+Trial.execute() for real OpenROAD execution.
+
+**Regression Details:**
+- F278 was marked as passing but the test was actually failing
+- Trial results had empty metrics and /tmp/mock as trial_dir
+- Root cause: Lines 970-992 in executor.py contained placeholder mock code
+- This was a TODO comment that was never completed
+
+**Fix Implemented:**
+1. Replaced mock trial result creation with real Trial.execute() calls
+2. Added proper script path detection (run_sta.tcl in snapshot directory)
+3. Added error handling with try/except for trial execution failures
+4. Preserved telemetry event emission for trial lifecycle
+
+**Testing:**
+- F278 test now passes with real metrics (wns_ps, tns_ps)
+- Real artifacts generated in correct directory structure
+- F27x test suite passing (infrastructure tests)
+- Trial execution now uses Docker with real OpenROAD commands
+
+**Impact:**
+This fix enables ALL future studies to use real OpenROAD execution instead
+of mocked results. This is a critical foundation for the remaining features.
+
+**Current Status:**
+- Features passing: 262/280 (93.6%)
+- Remaining features: 18
+- Regression fixed and committed
+
+**Commit:**
+a9ce449 - Fix CRITICAL regression: Replace mock trial execution with real Trial.execute()
+
+**Next Steps:**
+- Work on remaining 18 features
+- Focus on features with all dependencies satisfied
+- Priority order: F245, F247, F250, F251, F254, F255, F259, F260
+
+================================================================================

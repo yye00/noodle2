@@ -26,6 +26,9 @@ class StudyMetricsSummary:
     final_hot_ratio: float | None = None
     final_total_power_mw: float | None = None
     best_case_name: str | None = None
+    total_trials: int = 0
+    total_runtime_seconds: float = 0.0
+    stages_completed: int = 0
     metadata: dict[str, Any] = field(default_factory=dict)
 
 

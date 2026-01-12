@@ -1,8 +1,0 @@
-{
-  "wns_ps": -2500,
-  "tns_ps": -125000,
-  "hot_ratio": 0.35,
-  "overflow_total": 1200,
-  "num_critical_paths": 450,
-  "timestamp": "2026-01-11T19:10:38-05:00"
-}

@@ -24,6 +24,8 @@ class ReplayConfig:
     verbose: bool = False  # Enable verbose logging
     output_dir: Path = Path("replay_output")  # Output directory for replay artifacts
     telemetry_root: Path = Path("telemetry")  # Root directory for telemetry data
+    eco_override: str | None = None  # ECO class to apply (overrides original)
+    param_overrides: dict[str, Any] = field(default_factory=dict)  # Parameter overrides
 
 
 @dataclass
@@ -40,6 +42,10 @@ class ReplayResult:
     error_message: str = ""
     stdout: str = ""
     stderr: str = ""
+    # Parameter modification tracking
+    original_eco: str | None = None
+    replay_eco: str | None = None
+    param_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)  # {param: (old, new)}
 
 
 def load_trial_config_from_telemetry(
@@ -187,8 +193,30 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
         logger.info(f"Found trial: {trial_config.case_name} stage {trial_config.stage_index} trial {trial_config.trial_index}")
         logger.debug(f"Original metrics: {original_metrics}")
 
+        # Extract original ECO and parameters from metadata
+        original_eco = trial_config.metadata.get("eco_class", None)
+        original_params = trial_config.metadata.get("eco_params", {})
+
+        # Apply ECO override if specified
+        replay_eco = config.eco_override if config.eco_override else original_eco
+
+        # Apply parameter overrides
+        replay_params = original_params.copy()
+        param_changes = {}
+        for key, new_value in config.param_overrides.items():
+            old_value = original_params.get(key)
+            replay_params[key] = new_value
+            param_changes[key] = (old_value, new_value)
+            logger.info(f"Parameter override: {key}: {old_value} → {new_value}")
+
+        # Log ECO changes
+        if config.eco_override and config.eco_override != original_eco:
+            logger.info(f"ECO override: {original_eco} → {replay_eco}")
+
         # Create output directory
         output_dir = config.output_dir / f"{config.case_name}_t{trial_config.trial_index}"
+        if config.param_overrides or config.eco_override:
+            output_dir = config.output_dir / f"{config.case_name}_t{trial_config.trial_index}_modified"
         output_dir.mkdir(parents=True, exist_ok=True)
 
         logger.info(f"Output directory: {output_dir}")
@@ -201,6 +229,10 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
         logger.debug(f"Case: {trial_config.case_name}")
         logger.debug(f"Stage: {trial_config.stage_index}")
         logger.debug(f"Trial: {trial_config.trial_index}")
+        if replay_eco:
+            logger.debug(f"ECO: {replay_eco}")
+        if replay_params:
+            logger.debug(f"Parameters: {replay_params}")
 
         # Simulate execution
         time.sleep(0.1)  # Minimal delay for realism
@@ -219,6 +251,13 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
                 "stage_index": trial_config.stage_index,
                 "trial_index": trial_config.trial_index,
             },
+            "eco_info": {
+                "original_eco": original_eco,
+                "replay_eco": replay_eco,
+                "original_params": original_params,
+                "replay_params": replay_params,
+                "param_changes": {k: {"old": v[0], "new": v[1]} for k, v in param_changes.items()},
+            },
         }
 
         metadata_file = output_dir / "replay_metadata.json"
@@ -236,6 +275,9 @@ def replay_trial(config: ReplayConfig) -> ReplayResult:
             trial_config=trial_config,
             original_metrics=original_metrics,
             replay_metrics={},  # Would be populated by real execution
+            original_eco=original_eco,
+            replay_eco=replay_eco,
+            param_changes=param_changes,
         )
 
     except Exception as e:

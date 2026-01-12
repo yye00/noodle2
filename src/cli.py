@@ -351,6 +351,19 @@ the original Study's state or telemetry.
         type=Path,
         help="Output directory for replay artifacts (default: replay_output)",
     )
+    replay_parser.add_argument(
+        "--eco",
+        type=str,
+        help="ECO class to apply (overrides original)",
+    )
+    replay_parser.add_argument(
+        "--param",
+        type=str,
+        action="append",
+        dest="params",
+        metavar="KEY=VALUE",
+        help="ECO parameter override (can be used multiple times, e.g., --param size=1.8)",
+    )
 
     return parser
 
@@ -476,7 +489,27 @@ def cmd_replay(args: argparse.Namespace) -> int:
         print(f"   Verbose: enabled")
     if args.output:
         print(f"   Output: {args.output}")
+    if args.eco:
+        print(f"   ECO override: {args.eco}")
+    if args.params:
+        print(f"   Parameter overrides: {args.params}")
     print()
+
+    # Parse parameter overrides
+    param_overrides = {}
+    if args.params:
+        for param in args.params:
+            if "=" not in param:
+                print(f"❌ Invalid parameter format: {param}")
+                print("   Expected format: KEY=VALUE")
+                return 1
+            key, value = param.split("=", 1)
+            # Try to convert to number if possible
+            try:
+                value = float(value)
+            except ValueError:
+                pass  # Keep as string
+            param_overrides[key] = value
 
     # Create replay configuration
     config = ReplayConfig(
@@ -484,6 +517,8 @@ def cmd_replay(args: argparse.Namespace) -> int:
         trial_index=args.trial,
         verbose=args.verbose,
         output_dir=args.output or Path("replay_output"),
+        eco_override=args.eco,
+        param_overrides=param_overrides,
     )
 
     try:
@@ -493,6 +528,10 @@ def cmd_replay(args: argparse.Namespace) -> int:
             print("✅ Replay completed successfully")
             print(f"   Runtime: {result.runtime_seconds:.2f}s")
             print(f"   Output: {result.output_dir}")
+            if result.param_changes:
+                print(f"   Parameter changes applied:")
+                for key, (old, new) in result.param_changes.items():
+                    print(f"     {key}: {old} → {new}")
             return 0
         else:
             print()

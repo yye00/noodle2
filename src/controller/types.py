@@ -120,6 +120,29 @@ class StageConfig:
 
 
 @dataclass
+class DiagnosisConfig:
+    """Configuration for auto-diagnosis analysis.
+
+    Controls how timing and congestion diagnosis is performed during
+    study execution, including analysis depth and thresholds.
+    """
+
+    enabled: bool = True  # Enable auto-diagnosis
+    timing_paths: int = 20  # Number of critical paths to analyze
+    hotspot_threshold: float = 0.7  # Congestion ratio threshold for hotspot identification
+    wire_delay_threshold: float = 0.65  # Wire delay ratio for wire-dominated classification
+
+    def __post_init__(self) -> None:
+        """Validate diagnosis configuration."""
+        if self.timing_paths < 1:
+            raise ValueError("timing_paths must be at least 1")
+        if not (0.0 < self.hotspot_threshold <= 1.0):
+            raise ValueError("hotspot_threshold must be between 0.0 and 1.0")
+        if not (0.0 < self.wire_delay_threshold <= 1.0):
+            raise ValueError("wire_delay_threshold must be between 0.0 and 1.0")
+
+
+@dataclass
 class StudyConfig:
     """Complete Study definition."""
 
@@ -149,6 +172,8 @@ class StudyConfig:
     custom_script_mounts: dict[str, str] = field(default_factory=dict)  # {host_path: container_path} for custom ECO scripts
     # PDK override for versioned PDK bind mounting
     pdk_override: Any = None  # PDKOverride instance for bind-mounted versioned PDK
+    # Diagnosis configuration for auto-analysis
+    diagnosis: DiagnosisConfig = field(default_factory=DiagnosisConfig)  # Auto-diagnosis configuration
 
     def validate(self) -> None:
         """Validate Study configuration."""

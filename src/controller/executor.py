@@ -950,13 +950,21 @@ class StudyExecutor:
 
             print(f"  Trial {trial_index + 1}/{trials_to_execute}: {trial_case.identifier}")
 
+            # Determine script path based on snapshot directory
+            # Look for run_sta.tcl in the snapshot directory
+            snapshot_path = Path(self.config.snapshot_path)
+            script_path = snapshot_path / "run_sta.tcl"
+            if not script_path.exists():
+                # Fallback: use the snapshot path directly (for backward compatibility)
+                script_path = snapshot_path
+
             # Create trial configuration
             trial_config = TrialConfig(
                 study_name=self.config.name,
                 case_name=str(trial_case.identifier),
                 stage_index=stage_index,
                 trial_index=trial_index,
-                script_path=self.config.snapshot_path,  # Placeholder - should be actual script
+                script_path=str(script_path),
                 snapshot_dir=self.config.snapshot_path,
                 timeout_seconds=stage_config.timeout_seconds,
                 execution_mode=stage_config.execution_mode,
@@ -967,10 +975,6 @@ class StudyExecutor:
                 },
             )
 
-            # Note: For now, we're creating TrialConfig but not executing actual trials
-            # Real execution would use Trial.execute() here
-            # This is a framework implementation to enable testing
-
             # Emit trial start event
             self.event_stream.emit_trial_start(
                 study_name=self.config.name,
@@ -979,17 +983,29 @@ class StudyExecutor:
                 trial_index=trial_index,
             )
 
-            # Create a mock trial result for framework testing
-            # This allows survivor selectors to work properly
-            from src.trial_runner.trial import TrialArtifacts
-            mock_result = TrialResult(
+            # Execute trial using Trial.execute() for real OpenROAD execution
+            # Trial will create artifacts at: artifacts_root/study_name/case_name/stage_X/trial_Y/
+            trial = Trial(
                 config=trial_config,
-                success=True,  # Assume success for framework testing
-                return_code=0,
-                runtime_seconds=0.0,
-                artifacts=TrialArtifacts(trial_dir=Path("/tmp/mock")),
+                artifacts_root=self.artifacts_root,
             )
-            trial_results.append(mock_result)
+
+            try:
+                result = trial.execute()
+                trial_results.append(result)
+            except Exception as e:
+                # Handle trial execution errors gracefully
+                from src.trial_runner.trial import TrialArtifacts
+                error_result = TrialResult(
+                    config=trial_config,
+                    success=False,
+                    return_code=1,
+                    runtime_seconds=0.0,
+                    artifacts=TrialArtifacts(trial_dir=trial.trial_dir),
+                    stderr=str(e),
+                )
+                trial_results.append(error_result)
+                result = error_result
 
             # Emit trial complete event
             self.event_stream.emit_trial_complete(
@@ -997,9 +1013,9 @@ class StudyExecutor:
                 case_name=str(trial_case.identifier),
                 stage_index=stage_index,
                 trial_index=trial_index,
-                success=mock_result.success,
-                runtime_seconds=mock_result.runtime_seconds,
-                metrics=mock_result.metrics,
+                success=result.success,
+                runtime_seconds=result.runtime_seconds,
+                metrics=result.metrics,
             )
 
         # Select survivors based on configured count

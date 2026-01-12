@@ -461,7 +461,77 @@
       "sub_features": [],
       "created_at": "2026-01-12T04:08:57.469739",
       "updated_at": "2026-01-12T04:08:57.469745"
+    },
+    "F238": {
+      "feature_id": "F238",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T04:22:51.820970",
+      "updated_at": "2026-01-12T04:22:51.820974"
+    },
+    "F233": {
+      "feature_id": "F233",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T04:22:51.822319",
+      "updated_at": "2026-01-12T04:22:51.822323"
+    },
+    "F230": {
+      "feature_id": "F230",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T04:22:51.822546",
+      "updated_at": "2026-01-12T04:22:51.822549"
+    },
+    "F243": {
+      "feature_id": "F243",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T04:40:25.031762",
+      "updated_at": "2026-01-12T04:40:25.031766"
+    },
+    "F240": {
+      "feature_id": "F240",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 0,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-12T04:40:25.032032",
+      "updated_at": "2026-01-12T04:40:25.032035"
     }
   },
-  "updated_at": "2026-01-12T04:08:57.469787"
+  "updated_at": "2026-01-12T04:40:25.032058"
 }

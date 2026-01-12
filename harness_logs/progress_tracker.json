@@ -289,8 +289,40 @@
     {
       "session_num": 65,
       "started_at": "2026-01-12T04:09:01.478192",
-      "ended_at": null,
+      "ended_at": "2026-01-12T04:22:51.823378",
       "passing_at_start": 257,
+      "passing_at_end": 260,
+      "features_completed": [
+        "F238",
+        "F233",
+        "F230"
+      ],
+      "features_attempted": [
+        "F238",
+        "F233",
+        "F230"
+      ]
+    },
+    {
+      "session_num": 66,
+      "started_at": "2026-01-12T04:22:55.830295",
+      "ended_at": "2026-01-12T04:40:25.033159",
+      "passing_at_start": 260,
+      "passing_at_end": 262,
+      "features_completed": [
+        "F243",
+        "F240"
+      ],
+      "features_attempted": [
+        "F243",
+        "F240"
+      ]
+    },
+    {
+      "session_num": 67,
+      "started_at": "2026-01-12T04:40:29.040150",
+      "ended_at": null,
+      "passing_at_start": 262,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
@@ -560,9 +592,49 @@
         "success": true,
         "error_msg": null
       }
+    ],
+    "F238": [
+      {
+        "timestamp": "2026-01-12T04:22:51.820790",
+        "session_num": 65,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F233": [
+      {
+        "timestamp": "2026-01-12T04:22:51.821110",
+        "session_num": 65,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F230": [
+      {
+        "timestamp": "2026-01-12T04:22:51.822442",
+        "session_num": 65,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F243": [
+      {
+        "timestamp": "2026-01-12T04:40:25.031574",
+        "session_num": 66,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F240": [
+      {
+        "timestamp": "2026-01-12T04:40:25.031920",
+        "session_num": 66,
+        "success": true,
+        "error_msg": null
+      }
     ]
   },
-  "last_passing_count": 257,
+  "last_passing_count": 262,
   "sessions_without_progress": 0,
   "stuck_features": [],
   "created_at": "2026-01-11T22:30:54.902059",

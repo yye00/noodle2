@@ -6255,3 +6255,92 @@ a9ce449 - Fix CRITICAL regression: Replace mock trial execution with real Trial.
 - Priority order: F245, F247, F250, F251, F254, F255, F259, F260
 
 ================================================================================
+
+================================================================================
+SESSION 401 - F245 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F245 - Study comparison quantifies total trials and runtime efficiency
+
+**Implementation Summary:**
+Extended the study comparison functionality to track and compare efficiency metrics
+between studies, including total trials executed, runtime duration, and stages to convergence.
+
+**Code Changes:**
+
+1. **src/controller/study_comparison.py** (45 lines added/modified):
+   - Extended load_study_summary() to load efficiency metrics from study_summary.json
+   - Added EFFICIENCY COMPARISON section to format_comparison_report()
+   - Shows Total Trials, Runtime (min), and Stages Completed comparisons
+   - Added signed deltas (+/-) for clarity
+   - Direction indicators (▲ improvement, ▼ regression) for each metric
+   - Updated write_comparison_report() to include efficiency data in JSON output
+
+2. **tests/test_f245_efficiency_comparison.py** (381 lines, new file):
+   - 12 comprehensive tests covering all 5 feature steps
+   - Tests for loading efficiency metrics
+   - Tests for formatted report output
+   - Tests for JSON output
+   - Edge case tests for regressions
+   - All tests passing
+
+**Test Coverage:**
+
+Step 1: Run study comparison
+- ✓ test_load_study_with_efficiency_metrics
+- ✓ test_compare_studies_includes_efficiency_data
+
+Step 2: Verify total trials comparison
+- ✓ test_report_includes_total_trials_for_both_studies
+- ✓ test_formatted_report_shows_trials_comparison
+
+Step 3: Verify runtime comparison in minutes
+- ✓ test_report_includes_runtime_in_minutes
+- ✓ test_formatted_report_shows_runtime_in_minutes
+
+Step 4: Verify stages_to_converge comparison
+- ✓ test_report_includes_stages_completed
+- ✓ test_formatted_report_shows_stages_comparison
+
+Step 5: Verify efficiency improvements highlighted
+- ✓ test_efficiency_improvements_shown_with_direction_indicators
+- ✓ test_efficiency_summary_highlights_gains
+- ✓ test_regression_in_efficiency_is_highlighted
+- ✓ test_json_report_includes_efficiency_metrics
+
+**Backward Compatibility:**
+- All existing study comparison tests pass (65 tests)
+- F241, F242, F243, F244 features unaffected
+- No breaking changes to API or data structures
+
+**Example Output:**
+
+```
+EFFICIENCY COMPARISON
+--------------------------------------------------------------------------------
+Metric                    Study 1         Study 2         Delta             Dir
+--------------------------------------------------------------------------------
+Total Trials              150             100             -50                 ▲
+Runtime (min)             60.0            40.0            -20.0               ▲
+Stages Completed          5               4               -1                  ▲
+--------------------------------------------------------------------------------
+```
+
+**Current Status:**
+- Features passing: 263/280 (93.9%)
+- Remaining features: 17
+- F245 marked as passing in feature_list.json
+
+**Next Priority Features:**
+- F247: Diversity-aware selection supports elitism
+- F250: Approval gate displays summary and visualizations
+- F251: Approval gate enforces dependency
+- F254: Compound ECO supports rollback_on_failure: partial
+- F255: Compound ECO inherits most restrictive component ECO class
+
+**Commit:**
+1bc7c90 - Implement F245: Study comparison quantifies total trials and runtime efficiency
+
+================================================================================

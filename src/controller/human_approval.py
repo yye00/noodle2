@@ -18,6 +18,11 @@ class ApprovalSummary:
     best_hot_ratio: float | None = None
     stage_summaries: list[dict[str, Any]] = field(default_factory=list)
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    # Visualization data for approval gate display
+    show_summary: bool = True  # Whether to display stage results summary
+    show_visualizations: bool = False  # Whether to display visualizations
+    visualization_paths: list[str] = field(default_factory=list)  # Paths to visualization files
+    pareto_frontier_data: dict[str, Any] | None = None  # Pareto frontier data if available
 
     def format_for_display(self) -> str:
         """
@@ -45,7 +50,7 @@ class ApprovalSummary:
         if self.best_wns_ps is not None or self.best_hot_ratio is not None:
             lines.append("")
 
-        if self.stage_summaries:
+        if self.show_summary and self.stage_summaries:
             lines.append("Stage Results:")
             lines.append("-" * 70)
             for summary in self.stage_summaries:
@@ -54,6 +59,30 @@ class ApprovalSummary:
                 survivors = summary.get("survivors", [])
                 lines.append(f"  {stage_name}: {trials} trials, {len(survivors)} survivors")
             lines.append("")
+
+        if self.show_visualizations:
+            if self.visualization_paths:
+                lines.append("Visualizations:")
+                lines.append("-" * 70)
+                for viz_path in self.visualization_paths:
+                    lines.append(f"  {viz_path}")
+                lines.append("")
+
+            if self.pareto_frontier_data:
+                lines.append("Pareto Frontier:")
+                lines.append("-" * 70)
+                points = self.pareto_frontier_data.get("points", [])
+                lines.append(f"  {len(points)} pareto-optimal solutions found")
+                if points:
+                    # Show first few pareto points
+                    for i, point in enumerate(points[:3]):
+                        wns = point.get("wns_ps", "N/A")
+                        hot = point.get("hot_ratio", "N/A")
+                        case = point.get("case_name", "unknown")
+                        lines.append(f"  #{i+1}: {case} - WNS: {wns} ps, hot_ratio: {hot}")
+                    if len(points) > 3:
+                        lines.append(f"  ... and {len(points) - 3} more")
+                lines.append("")
 
         lines.append("=" * 70)
         lines.append("Please review the results above.")

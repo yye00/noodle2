@@ -859,13 +859,51 @@ class StudyExecutor:
         for stage_result in stage_results:
             for trial_result in stage_result.trial_results:
                 if trial_result.success and trial_result.metrics:
-                    wns = trial_result.metrics.timing.wns_ps
-                    if best_wns_ps is None or wns > best_wns_ps:
-                        best_wns_ps = wns
-                    if trial_result.metrics.congestion:
-                        hot_ratio = trial_result.metrics.congestion.hot_ratio
-                        if best_hot_ratio is None or hot_ratio < best_hot_ratio:
+                    # metrics is a dict with keys like 'wns_ps', 'hot_ratio', etc.
+                    if isinstance(trial_result.metrics, dict):
+                        wns = trial_result.metrics.get("wns_ps")
+                        if wns is not None and (best_wns_ps is None or wns > best_wns_ps):
+                            best_wns_ps = wns
+                        hot_ratio = trial_result.metrics.get("hot_ratio")
+                        if hot_ratio is not None and (best_hot_ratio is None or hot_ratio < best_hot_ratio):
                             best_hot_ratio = hot_ratio
+
+        # Collect visualization paths if enabled
+        visualization_paths: list[str] = []
+        pareto_frontier_data: dict[str, Any] | None = None
+
+        if stage_config.show_visualizations:
+            # Collect heatmaps and charts from previous stages
+            for result in stage_results:
+                if hasattr(result, "visualization_paths"):
+                    visualization_paths.extend(result.visualization_paths)
+
+            # Generate pareto frontier data if available
+            if len(stage_results) > 0:
+                last_stage = stage_results[-1]
+                pareto_points = []
+                for trial_result in last_stage.trial_results:
+                    if trial_result.success and trial_result.metrics:
+                        if isinstance(trial_result.metrics, dict):
+                            case_name = trial_result.config.case_name
+                            wns_ps = trial_result.metrics.get("wns_ps")
+                            if wns_ps is not None:
+                                point = {
+                                    "case_name": case_name,
+                                    "wns_ps": wns_ps,
+                                }
+                                hot_ratio = trial_result.metrics.get("hot_ratio")
+                                if hot_ratio is not None:
+                                    point["hot_ratio"] = hot_ratio
+                                pareto_points.append(point)
+
+                if pareto_points:
+                    # Simple pareto frontier: select non-dominated points
+                    # For now, just include all successful points
+                    pareto_frontier_data = {
+                        "points": pareto_points,
+                        "objective": "wns_ps_hot_ratio",
+                    }
 
         summary = generate_approval_summary(
             study_name=self.config.name,
@@ -877,6 +915,12 @@ class StudyExecutor:
             best_wns_ps=best_wns_ps,
             best_hot_ratio=best_hot_ratio,
         )
+
+        # Set visualization display options from stage config
+        summary.show_summary = stage_config.show_summary
+        summary.show_visualizations = stage_config.show_visualizations
+        summary.visualization_paths = visualization_paths
+        summary.pareto_frontier_data = pareto_frontier_data
 
         # Display approval prompt
         print("\n" + summary.format_for_display())

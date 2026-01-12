@@ -108,6 +108,8 @@ class ECOMetadata:
     tags: list[str] = field(default_factory=list)  # For categorization
     preconditions: list[ECOPrecondition] = field(default_factory=list)  # Preconditions
     postconditions: list[ECOPostcondition] = field(default_factory=list)  # Postconditions
+    expected_effects: dict[str, str] = field(default_factory=dict)  # Expected metric changes (F259)
+    timeout_seconds: float | None = None  # Execution timeout limit (F260)
 
     def __post_init__(self) -> None:
         """Validate metadata."""
@@ -115,6 +117,8 @@ class ECOMetadata:
             raise ValueError("ECO name cannot be empty")
         if not self.description:
             raise ValueError("ECO description cannot be empty")
+        if self.timeout_seconds is not None and self.timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
 
 
 @dataclass
@@ -340,7 +344,7 @@ class ECO(ABC):
 
     def to_dict(self) -> dict[str, Any]:
         """Convert ECO to dictionary for serialization."""
-        return {
+        result = {
             "name": self.metadata.name,
             "eco_class": self.metadata.eco_class.value,
             "description": self.metadata.description,
@@ -350,7 +354,11 @@ class ECO(ABC):
             "tags": self.metadata.tags,
             "preconditions": [p.to_dict() for p in self.metadata.preconditions],
             "postconditions": [p.to_dict() for p in self.metadata.postconditions],
+            "expected_effects": self.metadata.expected_effects,
         }
+        if self.metadata.timeout_seconds is not None:
+            result["timeout_seconds"] = self.metadata.timeout_seconds
+        return result
 
 
 class NoOpECO(ECO):

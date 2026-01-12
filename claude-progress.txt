@@ -6515,3 +6515,52 @@ Additional tests:
 5a4559a - Implement F254: Compound ECO supports rollback_on_failure: partial
 
 ================================================================================
+
+================================================================================
+SESSION 404 - F255 COMPLETED
+Date: 2026-01-12
+Status: COMPLETED
+================================================================================
+
+**Feature Completed:** F255 - Compound ECO inherits most restrictive component ECO class
+
+**Implementation Summary:**
+Verified that the existing CompoundECO implementation correctly inherits the most 
+restrictive ECO class from its components. Added comprehensive tests to verify 
+class inheritance and safety domain validation.
+
+**Implementation Details:**
+
+1. Existing implementation (src/controller/eco.py lines 724-755):
+   - _determine_eco_class() method correctly implements hierarchy
+   - GLOBAL_DISRUPTIVE > ROUTING_AFFECTING > PLACEMENT_LOCAL > TOPOLOGY_NEUTRAL
+   - Compound ECO always inherits the most restrictive class
+
+2. Safety domain validation (src/controller/safety.py):
+   - SAFETY_POLICY defines allowed ECO classes per domain
+   - SANDBOX: All classes allowed
+   - GUARDED: No GLOBAL_DISRUPTIVE (default production)
+   - LOCKED: Only TOPOLOGY_NEUTRAL and PLACEMENT_LOCAL
+
+**Test Coverage (tests/test_f255_compound_eco_class.py - 13 tests passing):**
+
+Step 1: Define compound ECO with components of different classes
+Step 2: Include one routing_affecting component
+Step 3: Verify compound ECO class is routing_affecting
+Steps 4-5: Verify routing_affecting rejected in LOCKED domain
+
+Additional tests:
+- Class inheritance from different component combinations
+- Safety domain validation for all domains
+- ECO class hierarchy verification
+- Serialization of compound ECO class
+- Single/multiple component scenarios
+
+**Current Status:**
+- Features passing: 268/280 (95.7%)
+- Features remaining: 12
+
+**Commit:**
+8ab34b3 - Implement F255: Compound ECO inherits most restrictive component ECO class
+
+================================================================================

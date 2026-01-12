@@ -2224,3 +2224,64 @@ as passing after full verification.
 The congestion diagnosis system integrates with the timing diagnosis system 
 (F201-F203) to provide complete auto-diagnosis capabilities for both timing 
 and congestion issues.
+
+---
+
+## Session 368 Update - Three Features Completed (2026-01-11)
+
+### Final Status
+
+**Features Completed This Session:** 3 (F204, F205, F206)
+**Project Completion:** 209/271 features (77.1%)
+**Test Suite:** All tests passing
+
+### Features Implemented
+
+#### F204: Generate congestion diagnosis report for high hot_ratio design
+- Created tests/test_congestion_diagnosis.py (17 tests)
+- Verifies diagnosis.json contains congestion_diagnosis section
+- Verifies hot_ratio, overflow_total reporting
+- Verifies hotspot identification with severity levels
+
+#### F205: Hotspot cause and affected layer identification  
+- Created tests/test_congestion_hotspot_analysis.py (13 tests)
+- Verifies hotspot bbox coordinates
+- Verifies cause classification (PIN_CROWDING vs PLACEMENT_DENSITY)
+- Verifies affected_layers and layer_breakdown
+
+#### F206: ECO suggestions per congestion hotspot
+- Created tests/test_congestion_eco_suggestions.py (13 tests)
+- Verifies each hotspot has ECO suggestions
+- Verifies cause-specific ECO recommendations
+- Verifies ECO suggestions are actionable
+
+### Test Summary
+
+Total tests added: 43
+- test_congestion_diagnosis.py: 17 tests
+- test_congestion_hotspot_analysis.py: 13 tests
+- test_congestion_eco_suggestions.py: 13 tests
+
+All 43 tests passing (100% pass rate)
+
+### Commits
+
+1. c7e51df - Implement F204: Congestion diagnosis report
+2. 74d78aa - Implement F205: Hotspot cause and layer identification
+3. bd00b9f - Implement F206: ECO suggestions per hotspot
+
+### Next Available Features
+
+Now that F204-F206 are complete:
+- F207: Unblocked (depends on F204)
+- F208: Unblocked (depends on F204)  
+- F209: Unblocked (depends on F208)
+- F216-F239: High-priority visualization features available
+
+### Session Efficiency
+
+- Duration: 1 session
+- Features completed: 3
+- Tests written: 43
+- Commits: 3
+- All existing tests still passing

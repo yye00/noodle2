@@ -459,6 +459,44 @@ The comparison helps evaluate:
         help="Output format (default: text)",
     )
 
+    # === SHOW-PRIORS command ===
+    show_priors_parser = subparsers.add_parser(
+        "show-priors",
+        help="Inspect warm-start priors before study execution",
+        description="""
+Inspect ECO priors that will be loaded for warm-start execution.
+
+This command displays:
+  • Source study provenance (where priors came from)
+  • ECO effectiveness data for each ECO
+  • Weights and confidence scores
+  • Total applications and success rates
+  • WNS improvement statistics
+
+This allows operators to review the priors before committing
+to a study execution, ensuring they understand what historical
+data will be used to guide ECO selection.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    show_priors_parser.add_argument(
+        "--study",
+        type=str,
+        required=True,
+        help="Study name or path to Study configuration",
+    )
+    show_priors_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+    show_priors_parser.add_argument(
+        "--eco",
+        type=str,
+        help="Show details for a specific ECO only",
+    )
+
     return parser
 
 
@@ -759,6 +797,119 @@ def cmd_compare(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_show_priors(args: argparse.Namespace) -> int:
+    """Execute show-priors command."""
+    import json
+
+    from src.controller.prior_sharing import PriorRepository
+    from src.controller.warm_start import WarmStartConfig, WarmStartLoader
+
+    # Only print header for text format
+    if args.format != "json":
+        print(f"🔍 Inspecting Warm-Start Priors: {args.study}")
+        print()
+
+    try:
+        # Load study configuration to get warm-start settings
+        # For now, we'll accept a direct path to a prior repository file
+        # or a warm-start configuration file
+        study_path = Path(args.study)
+
+        if not study_path.exists():
+            print(f"❌ Error: Study path does not exist: {study_path}")
+            return 1
+
+        # Check if it's a prior repository file (JSON)
+        if study_path.suffix == ".json":
+            # Load prior repository directly
+            with open(study_path) as f:
+                data = json.load(f)
+
+            repository = PriorRepository.from_dict(data)
+
+            # Display in requested format
+            if args.format == "json":
+                print(json.dumps(repository.to_dict(), indent=2))
+                return 0
+
+            # Text format
+            print("=" * 70)
+            print("PRIOR REPOSITORY")
+            print("=" * 70)
+            print()
+
+            # Provenance
+            if repository.provenance:
+                print("Source Study Provenance:")
+                print(f"  • Study ID: {repository.provenance.source_study_id}")
+                print(f"  • Export Time: {repository.provenance.export_timestamp}")
+                if repository.provenance.source_study_snapshot_hash:
+                    print(f"  • Snapshot Hash: {repository.provenance.source_study_snapshot_hash}")
+                print()
+
+            # Summary statistics
+            eco_count = len(repository.eco_priors)
+            print(f"Total ECOs: {eco_count}")
+            print()
+
+            # Filter to specific ECO if requested
+            if args.eco:
+                if args.eco not in repository.eco_priors:
+                    print(f"❌ Error: ECO '{args.eco}' not found in repository")
+                    print(f"Available ECOs: {', '.join(sorted(repository.eco_priors.keys()))}")
+                    return 1
+                eco_list = [(args.eco, repository.eco_priors[args.eco])]
+            else:
+                eco_list = sorted(repository.eco_priors.items())
+
+            # Display ECO details
+            print("=" * 70)
+            print("ECO EFFECTIVENESS DATA")
+            print("=" * 70)
+            print()
+
+            for eco_name, effectiveness in eco_list:
+                print(f"ECO: {eco_name}")
+                print(f"  Prior: {effectiveness.prior.value}")
+                print(f"  Total Applications: {effectiveness.total_applications}")
+                print(f"  Successful: {effectiveness.successful_applications}")
+                print(f"  Failed: {effectiveness.failed_applications}")
+
+                if effectiveness.total_applications > 0:
+                    success_rate = (
+                        effectiveness.successful_applications
+                        / effectiveness.total_applications
+                        * 100
+                    )
+                    print(f"  Success Rate: {success_rate:.1f}%")
+
+                print(f"  Average WNS Improvement: {effectiveness.average_wns_improvement_ps:.2f} ps")
+                print(f"  Best Improvement: {effectiveness.best_wns_improvement_ps:.2f} ps")
+                print(f"  Worst Degradation: {effectiveness.worst_wns_degradation_ps:.2f} ps")
+                print()
+
+            return 0
+
+        else:
+            print(f"❌ Error: Expected JSON file, got: {study_path}")
+            print()
+            print("Tip: Provide path to a prior repository JSON file")
+            print("Example: noodle2 show-priors --study priors/nangate45_baseline.json")
+            return 1
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: File not found: {e}")
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: Invalid JSON format: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error during prior inspection: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
@@ -782,6 +933,7 @@ def main() -> int:
         "replay": cmd_replay,
         "debug": cmd_debug,
         "compare": cmd_compare,
+        "show-priors": cmd_show_priors,
     }
 
     handler = command_map.get(args.command)

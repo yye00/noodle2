@@ -5503,3 +5503,119 @@ implementation with comprehensive tests. F210 implemented full diagnosis history
 tracking infrastructure with trend analysis and issue resolution tracking.
 All features fully tested and documented.
 
+
+
+================================================================================
+SESSION 394 - PROGRESS UPDATE
+================================================================================
+
+**Session Start Time:** 2026-01-12 03:11 UTC
+**Features Completed:** 1 (F211)
+**Tests Written:** 10
+**All Tests Passing:** ✅
+
+**Context:**
+- Fresh session, no memory of previous work
+- Started with 250/280 features passing (89.3%)
+- No features needed reverification
+- Previous session (393) completed F207 and F210
+
+**Features Completed:**
+
+1. **F211: Auto-diagnosis respects preconditions defined in ECO definitions**
+   - Implemented filter_eco_suggestions_by_preconditions() function
+   - Evaluates ECO preconditions before suggesting them
+   - Filters out ECOs whose preconditions not satisfied
+   - Returns filtered suggestions + evaluation log
+   - Created comprehensive test suite with 10 tests
+   - Tests verify all 6 feature steps:
+     1. Define ECO with preconditions (requires_timing_issue: true)
+     2. Run diagnosis on design without timing issue
+     3. Verify ECO is not suggested
+     4. Run diagnosis on design with timing issue
+     5. Verify ECO is suggested
+     6. Verify precondition evaluation is logged
+   - Files: diagnosis.py (+65 lines), test (+431 lines)
+   - All tests passing
+
+**Technical Implementation:**
+
+The filter_eco_suggestions_by_preconditions function:
+- Takes: list[ECOSuggestion], eco_registry, design_metrics
+- Returns: (filtered_suggestions, evaluation_log)
+- For each suggestion:
+  - Checks if ECO exists in registry
+  - If not in registry: keeps it (assumes no preconditions)
+  - If in registry: evaluates preconditions via ECO.evaluate_preconditions()
+  - Logs evaluation result with details
+  - Only includes ECO if all preconditions satisfied
+
+Evaluation log structure:
+```python
+{
+  "eco_name": {
+    "all_satisfied": bool,
+    "failed": list[str],  # Names of failed preconditions
+    "precondition_count": int
+  }
+}
+```
+
+**Key Design Decisions:**
+
+1. **Separation of Concerns**: Diagnosis generates suggestions, filter applies preconditions
+2. **Unknown ECOs**: ECOs not in registry are kept (conservative approach)
+3. **Multiple Preconditions**: All must pass (AND logic)
+4. **Transparency**: Full evaluation log for debugging/auditing
+5. **Integration**: Uses existing ECO.evaluate_preconditions() infrastructure
+
+**Test Coverage:**
+
+Core functionality (6 steps):
+- Step 1: Define ECO with timing precondition
+- Step 2: Run diagnosis without timing issue
+- Step 3: Verify ECO not suggested (precondition failed)
+- Step 4: Run diagnosis with timing issue
+- Step 5: Verify ECO suggested (precondition satisfied)
+- Step 6: Verify evaluation logged
+
+Edge cases (4 tests):
+- ECO not in registry (kept with note)
+- Multiple preconditions (all must pass)
+- Empty suggestions (returns empty)
+- Empty registry (all kept)
+
+**Feature Progress:**
+- Starting: 250/280 (89.3%)
+- Ending: 251/280 (89.6%)
+- Gained: 1 feature (+0.3%)
+- Remaining: 29 features (10.4%)
+
+**Next Priority Features:**
+1. F213 [medium]: Diagnosis identifies problem cells for targeted ECOs
+2. F220 [medium]: Differential heatmaps use appropriate colormap
+3. F221 [medium]: Differential heatmap generation gracefully skips when no parent
+4. F223 [medium]: Critical path overlay supports color-by-slack mode
+
+**Code Quality:**
+- All functions have type hints
+- Comprehensive docstrings
+- Clean separation of concerns
+- Following existing code patterns
+- Proper error handling
+- Full logging support
+
+**Session Statistics:**
+- 1 feature completed
+- 10 tests written (all passing)
+- 1 function added to diagnosis.py (65 lines)
+- 1 test file created (431 lines)
+- 1 clean git commit with detailed message
+- 100% test pass rate maintained (excluding env issues with Ray)
+
+**Session Outcome:**
+Productive session with F211 completed. The implementation integrates cleanly
+with existing ECO precondition infrastructure. The filter function provides
+transparent precondition evaluation logging, making diagnosis behavior auditable.
+All tests passing with comprehensive edge case coverage.
+

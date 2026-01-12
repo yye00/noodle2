@@ -68,6 +68,31 @@ class ProblemNet:
 
 
 @dataclass
+class ProblemCell:
+    """Problem cell identified in timing analysis.
+
+    Represents a specific cell (buffer, gate, flop) that is contributing
+    to timing violations and may be a target for ECOs like resizing.
+    """
+
+    name: str  # Cell instance name (e.g., "buf_x4_123")
+    cell_type: str  # Cell type (e.g., "buffer", "and2", "dff")
+    slack_ps: int  # Worst slack of paths through this cell
+    delay_ps: int | None = None  # Cell delay contribution
+    critical_paths: list[str] = field(default_factory=list)  # Paths this cell affects
+
+    def to_dict(self) -> dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        return {
+            "name": self.name,
+            "cell_type": self.cell_type,
+            "slack_ps": self.slack_ps,
+            "delay_ps": self.delay_ps,
+            "critical_paths": self.critical_paths,
+        }
+
+
+@dataclass
 class ECOSuggestion:
     """Suggested ECO to address a problem."""
 
@@ -120,6 +145,7 @@ class TimingDiagnosis:
     critical_region_description: str | None = None
 
     problem_nets: list[ProblemNet] = field(default_factory=list)
+    problem_cells: list[ProblemCell] = field(default_factory=list)
     suggested_ecos: list[ECOSuggestion] = field(default_factory=list)
     slack_histogram: SlackHistogram | None = None
 
@@ -154,6 +180,9 @@ class TimingDiagnosis:
                 }
                 for net in self.problem_nets
             ]
+
+        if self.problem_cells:
+            result["problem_cells"] = [cell.to_dict() for cell in self.problem_cells]
 
         if self.suggested_ecos:
             result["suggested_ecos"] = [
@@ -303,6 +332,7 @@ def diagnose_timing(
     *,
     path_count: int = 20,
     wire_delay_threshold: float = 0.65,
+    identify_problem_cells: bool = False,
 ) -> TimingDiagnosis:
     """
     Analyze timing metrics and produce diagnosis report.
@@ -314,6 +344,7 @@ def diagnose_timing(
         metrics: Timing metrics to analyze
         path_count: Number of critical paths to analyze
         wire_delay_threshold: Threshold for wire-dominated classification (0.0-1.0)
+        identify_problem_cells: If True, identify specific problem cells (F213)
 
     Returns:
         TimingDiagnosis report
@@ -324,6 +355,7 @@ def diagnose_timing(
     cell_dominated_paths = 0
 
     problem_nets: list[ProblemNet] = []
+    problem_cells: list[ProblemCell] = []
 
     # Analyze top critical paths
     for i, path in enumerate(metrics.top_paths[:path_count]):
@@ -485,6 +517,77 @@ def diagnose_timing(
                     f"Region containing {num_critical} critical paths with mixed delay characteristics."
                 )
 
+    # Identify problem cells (F213)
+    if identify_problem_cells and metrics.top_paths:
+        # Extract cells from critical paths
+        # In real implementation, would parse detailed path reports
+        # For now, extract from startpoint/endpoint names
+        cell_path_map: dict[str, list[str]] = {}  # cell_name -> paths
+
+        for path in metrics.top_paths[:path_count]:
+            # Extract cell names from path
+            # Startpoint is typically a cell output (e.g., "reg0/Q")
+            # Endpoint is typically a cell input (e.g., "reg1/D")
+
+            # Extract startpoint cell (driver)
+            if path.startpoint and "/" in path.startpoint:
+                cell_name = path.startpoint.rsplit("/", 1)[0]
+                path_desc = f"{path.startpoint} -> {path.endpoint}"
+
+                if cell_name not in cell_path_map:
+                    cell_path_map[cell_name] = []
+                cell_path_map[cell_name].append(path_desc)
+
+            # Extract endpoint cell (load)
+            if path.endpoint and "/" in path.endpoint:
+                cell_name = path.endpoint.rsplit("/", 1)[0]
+                path_desc = f"{path.startpoint} -> {path.endpoint}"
+
+                if cell_name not in cell_path_map:
+                    cell_path_map[cell_name] = []
+                if path_desc not in cell_path_map[cell_name]:
+                    cell_path_map[cell_name].append(path_desc)
+
+        # Create ProblemCell entries for cells appearing in critical paths
+        for cell_name, paths in cell_path_map.items():
+            # Find worst slack for this cell
+            worst_slack = 0
+            for path in metrics.top_paths[:path_count]:
+                if cell_name in (path.startpoint or "") or cell_name in (path.endpoint or ""):
+                    if path.slack_ps < worst_slack:
+                        worst_slack = path.slack_ps
+
+            # Infer cell type from name (heuristic)
+            # Real implementation would query the design database
+            if "reg" in cell_name.lower() or "ff" in cell_name.lower():
+                cell_type = "flop"
+            elif "buf" in cell_name.lower():
+                cell_type = "buffer"
+            elif "and" in cell_name.lower() or "or" in cell_name.lower() or "xor" in cell_name.lower():
+                cell_type = "logic"
+            else:
+                cell_type = "unknown"
+
+            # Estimate cell delay (heuristic)
+            # Real implementation would extract from timing report
+            delay_ps = max(50, abs(worst_slack) // 4)
+
+            problem_cells.append(
+                ProblemCell(
+                    name=cell_name,
+                    cell_type=cell_type,
+                    slack_ps=worst_slack,
+                    delay_ps=delay_ps,
+                    critical_paths=paths,
+                )
+            )
+
+        # Sort by worst slack (most critical first)
+        problem_cells.sort(key=lambda c: c.slack_ps)
+
+        # Keep top problem cells
+        problem_cells = problem_cells[:10]
+
     return TimingDiagnosis(
         wns_ps=metrics.wns_ps,
         tns_ps=metrics.tns_ps,
@@ -494,6 +597,7 @@ def diagnose_timing(
         critical_region=critical_region,
         critical_region_description=critical_region_description,
         problem_nets=problem_nets[:10],  # Top 10 worst nets
+        problem_cells=problem_cells,  # Top 10 problem cells
         suggested_ecos=suggested_ecos,
         slack_histogram=slack_histogram,
     )

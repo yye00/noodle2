@@ -4268,3 +4268,53 @@ With all three PDK snapshots complete, infrastructure features unblocked:
 - Consider tackling multiple high-priority features
 - No blocking dependencies for top features
 
+
+================================================================================
+SESSION 384 UPDATE - F241 Also Completed
+================================================================================
+
+## Additional Feature Completed
+
+**F241 [high]**: Compare two studies and generate comparison report
+- Status: ✅ PASSING (25/25 tests)
+- Tests: tests/test_f241_study_comparison.py
+- Verified existing implementation in src/controller/study_comparison.py
+
+## Session Summary
+
+**Features Completed:** 2 (F280 + F241)
+**Tests Added:** 52 (27 + 25)
+**Overall Progress:** 234/280 (83.6%)
+**Remaining:** 46 features
+
+### F280: Sky130 Snapshot
+- Real Sky130 (130nm open-source PDK) snapshot created
+- 27 tests passing
+- Multi-PDK infrastructure complete
+
+### F241: Study Comparison
+- Verify study-to-study comparison works
+- Delta calculations and direction indicators (▲/▼)
+- 25 tests passing
+
+## Technical Notes
+
+### Study Comparison Features
+- Automatic delta calculation (absolute + percentage)
+- Direction indicators: ▲ (improvement), ▼ (regression), = (no change)
+- Metric-specific direction logic (WNS/TNS vs hot_ratio/power)
+- Overall improvement detection (majority vote)
+- JSON and formatted text output
+
+### Report Generation
+- StudyMetricsSummary: Aggregate metrics from study
+- MetricComparison: Individual metric comparison
+- StudyComparisonReport: Complete comparison
+- format_comparison_report: Human-readable output
+
+## F241 Unblocks Dependent Features
+- F242: Multi-study batch comparison
+- F243: Statistical significance testing
+- F244: Comparison visualization
+- F245: Pareto frontier comparison
+

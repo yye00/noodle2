@@ -3142,3 +3142,83 @@ All 6 F236 verification steps passing:
 - F241: Compare two studies and generate comparison report
 - F246: Support diverse_top_n survivor selection
 - 49 features remaining
+
+=== Continuation of Session 376 - F237 Implementation ===
+
+**Second Feature:** F237 - Replay trial with modified ECO parameters
+
+**Achievement:** Parameter sensitivity analysis capability - replay trials with modified ECO parameters
+**Project Completion:** 223/271 features (82.3%)
+**New Passing Features:** 2 total (F236, F237)
+**Test Suite:** All 32 replay tests passing (18 F236 + 14 F237), no regressions
+
+**Extended:**
+1. **CLI parameter override support** (src/cli.py)
+   - Added --eco flag to override ECO class
+   - Added --param flag for parameter overrides (can be used multiple times)
+   - Parameter parsing with automatic float conversion
+   - Display parameter changes in output: old → new
+
+2. **Enhanced replay module** (src/replay/trial_replay.py, +88 lines changes)
+   - ReplayConfig: eco_override and param_overrides fields
+   - ReplayResult: original_eco, replay_eco, param_changes tracking
+   - Parameter modification logic with change tracking
+   - Modified replays use "_modified" directory suffix
+   - Metadata captures full eco_info section with:
+     * original_eco and replay_eco
+     * original_params and replay_params
+     * param_changes with old/new values
+
+3. **Comprehensive test suite** (tests/test_f237_replay_with_params.py, +524 lines)
+   - TestReplayWithParameterOverrides: 6 tests
+     * Single parameter override
+     * Multiple parameter overrides
+     * ECO class override
+     * New parameter addition
+     * Modified output directory
+     * Metadata capture
+   - TestF237VerificationSteps: 6 tests (map to F237 steps)
+   - TestParameterOverrideCLI: 2 tests for CLI integration
+
+**Key Features:**
+- Override single parameter: --param size_multiplier=1.8
+- Override multiple parameters: --param size=1.8 --param threshold=50
+- Override ECO class: --eco resize_critical_drivers
+- Add new parameters not in original trial
+- Track all changes: {param: (old_value, new_value)}
+- Modified replays use separate output directory
+- Full metadata for sensitivity analysis
+
+**Verification Results:**
+All 6 F237 verification steps passing:
+- ✅ Step 1: Identify trial with ECO parameters
+- ✅ Step 2: Execute replay with --param override
+- ✅ Step 3: Trial replayed with modified parameter
+- ✅ Step 4: Original parameter value captured (1.5)
+- ✅ Step 5: Modified parameter value applied (1.8)
+- ✅ Step 6: Results available for sensitivity comparison
+
+**Test Results:**
+- 14/14 F237 tests passing in 1.38s
+- 18/18 F236 tests still passing (no regressions)
+- 32/32 total replay tests passing in 2.36s
+
+**Use Cases:**
+1. Parameter sensitivity analysis: How does WNS change when size_multiplier
+   increases from 1.5 to 1.8?
+2. ECO exploration: Try different ECO classes on same trial
+3. Parameter tuning: Find optimal parameter values by systematic variation
+4. What-if analysis: Test hypothetical parameter combinations
+
+**Session Total:**
+- 2 features fully implemented and verified (F236, F237)
+- +340 lines implementation code
+- +1,102 lines test code
+- 32 new tests, all passing
+- Project at 82.3% completion (223/271 features)
+- Both features build on each other for powerful debugging workflow
+
+**Next Steps:**
+- F239: Generate detailed debug report for specific trial
+- F241: Compare two studies and generate comparison report
+- 48 features remaining

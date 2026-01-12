@@ -396,7 +396,7 @@ def diagnose_timing(
     elif dominant_issue == TimingIssueClassification.CELL_DOMINATED:
         suggested_ecos.append(
             ECOSuggestion(
-                eco="upsize_critical_cells",
+                eco="resize_critical_drivers",
                 priority=1,
                 reason="cell-dominated paths detected",
                 addresses="timing",
@@ -404,7 +404,7 @@ def diagnose_timing(
         )
         suggested_ecos.append(
             ECOSuggestion(
-                eco="swap_high_vt_to_low_vt",
+                eco="swap_to_faster_cells",
                 priority=2,
                 reason="improve cell delay",
                 addresses="timing",
@@ -421,7 +421,7 @@ def diagnose_timing(
         )
         suggested_ecos.append(
             ECOSuggestion(
-                eco="upsize_critical_cells",
+                eco="resize_critical_drivers",
                 priority=2,
                 reason="mixed wire and cell delays",
                 addresses="timing",

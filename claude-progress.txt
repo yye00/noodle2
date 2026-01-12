@@ -5876,3 +5876,97 @@ All tests passing. Codebase in excellent, clean state.
 - 2 clean git commits
 
 All tests passing. Codebase in excellent, clean state.
+
+=== SESSION 397: F224 Completed ===
+
+**Date:** 2026-01-12
+**Features Completed:** 1 (F224)
+**Tests Written:** 16 new tests for F224
+**All Tests Passing:** ✅
+
+**Progress: 256/280 (91.4%)**
+
+**Context:**
+- Fresh session, no memory of previous work
+- Started with 255/280 features passing (91.1%)
+- Ended with 256/280 features passing (91.4%)
+- Completed 1 medium-priority visualization feature
+
+**Feature Completed:**
+
+**F224: Critical path overlay shows endpoints and slack labels**
+- Extended F222 critical path overlay with endpoint markers and slack labeling
+- Two new optional parameters:
+  * show_endpoints: bool - Mark start/endpoints with visible star symbols
+  * show_slack_labels: bool - Display slack values on paths
+  
+- Endpoint markers implementation:
+  * Startpoint: lime green star (marker="*", markersize=12)
+  * Endpoint: red star (marker="*", markersize=12)
+  * Black edge for visibility on any background
+  * Uses zorder=10 to render above heatmap base layer
+  
+- Slack labels implementation:
+  * Positioned at path midpoint for optimal visibility
+  * Format: "{slack_ps}ps" (e.g., "-1500ps")
+  * Background box with path color border for association
+  * White text with bold weight for readability
+  * Uses zorder=11 to render above endpoint markers
+  
+- Quality features:
+  * Both parameters default to False (backward compatibility)
+  * Works with all color_by modes (slack, wire_delay, cell_delay)
+  * Gracefully handles edge cases (missing fields, single-point paths)
+  * Labels avoid clutter with intelligent positioning
+  * Higher DPI/larger figure sizes recommended for many paths
+  
+- Test coverage: 16 tests
+  * 6 feature step verification tests
+  * 10 edge case tests (single path, many paths, missing data, backward compat)
+  * Verified integration with F222 and F223
+  * All previous tests still pass (F222: 17/17, F223: 12/12)
+  
+- Code changes:
+  * heatmap_renderer.py: +68 lines (endpoint/label rendering logic)
+  * test_f224_endpoint_slack_labels.py: +517 lines (comprehensive tests)
+  
+- Metadata enhancements:
+  * Added show_endpoints to return dictionary
+  * Added show_slack_labels to return dictionary
+  * Enables programmatic verification of feature usage
+
+**Technical Highlights:**
+- Clean separation of concerns: endpoints and labels as independent features
+- Z-order layering ensures proper visual hierarchy (heatmap < paths < endpoints < labels)
+- Smart label positioning at midpoint reduces overlap risk
+- Defensive programming handles missing or malformed path data
+- Full backward compatibility with existing F222/F223 functionality
+
+**Next Priority Features:**
+1. F227 [medium]: Hotspot annotations include cause labels
+2. F230 [medium]: Track Pareto history in pareto_history.json
+3. F233 [medium]: Trajectory charts show best/median/worst statistics per stage
+4. F238 [medium]: Replay with forced visualization even if originally disabled
+5. F240 [medium]: Debug report captures exact TCL commands for reproducibility
+
+**Session Statistics:**
+- 1 feature completed (F224)
+- 16 tests written (all passing)
+- 68 lines implementation
+- 517 lines tests
+- 1 clean git commit
+- 100% test pass rate maintained
+- Backward compatibility verified
+
+**Session Outcome:**
+Productive session with 1 visualization feature completed. F224 enhances the
+critical path overlay system with endpoint markers (lime start, red end) and
+slack value labels positioned at path midpoints. Both features are optional
+and default to disabled for backward compatibility.
+
+The implementation provides clear visual feedback about timing-critical paths,
+making it easier to identify where paths begin/end and understand their slack
+values without consulting separate timing reports. The star markers are highly
+visible with black edges, and labels use contrasting backgrounds for readability.
+
+All tests passing. Codebase in excellent, clean state. Progress: 91.4% complete.

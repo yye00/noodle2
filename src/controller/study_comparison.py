@@ -235,6 +235,9 @@ def load_study_summary(study_name: str, telemetry_root: Path = Path("telemetry")
             final_hot_ratio=summary_data.get("final_hot_ratio"),
             final_total_power_mw=summary_data.get("final_total_power_mw"),
             best_case_name=summary_data.get("best_case_name"),
+            total_trials=summary_data.get("total_trials", 0),
+            total_runtime_seconds=summary_data.get("total_runtime_seconds", 0.0),
+            stages_completed=summary_data.get("stages_completed", 0),
             metadata=summary_data.get("metadata", {}),
         )
 
@@ -545,6 +548,55 @@ def format_comparison_report(report: StudyComparisonReport) -> str:
     lines.append("-" * 80)
     lines.append("")
 
+    # Efficiency comparison table
+    lines.append("EFFICIENCY COMPARISON")
+    lines.append("-" * 80)
+    lines.append(
+        f"{'Metric':<25} {'Study 1':<15} {'Study 2':<15} {'Delta':<15} {'Dir':>5}"
+    )
+    lines.append("-" * 80)
+
+    # Total Trials comparison
+    trials_delta = report.study2_summary.total_trials - report.study1_summary.total_trials
+    trials_direction = "▲" if trials_delta < 0 else ("▼" if trials_delta > 0 else "=")
+    trials_delta_str = f"{trials_delta:+d}" if trials_delta != 0 else "0"
+    lines.append(
+        f"{'Total Trials':<25} "
+        f"{report.study1_summary.total_trials:<15} "
+        f"{report.study2_summary.total_trials:<15} "
+        f"{trials_delta_str:<15} "
+        f"{trials_direction:>5}"
+    )
+
+    # Runtime comparison (convert to minutes)
+    runtime1_min = report.study1_summary.total_runtime_seconds / 60.0
+    runtime2_min = report.study2_summary.total_runtime_seconds / 60.0
+    runtime_delta_min = runtime2_min - runtime1_min
+    runtime_direction = "▲" if runtime_delta_min < 0 else ("▼" if runtime_delta_min > 0 else "=")
+    runtime_delta_str = f"{runtime_delta_min:+.1f}" if runtime_delta_min != 0 else "0.0"
+    lines.append(
+        f"{'Runtime (min)':<25} "
+        f"{runtime1_min:<15.1f} "
+        f"{runtime2_min:<15.1f} "
+        f"{runtime_delta_str:<15} "
+        f"{runtime_direction:>5}"
+    )
+
+    # Stages to Converge comparison
+    stages_delta = report.study2_summary.stages_completed - report.study1_summary.stages_completed
+    stages_direction = "▲" if stages_delta < 0 else ("▼" if stages_delta > 0 else "=")
+    stages_delta_str = f"{stages_delta:+d}" if stages_delta != 0 else "0"
+    lines.append(
+        f"{'Stages Completed':<25} "
+        f"{report.study1_summary.stages_completed:<15} "
+        f"{report.study2_summary.stages_completed:<15} "
+        f"{stages_delta_str:<15} "
+        f"{stages_direction:>5}"
+    )
+
+    lines.append("-" * 80)
+    lines.append("")
+
     # ECO effectiveness comparison table
     if report.eco_effectiveness_comparisons:
         lines.append("ECO EFFECTIVENESS COMPARISON")
@@ -610,6 +662,9 @@ def write_comparison_report(
             "final_hot_ratio": report.study1_summary.final_hot_ratio,
             "final_total_power_mw": report.study1_summary.final_total_power_mw,
             "best_case_name": report.study1_summary.best_case_name,
+            "total_trials": report.study1_summary.total_trials,
+            "total_runtime_seconds": report.study1_summary.total_runtime_seconds,
+            "stages_completed": report.study1_summary.stages_completed,
         },
         "study2_summary": {
             "study_name": report.study2_summary.study_name,
@@ -619,6 +674,9 @@ def write_comparison_report(
             "final_hot_ratio": report.study2_summary.final_hot_ratio,
             "final_total_power_mw": report.study2_summary.final_total_power_mw,
             "best_case_name": report.study2_summary.best_case_name,
+            "total_trials": report.study2_summary.total_trials,
+            "total_runtime_seconds": report.study2_summary.total_runtime_seconds,
+            "stages_completed": report.study2_summary.stages_completed,
         },
         "metric_comparisons": [
             {

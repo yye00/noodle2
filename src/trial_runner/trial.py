@@ -462,58 +462,85 @@ class Trial:
         """
         metrics: dict[str, Any] = {}
 
-        # Parse timing metrics
-        if artifacts.metrics_json and artifacts.metrics_json.exists():
-            # Prefer JSON metrics if available
+        # First, check stdout for post-ECO metrics (takes precedence if present)
+        # This handles cases where ECO application writes metrics to stdout
+        stdout_log = self.trial_dir / "logs" / "stdout.txt"
+        if stdout_log.exists():
             try:
-                import json
-                content = artifacts.metrics_json.read_text()
+                import re
+                stdout_content = stdout_log.read_text()
 
-                # Load raw JSON first to get all fields (including hot_ratio)
-                raw_metrics = json.loads(content)
+                # Look for post-ECO metrics in stdout
+                # Format: "Post-ECO WNS: -410 ps"
+                wns_match = re.search(r'Post-ECO WNS:\s*(-?\d+)\s*ps', stdout_content)
+                tns_match = re.search(r'Post-ECO TNS:\s*(-?\d+)\s*ps', stdout_content)
+                hot_ratio_match = re.search(r'Post-ECO hot_ratio:\s*([\d.]+)', stdout_content)
 
-                # Parse timing-specific fields using existing parser
-                timing_obj = parse_openroad_metrics_json(content)
-                metrics["wns_ps"] = timing_obj.wns_ps
-                if timing_obj.tns_ps is not None:
-                    metrics["tns_ps"] = timing_obj.tns_ps
-                if timing_obj.failing_endpoints is not None:
-                    metrics["failing_endpoints"] = timing_obj.failing_endpoints
-
-                # Additionally extract hot_ratio if present
-                if "hot_ratio" in raw_metrics:
-                    metrics["hot_ratio"] = raw_metrics["hot_ratio"]
-
-                # Extract any other custom metrics from JSON
-                if "clock_period_ns" in raw_metrics:
-                    metrics["clock_period_ns"] = raw_metrics["clock_period_ns"]
+                if wns_match:
+                    metrics["wns_ps"] = int(wns_match.group(1))
+                if tns_match:
+                    metrics["tns_ps"] = int(tns_match.group(1))
+                if hot_ratio_match:
+                    metrics["hot_ratio"] = float(hot_ratio_match.group(1))
 
             except Exception as e:
-                metrics["timing_parse_error"] = str(e)
+                # If stdout parsing fails, continue with other methods
+                pass
 
-        elif artifacts.timing_report and artifacts.timing_report.exists():
-            # Fall back to text report parsing
-            try:
-                timing_obj = parse_timing_report(artifacts.timing_report)
-                metrics["wns_ps"] = timing_obj.wns_ps
-                if timing_obj.tns_ps is not None:
-                    metrics["tns_ps"] = timing_obj.tns_ps
-                if timing_obj.failing_endpoints is not None:
-                    metrics["failing_endpoints"] = timing_obj.failing_endpoints
-            except Exception as e:
-                metrics["timing_parse_error"] = str(e)
+        # Parse timing metrics from JSON/reports if not already found in stdout
+        if "wns_ps" not in metrics:
+            if artifacts.metrics_json and artifacts.metrics_json.exists():
+                # Prefer JSON metrics if available
+                try:
+                    import json
+                    content = artifacts.metrics_json.read_text()
 
-        # Parse congestion metrics (if available)
-        if artifacts.congestion_report and artifacts.congestion_report.exists():
-            try:
-                congestion_obj = parse_congestion_report_file(str(artifacts.congestion_report))
-                metrics["bins_total"] = congestion_obj.bins_total
-                metrics["bins_hot"] = congestion_obj.bins_hot
-                metrics["hot_ratio"] = congestion_obj.hot_ratio
-                if congestion_obj.max_overflow is not None:
-                    metrics["max_overflow"] = congestion_obj.max_overflow
-            except Exception as e:
-                metrics["congestion_parse_error"] = str(e)
+                    # Load raw JSON first to get all fields (including hot_ratio)
+                    raw_metrics = json.loads(content)
+
+                    # Parse timing-specific fields using existing parser
+                    timing_obj = parse_openroad_metrics_json(content)
+                    metrics["wns_ps"] = timing_obj.wns_ps
+                    if timing_obj.tns_ps is not None:
+                        metrics["tns_ps"] = timing_obj.tns_ps
+                    if timing_obj.failing_endpoints is not None:
+                        metrics["failing_endpoints"] = timing_obj.failing_endpoints
+
+                    # Additionally extract hot_ratio if present
+                    if "hot_ratio" in raw_metrics:
+                        metrics["hot_ratio"] = raw_metrics["hot_ratio"]
+
+                    # Extract any other custom metrics from JSON
+                    if "clock_period_ns" in raw_metrics:
+                        metrics["clock_period_ns"] = raw_metrics["clock_period_ns"]
+
+                except Exception as e:
+                    metrics["timing_parse_error"] = str(e)
+
+            elif artifacts.timing_report and artifacts.timing_report.exists():
+                # Fall back to text report parsing
+                try:
+                    timing_obj = parse_timing_report(artifacts.timing_report)
+                    metrics["wns_ps"] = timing_obj.wns_ps
+                    if timing_obj.tns_ps is not None:
+                        metrics["tns_ps"] = timing_obj.tns_ps
+                    if timing_obj.failing_endpoints is not None:
+                        metrics["failing_endpoints"] = timing_obj.failing_endpoints
+                except Exception as e:
+                    metrics["timing_parse_error"] = str(e)
+
+        # Parse congestion metrics (if available and not in stdout)
+        if "hot_ratio" not in metrics:
+            if artifacts.congestion_report and artifacts.congestion_report.exists():
+                try:
+                    congestion_obj = parse_congestion_report_file(str(artifacts.congestion_report))
+                    metrics["bins_total"] = congestion_obj.bins_total
+                    metrics["bins_hot"] = congestion_obj.bins_hot
+                    metrics["hot_ratio"] = congestion_obj.hot_ratio
+                    if congestion_obj.max_overflow is not None:
+                        metrics["max_overflow"] = congestion_obj.max_overflow
+                except Exception as e:
+                    metrics["congestion_parse_error"] = str(e)
 
         return metrics
 

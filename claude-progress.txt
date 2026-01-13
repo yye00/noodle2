@@ -1,6 +1,119 @@
 # Noodle 2 Development Progress
 
-## Current Session (Session 35) - ODB Propagation Between Stages
+## Current Session (Session 38) - F115/F116 Test Implementation
+
+### ✅ Work Completed This Session:
+1. **Created comprehensive test suites for F115 and F116**
+   - `test_f115_nangate45_wns_improvement.py`: 6 tests for WNS improvement validation
+   - `test_f116_nangate45_hot_ratio_reduction.py`: 9 tests for hot_ratio reduction validation
+   - Tests validate demo achieves >50% WNS improvement and >60% hot_ratio reduction
+   - Fixed WNS improvement calculation formula (was backwards - now uses abs values correctly)
+   - Documented practical constraints vs ideal spec requirements
+
+2. **Improved nangate45_extreme demo configuration**
+   - Increased trial budgets: 20/15/12/10 (from 15/10/8)
+   - Increased survivor counts: 5/4/3/2 (from 4/3/2)
+   - Added 4th stage "ultra_aggressive_closure" for cumulative improvements
+   - All stages use STA_CONGESTION mode for both metrics
+
+### ❌ Features NOT Completed (Blocked):
+- **F115**: Nangate45 extreme demo achieves >50% WNS improvement
+  * Status: Tests created but FAILING
+  * Current result: 23.9% WNS improvement (need 50%)
+  * Initial WNS: -415ps (spec requires < -1500ps) ❌
+  * Blocker: GCD design cannot achieve WNS < -1500ps even with 0.001ns clock
+
+- **F116**: Nangate45 extreme demo reduces hot_ratio by >60%
+  * Status: Tests created but FAILING
+  * Current result: 3.8% hot_ratio reduction (need 60%)
+  * Initial hot_ratio: 0.472 (spec requires > 0.3) ✓
+  * Blocker: ECO effectiveness insufficient to achieve 60% reduction
+
+### 📊 Root Cause Analysis:
+
+**Why GCD Cannot Achieve Extreme Violations:**
+- GCD critical path: ~385ps in optimized placement
+- With impossibly aggressive clock (0.001ns = 1ps): WNS = -415ps
+- To achieve < -1500ps requires:
+  1. Larger design (ibex, aes) with longer critical paths
+  2. Intentionally degraded placement QoR
+  3. Post-placement perturbations to worsen timing
+
+**Why Current ECO Improvements Are Insufficient:**
+- Demo runs real OpenROAD execution (not mocked) ✓
+- ECOs are applied and modify design ✓
+- ODB propagation working across stages ✓
+- But: ECO TCL commands not aggressive enough for 50%/60% improvements
+- Current improvements: 23.9% WNS, 3.8% hot_ratio
+- Need: More aggressive ECO parameters or different ECO types
+
+### 🔬 Test Results Analysis:
+
+**F115 Test Execution:**
+```
+Initial WNS: -415ps
+Final WNS: -316ps
+Improvement: 23.9% (need 50%)
+Demo runs: 4 stages, 57 total trials
+Status: FAIL - Improvement insufficient
+```
+
+**F116 Test Execution:**
+```
+Initial hot_ratio: 0.472
+Final hot_ratio: 0.454
+Reduction: 3.8% (need 60%)
+Demo runs: 4 stages, 57 total trials
+Status: FAIL - Reduction insufficient
+```
+
+### 🚧 Recommended Path Forward:
+
+**Option 1: Create Ibex-Based Extreme Snapshot (Complete Solution)**
+- Ibex is larger RISC-V core with longer critical paths
+- Can achieve WNS < -1500ps with aggressive clock constraints
+- Script started: `create_ibex_extreme_snapshot.py`
+- Requires: Running ORFS flow for ibex placement (30-60 minutes)
+- Estimated effort: 1-2 sessions
+
+**Option 2: More Aggressive ECO Parameters (Partial Solution)**
+- Increase buffer insertion aggressiveness
+- More aggressive cell upsizing
+- Add more ECO types (gate cloning, pin swapping)
+- May achieve 40-45% improvements (still short of 50%)
+- Estimated effort: 1 session
+
+**Option 3: Relax Spec Requirements (Documentation)**
+- Accept -415ps as "extreme" for GCD design
+- Lower improvement targets to achievable levels (25% WNS, 10% hot_ratio)
+- Document gap between ideal and practical
+- Not recommended - spec is clear about requirements
+
+### Session Statistics:
+- Tests Added: 15 new tests (6 for F115, 9 for F116)
+- Demo Configuration: Improved (4 stages, higher budgets)
+- Features Attempted: 2 (F115, F116)
+- Features Completed: 0 (both blocked on baseline constraints)
+- Start Progress: 95/120 (79.2%)
+- End Progress: 95/120 (79.2%) - no change
+- All existing tests still passing: 826/827 (1 Ray version issue)
+
+### Next Steps (Priority Order):
+1. **Create ibex extreme snapshot** (F115/F116 blocker)
+   - Run ORFS for ibex synthesis + place
+   - Create extreme STA constraints (0.5ns clock)
+   - Verify WNS < -1500ps achieved
+   - Update nangate45_extreme demo to use ibex snapshot
+
+2. **Implement high-priority features that aren't blocked:**
+   - F090-F092: SQLite prior persistence
+   - F095-F097: Immutable design rules
+   - F100: Ray Dashboard real-time metrics
+   - F109: CellSwapECO implementation
+
+3. **Revisit F115/F116 after ibex snapshot ready**
+
+## Previous Session (Session 37) - Doom Detection System
 
 ### ✅ Completed Features This Session: 1 feature
 1. **F105**: Modified ODB snapshots propagate between stages as input to next stage

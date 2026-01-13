@@ -2116,8 +2116,8 @@
       "Step 4: Verify no trials are executed",
       "Step 5: Verify rejection reason is clear in error message"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:08:40Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

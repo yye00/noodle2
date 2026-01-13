@@ -1812,8 +1812,8 @@
       "Step 5: Calculate net_improvement_pct",
       "Step 6: Save summary as JSON with improved_bins, worsened_bins, net_improvement_pct"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T06:52:52Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

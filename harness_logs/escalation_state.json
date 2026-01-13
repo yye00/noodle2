@@ -727,7 +727,29 @@
       "sub_features": [],
       "created_at": "2026-01-13T02:14:39.459181",
       "updated_at": "2026-01-13T02:14:39.459186"
+    },
+    "F084": {
+      "feature_id": "F084",
+      "current_model": "claude-sonnet-4-5-20250929",
+      "attempts_at_current_model": 1,
+      "total_attempts": 1,
+      "failure_type": null,
+      "diagnosis_done": false,
+      "research_queries": [],
+      "error_history": [
+        {
+          "timestamp": "2026-01-13T02:36:25.009111",
+          "model": "claude-sonnet-4-5-20250929",
+          "error_msg": "Session 123 made no progress",
+          "error_type": null,
+          "deps_met": true
+        }
+      ],
+      "decomposed": false,
+      "sub_features": [],
+      "created_at": "2026-01-13T02:36:25.009103",
+      "updated_at": "2026-01-13T02:36:25.009109"
     }
   },
-  "updated_at": "2026-01-13T02:14:39.459228"
+  "updated_at": "2026-01-13T02:36:25.009182"
 }

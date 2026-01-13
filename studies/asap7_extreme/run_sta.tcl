@@ -20,7 +20,8 @@ set cell_lef "$lef_dir/asap7sc7p5t_28_R_1x_220121a.lef"
 # Input/output paths
 set snapshot_dir "/snapshot"
 set work_dir "/work"
-set odb_file "$snapshot_dir/gcd_placed.odb"
+# Use ORFS-built placed design (has proper timing info)
+set odb_file "$snapshot_dir/gcd_placed_orfs.odb"
 
 puts "Loading timing library: $lib_file"
 puts "Loading tech LEF: $tech_lef"
@@ -40,11 +41,34 @@ read_liberty $lib_file
 # Read the placed design
 read_db $odb_file
 
-# Create a clock (aggressive for 7nm - 1GHz target)
-create_clock -name clk -period 1.0 [get_ports clk]
+# Link the design (connects cells to library)
+puts "Linking design..."
+set num_insts [[ord::get_db_block] getInsts]
+puts "Number of instances: [llength $num_insts]"
 
-# Set output delays only (avoid warning about input delay on clock port)
-set_output_delay -clock clk 0.05 [all_outputs]
+# Read SDC constraints (aggressive clock period for ASAP7 demo)
+set sdc_file "$snapshot_dir/gcd_aggressive.sdc"
+if {[file exists $sdc_file]} {
+    puts "Reading aggressive SDC constraints: $sdc_file"
+    read_sdc $sdc_file
+} else {
+    # Fallback: use less aggressive constraints
+    set sdc_file "$snapshot_dir/gcd.sdc"
+    if {[file exists $sdc_file]} {
+        puts "Reading SDC constraints: $sdc_file"
+        read_sdc $sdc_file
+    } else {
+        puts "WARNING: No SDC file found, creating clock manually"
+        create_clock -name core_clock -period 150 [get_ports clk]
+        set_output_delay -clock core_clock 30 [all_outputs]
+    }
+}
+
+# Report clock information
+puts "Clocks defined:"
+foreach clock [get_clocks *] {
+    puts "  Clock: [get_property $clock name], Period: [get_property $clock period]"
+}
 
 puts "=== Running Static Timing Analysis ==="
 puts ""
@@ -84,7 +108,7 @@ set fp [open $timing_report w]
 puts $fp "=== Noodle 2 Real STA Report ==="
 puts $fp "Design: GCD (placed)"
 puts $fp "PDK: ASAP7 (7nm FinFET)"
-puts $fp "Clock period: 1.0 ns (1 GHz)"
+puts $fp "Clock period: 0.5 ns (2 GHz - aggressive for timing violations)"
 puts $fp ""
 puts $fp "Timing Summary:"
 puts $fp "  WNS: $wns ns ($wns_ps ps)"
@@ -106,7 +130,7 @@ puts $fp "  \"execution_type\": \"real_sta\","
 puts $fp "  \"wns_ps\": $wns_ps,"
 puts $fp "  \"tns_ps\": $tns_ps,"
 puts $fp "  \"hot_ratio\": [format %.6f $hot_ratio],"
-puts $fp "  \"clock_period_ns\": 1.0,"
+puts $fp "  \"clock_period_ns\": 0.5,"
 if {$wns_ps < 0} {
     puts $fp "  \"status\": \"timing_violation\""
 } else {

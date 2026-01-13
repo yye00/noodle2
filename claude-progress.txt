@@ -2613,3 +2613,91 @@ High Priority Options:
 Current Status: Strong foundation for PDK smoke testing established
 Next Milestone: End-to-end demos with real OpenROAD execution
 
+================================================================================
+SESSION 17 - 2026-01-13
+================================================================================
+
+OBJECTIVE
+---------
+Work on F084/F085 (ASAP7/Sky130 extreme demos with real execution)
+
+WORK DONE
+---------
+
+1. Verified test infrastructure
+   - All 52 previously passing tests still pass
+   - 4813 total tests collected
+   - ~9 tests failing for F084 (ASAP7 extreme demo)
+
+2. Investigated real OpenROAD execution
+   - Docker available: openroad/orfs:latest image present
+   - ORFS cloned and available in orfs/ directory
+   - Demo scripts exist and run without crashing
+   - BUT: Real execution not producing valid timing results
+
+3. Root cause analysis for "No paths found"
+   - STA scripts execute but report "No paths found"
+   - Issue: The gcd_placed.odb snapshot doesn't have proper timing info
+   - Tried multiple approaches:
+     a) Updated SDC files with correct port names
+     b) Verified 474 instances in design
+     c) Clock properly defined (150ps aggressive period)
+     d) Copied ORFS-built 3_place.odb file
+   - Still getting WNS = infinity (no paths found)
+
+4. Created/Updated files:
+   - studies/asap7_extreme/gcd.sdc - SDC for GCD design
+   - studies/asap7_extreme/gcd_aggressive.sdc - Aggressive constraints
+   - studies/asap7_extreme/run_sta.tcl - Updated to use ORFS design
+   - studies/asap7_extreme/gcd_placed_orfs.odb - Copied from ORFS results
+
+FINDINGS
+--------
+
+The "No paths found" issue likely stems from one of:
+1. The ODB file needs parasitics (RC extraction) for STA
+2. The design needs to be built through the full ORFS flow (not just copied)
+3. Missing linking step or library mismatch
+4. The snapshot needs to be from 4_cts.odb or later (after clock tree)
+
+The current gcd_placed.odb is a simplified snapshot that doesn't have the
+necessary timing graph built for STA analysis.
+
+BLOCKER
+-------
+
+**F084 and F085 are BLOCKED on snapshot creation infrastructure.**
+
+To unblock F084/F085, we need:
+1. A script to properly generate snapshots from ORFS
+2. Run ORFS make flow for ASAP7/Sky130 GCD designs
+3. Extract post-CTS or post-route ODB files
+4. Create "broken" snapshots with aggressive constraints that have violations
+5. Verify STA actually reports timing paths
+
+This is a foundational infrastructure issue that affects all real execution.
+
+NEXT STEPS
+----------
+
+**Option A: Build proper snapshots** (recommended)
+1. Create snapshot generation script using ORFS make commands
+2. Run: make DESIGN_CONFIG=designs/asap7/gcd/config.mk route
+3. Extract 5_route.odb or 4_cts.odb as snapshot
+4. Create aggressive SDC to introduce violations
+5. Test that STA reports real timing numbers
+
+**Option B: Work on other features first**
+Focus on medium-priority features that don't require real execution:
+- F043: Warm start loading priors
+- F044-F046: Survivor selection strategies
+- F047-F049: Objective function modes
+- F050: Checkpointing
+
+STATUS
+------
+Features passing: 52/85 (61.2%)
+Features blocked: F084, F085 (critical priority)
+Time spent: ~3 hours on snapshot debugging
+
+================================================================================

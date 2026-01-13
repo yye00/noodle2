@@ -25,6 +25,10 @@ from src.controller.failure import (
     FailureSeverity,
     FailureType,
 )
+from src.controller.types import (
+    ObjectiveConfig,
+    ObjectiveMode,
+)
 from src.controller.ranking import (
     RankingPolicy,
     RankingWeights,
@@ -106,6 +110,8 @@ __all__ = [
     "FailureSeverity",
     "FailureClassification",
     "FailureClassifier",
+    "ObjectiveMode",
+    "ObjectiveConfig",
     "ECOClassContainmentTracker",
     "ECOClassStatus",
     "CaseTelemetry",

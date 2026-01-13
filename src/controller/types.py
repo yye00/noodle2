@@ -49,6 +49,14 @@ class ExecutionMode(str, Enum):
     FULL_ROUTE = "full_route"
 
 
+class ObjectiveMode(str, Enum):
+    """Objective function mode for multi-objective optimization."""
+
+    PARETO = "pareto"  # Pareto frontier - select non-dominated solutions
+    WEIGHTED_SUM = "weighted_sum"  # Weighted sum of objectives
+    LEXICOGRAPHIC = "lexicographic"  # Prioritize primary, use secondary as tiebreaker
+
+
 class FailureType(str, Enum):
     """Classification of trial failures."""
 
@@ -113,6 +121,41 @@ class StageConfig:
                 raise ValueError("required_approvers must be at least 1")
             if self.timeout_hours < 1:
                 raise ValueError("timeout_hours must be at least 1")
+
+
+@dataclass
+class ObjectiveConfig:
+    """Configuration for multi-objective optimization.
+
+    Defines how multiple objectives (timing, congestion, area, power) are
+    combined and optimized during survivor selection.
+    """
+
+    mode: ObjectiveMode = ObjectiveMode.WEIGHTED_SUM  # Optimization mode
+    primary: str = "wns_ps"  # Primary objective (e.g., "wns_ps", "hot_ratio")
+    secondary: str | None = None  # Secondary objective for tiebreaking or Pareto
+    weights: list[float] | None = None  # Weights for weighted_sum mode [primary_weight, secondary_weight]
+
+    def __post_init__(self) -> None:
+        """Validate objective configuration."""
+        if not self.primary:
+            raise ValueError("primary objective must be specified")
+
+        if self.mode == ObjectiveMode.WEIGHTED_SUM:
+            if self.weights is None:
+                # Default weights if not specified
+                self.weights = [0.6, 0.4] if self.secondary else [1.0]
+            if self.secondary and len(self.weights) != 2:
+                raise ValueError("weighted_sum mode with secondary objective requires exactly 2 weights")
+            if self.weights:
+                if any(w < 0 or w > 1 for w in self.weights):
+                    raise ValueError("weights must be between 0.0 and 1.0")
+                if abs(sum(self.weights) - 1.0) > 0.01:
+                    raise ValueError(f"weights must sum to 1.0, got {sum(self.weights)}")
+
+        elif self.mode in (ObjectiveMode.PARETO, ObjectiveMode.LEXICOGRAPHIC):
+            if not self.secondary:
+                raise ValueError(f"{self.mode.value} mode requires both primary and secondary objectives")
 
 
 @dataclass
@@ -224,6 +267,8 @@ class StudyConfig:
     pdk_override: Any = None  # PDKOverride instance for bind-mounted versioned PDK
     # Diagnosis configuration for auto-analysis
     diagnosis: DiagnosisConfig = field(default_factory=DiagnosisConfig)  # Auto-diagnosis configuration
+    # Objective configuration for multi-objective optimization
+    objective: ObjectiveConfig = field(default_factory=ObjectiveConfig)  # Multi-objective optimization configuration
     # Safety rails configuration
     rails: RailsConfig = field(default_factory=RailsConfig)  # Safety rails for abort/stage/study limits
 

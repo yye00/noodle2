@@ -1388,8 +1388,8 @@
       "Step 4: Verify Pareto frontier is computed correctly",
       "Step 5: Verify both objectives are considered"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T10:06:36.404993+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1418,8 +1418,8 @@
       "Step 4: Verify ranking uses weighted sum: 0.7*wns + 0.3*hot_ratio",
       "Step 5: Verify survivors are selected by combined score"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T10:06:36.404993+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1448,8 +1448,8 @@
       "Step 4: Verify primary metric is optimized first",
       "Step 5: Verify secondary is used only for ties in primary"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T10:06:36.404993+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

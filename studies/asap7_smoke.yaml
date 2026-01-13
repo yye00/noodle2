@@ -1,0 +1,35 @@
+# ASAP7 smoke test - minimal configuration with workarounds
+name: asap7_smoke
+pdk: asap7
+safety_domain: guarded
+base_case_name: asap7_base
+snapshot_path: studies/asap7_base/gcd_placed.odb
+
+# Metadata
+metadata:
+  description: "Quick smoke test for ASAP7 PDK with required workarounds"
+  tags: ["smoke", "asap7", "validation", "workarounds"]
+  purpose: "Verify ASAP7 workarounds and basic functionality"
+  asap7_workarounds: true
+  sta_first: true
+
+# Single stage with minimal trials
+stages:
+  - name: smoke_test
+    execution_mode: sta_only
+    trial_budget: 1
+    survivor_count: 1
+    allowed_eco_classes: [topology_neutral]
+    survivor_selection: pure_top_n
+    ranking_metric: wns_ps
+
+# Safety rails
+rails:
+  abort:
+    wns_ps: -50000  # Very permissive for smoke test
+    timeout_seconds: 300  # 5 minutes max per trial
+  stage:
+    failure_rate: 0.9  # Allow high failure rate for smoke test
+  study:
+    catastrophic_failures: 3
+    max_runtime_hours: 1

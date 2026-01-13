@@ -1,0 +1,33 @@
+# Sky130 smoke test - minimal configuration for Ibex design
+name: sky130_smoke
+pdk: sky130
+safety_domain: guarded
+base_case_name: sky130_base
+snapshot_path: studies/sky130_base/ibex_placed.odb
+
+# Metadata
+metadata:
+  description: "Quick smoke test for Sky130 PDK with Ibex design"
+  tags: ["smoke", "sky130", "validation", "ibex"]
+  purpose: "Verify basic STA and congestion analysis for Sky130"
+
+# Single stage with minimal trials
+stages:
+  - name: smoke_test
+    execution_mode: sta_congestion
+    trial_budget: 1
+    survivor_count: 1
+    allowed_eco_classes: [topology_neutral]
+    survivor_selection: pure_top_n
+    ranking_metric: wns_ps
+
+# Safety rails
+rails:
+  abort:
+    wns_ps: -50000  # Very permissive for smoke test
+    timeout_seconds: 300  # 5 minutes max per trial
+  stage:
+    failure_rate: 0.9  # Allow high failure rate for smoke test
+  study:
+    catastrophic_failures: 3
+    max_runtime_hours: 1

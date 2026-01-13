@@ -502,16 +502,80 @@ data will be used to guide ECO selection.
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Execute run command."""
-    print(f"🚀 Running Study: {args.study}")
+    from src.controller.study import load_study_config
+    from src.controller.executor import StudyExecutor
+
+    study_path = Path(args.study)
+
+    # If study is just a name, look for it in studies/ directory
+    if not study_path.exists() and not str(study_path).endswith(('.yaml', '.yml')):
+        study_path = Path('studies') / f"{args.study}.yaml"
+
+    if not study_path.exists():
+        print(f"❌ Error: Study configuration not found: {study_path}")
+        return 1
+
+    print(f"🚀 Running Study: {study_path}")
     print(f"   Ray address: {args.ray_address}")
     if args.checkpoint_dir:
         print(f"   Checkpoints: {args.checkpoint_dir}")
     if args.dry_run:
         print("   Dry run: validation only")
     print()
-    print("Error: Study execution not yet implemented.")
-    print("This is a placeholder for the full Study runner.")
-    return 1
+
+    try:
+        # Load configuration
+        print("📋 Loading configuration...")
+        config = load_study_config(study_path)
+        print(f"   Study name: {config.name}")
+        print(f"   PDK: {config.pdk}")
+        print(f"   Safety domain: {config.safety_domain}")
+        print(f"   Stages: {len(config.stages)}")
+        print()
+
+        if args.dry_run:
+            print("✅ Configuration is valid (dry run)")
+            return 0
+
+        # Initialize executor
+        print("⚙️  Initializing executor...")
+        executor = StudyExecutor(
+            config=config,
+            artifacts_root="artifacts",
+            telemetry_root="telemetry",
+            use_ray=False,  # For now, use sequential execution
+        )
+
+        # Execute study
+        print("🏃 Executing study...")
+        print()
+        result = executor.execute()
+
+        # Print results
+        print()
+        print("=" * 70)
+        print("✅ Study execution complete!")
+        print(f"   Total stages: {result.total_stages}")
+        print(f"   Stages completed: {result.stages_completed}")
+        print(f"   Total runtime: {result.total_runtime_seconds:.2f}s")
+        print(f"   Final survivors: {len(result.final_survivors)}")
+        if result.aborted:
+            print(f"   ⚠️  Aborted: {result.abort_reason}")
+        print("=" * 70)
+
+        return 0 if not result.aborted else 1
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+        return 1
+    except ValueError as e:
+        print(f"❌ Configuration error: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Execution failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
 
 
 def cmd_validate(args: argparse.Namespace) -> int:

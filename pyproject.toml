@@ -13,6 +13,9 @@ dependencies = [
     "Pillow>=10.0.0",
 ]
 
+[project.scripts]
+noodle2 = "cli:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

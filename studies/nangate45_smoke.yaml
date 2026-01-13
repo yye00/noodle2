@@ -1,0 +1,33 @@
+# Nangate45 smoke test - minimal configuration for quick validation
+name: nangate45_smoke
+pdk: nangate45
+safety_domain: guarded
+base_case_name: nangate45_base
+snapshot_path: studies/nangate45_base/gcd_placed.odb
+
+# Metadata
+metadata:
+  description: "Quick smoke test for Nangate45 PDK"
+  tags: ["smoke", "nangate45", "validation"]
+  purpose: "Verify basic STA and congestion analysis functionality"
+
+# Single stage with minimal trials
+stages:
+  - name: smoke_test
+    execution_mode: sta_congestion
+    trial_budget: 1
+    survivor_count: 1
+    allowed_eco_classes: [topology_neutral]
+    survivor_selection: pure_top_n
+    ranking_metric: wns_ps
+
+# Safety rails
+rails:
+  abort:
+    wns_ps: -50000  # Very permissive for smoke test
+    timeout_seconds: 300  # 5 minutes max per trial
+  stage:
+    failure_rate: 0.9  # Allow high failure rate for smoke test
+  study:
+    catastrophic_failures: 3
+    max_runtime_hours: 1

@@ -2270,8 +2270,8 @@
       "Step 5: Verify all required heatmaps are generated (placement_density, routing_congestion)",
       "Step 6: Verify execution completes within 5 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T07:13:35.471684+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2302,8 +2302,8 @@
       "Step 5: Verify artifacts and heatmaps are created",
       "Step 6: Verify execution completes within 5 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T07:13:35.471684+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2333,8 +2333,8 @@
       "Step 4: Verify artifacts and heatmaps are created",
       "Step 5: Verify execution completes within 5 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T07:13:35.471684+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

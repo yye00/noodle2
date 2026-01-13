@@ -106,9 +106,10 @@ class TestF019CellResizeECO:
 
         tcl_script = eco.generate_tcl()
 
-        # Check for repair_design command (primary method)
-        assert "repair_design" in tcl_script, "TCL should contain 'repair_design' command"
-        print("✓ TCL contains 'repair_design' command")
+        # Check for repair_timing command (primary method for cell resizing)
+        # Note: repair_timing is more reliable than repair_design for setup violations
+        assert "repair_timing" in tcl_script, "TCL should contain 'repair_timing' command"
+        print("✓ TCL contains 'repair_timing' command")
 
         # Check for size multiplier in comments
         assert "2.0" in tcl_script or "2.0x" in tcl_script

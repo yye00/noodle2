@@ -2603,8 +2603,8 @@
       "Step 4: Verify case is marked for termination",
       "Step 5: Verify doom reason is logged in study output"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T16:49:35.184408+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2634,8 +2634,8 @@
       "Step 4: Verify stagnation trigger is correctly identified",
       "Step 5: Verify case termination decision is made"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T16:51:55.985350+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2667,8 +2667,8 @@
       "Step 4: Verify doom_type is eco_exhaustion",
       "Step 5: Verify study terminates with ECO gap report"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T16:53:09.242165+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

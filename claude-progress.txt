@@ -1,8 +1,10 @@
 # Noodle 2 Development Progress
 
-## Current Session (Session 38) - F115/F116 Test Implementation
+## Current Session (Session 38) - F115/F116 Tests + F090 Complete
 
 ### ✅ Work Completed This Session:
+
+**Part 1: F115/F116 Test Implementation (Blocked)**
 1. **Created comprehensive test suites for F115 and F116**
    - `test_f115_nangate45_wns_improvement.py`: 6 tests for WNS improvement validation
    - `test_f116_nangate45_hot_ratio_reduction.py`: 9 tests for hot_ratio reduction validation
@@ -15,6 +17,27 @@
    - Increased survivor counts: 5/4/3/2 (from 4/3/2)
    - Added 4th stage "ultra_aggressive_closure" for cumulative improvements
    - All stages use STA_CONGESTION mode for both metrics
+
+**Part 2: F090 SQLite Prior Repository (COMPLETED ✅)**
+3. **Implemented SQLite-backed prior repository**
+   - Created `SQLitePriorRepository` class in `src/controller/prior_repository_sqlite.py`
+   - Full database persistence with schema: eco_priors table
+   - Methods: store_prior, get_prior, get_all_priors, query_by_success_rate
+   - Cross-session data integrity maintained
+   - Provenance tracking for audit trails
+   - JSON import/export compatibility
+   - Default database path: ~/.noodle2/priors/priors.db
+
+4. **Comprehensive test suite for F090**
+   - Created `test_f090_prior_repository_sqlite.py` with 18 tests
+   - All tests passing ✓
+   - Covers all feature steps:
+     * Step 1: Initialize repository with ~/.noodle2/priors/ path
+     * Step 2: Store ECO prior data (name, success_rate, avg_improvement)
+     * Step 3: Verify priors.db file creation
+     * Step 4: Query priors from database
+     * Step 5: Verify data integrity across sessions
+   - Integration tests: JSON import/export, statistics, filtering
 
 ### ❌ Features NOT Completed (Blocked):
 - **F115**: Nangate45 extreme demo achieves >50% WNS improvement
@@ -90,13 +113,14 @@ Status: FAIL - Reduction insufficient
 - Not recommended - spec is clear about requirements
 
 ### Session Statistics:
-- Tests Added: 15 new tests (6 for F115, 9 for F116)
+- Tests Added: 33 new tests (6 for F115, 9 for F116, 18 for F090)
 - Demo Configuration: Improved (4 stages, higher budgets)
-- Features Attempted: 2 (F115, F116)
-- Features Completed: 0 (both blocked on baseline constraints)
+- Features Attempted: 3 (F115, F116, F090)
+- Features Completed: 1 (F090 ✅)
+- Features Blocked: 2 (F115, F116 - need ibex snapshot)
 - Start Progress: 95/120 (79.2%)
-- End Progress: 95/120 (79.2%) - no change
-- All existing tests still passing: 826/827 (1 Ray version issue)
+- **End Progress: 96/120 (80.0%)** +1 feature
+- All existing tests still passing: 844/845 tests pass
 
 ### Next Steps (Priority Order):
 1. **Create ibex extreme snapshot** (F115/F116 blocker)

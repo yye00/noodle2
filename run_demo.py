@@ -195,16 +195,26 @@ def collect_study_metrics(study_result: StudyResult, study_config) -> dict:
         "final_survivors": study_result.final_survivors,
     }
 
-    # Extract initial and final WNS/hot_ratio from stage results
+    # Load initial metrics from snapshot's metrics.json file
+    snapshot_metrics_path = Path(study_config.snapshot_path) / "metrics.json"
+    if snapshot_metrics_path.exists():
+        with open(snapshot_metrics_path) as f:
+            snapshot_metrics = json.load(f)
+            metrics["initial_wns_ps"] = snapshot_metrics.get("wns_ps", 0)
+            metrics["initial_hot_ratio"] = snapshot_metrics.get("hot_ratio", 0)
+    else:
+        # Fallback to extracting from first trial if snapshot metrics not found
+        if study_result.stage_results:
+            first_stage = study_result.stage_results[0]
+            if first_stage.trial_results:
+                initial_metrics = first_stage.trial_results[0].metrics or {}
+                metrics["initial_wns_ps"] = initial_metrics.get("wns_ps", 0)
+                metrics["initial_hot_ratio"] = initial_metrics.get("hot_ratio", 0)
+
+    # Extract final WNS/hot_ratio from stage results
     if study_result.stage_results:
         first_stage = study_result.stage_results[0]
         last_stage = study_result.stage_results[-1]
-
-        # Get metrics from trial results
-        if first_stage.trial_results:
-            initial_metrics = first_stage.trial_results[0].metrics or {}
-            metrics["initial_wns_ps"] = initial_metrics.get("wns_ps", 0)
-            metrics["initial_hot_ratio"] = initial_metrics.get("hot_ratio", 0)
 
         if last_stage.trial_results:
             # Find best trial by WNS

@@ -750,3 +750,63 @@ Remaining high-priority features:
 - All immutable rules tests passing (38/38)
 - Clean working state
 - 101/120 features passing (84.2%)
+
+## Session 40 - 2026-01-13T17:40:00Z
+
+### Completed Features:
+✅ **F109: CellSwapECO implementation**
+- Created comprehensive test suite (10 tests, all passing)
+- Verifies CellSwapECO can be defined with target cell variants
+- TCL identifies cells on critical paths
+- Generates valid OpenROAD repair_timing commands
+- Integrates into Study executor ECO rotation
+- Validates parameters and serializes for telemetry
+
+✅ **F110: Trial config ECO parameter variation**
+- Created comprehensive test suite (7 tests, all passing)
+- Verifies trial configs generated with varied parameters
+- Parameter values differ systematically across trials
+- Creates observable effect gradient (size_multiplier, max_paths)
+- All ECO types have parameter variation
+- Parameter ranges validated as reasonable
+
+### Session Statistics:
+- Features Completed: 2 (F109, F110)
+- Tests Added: 17 new tests (10 for F109, 7 for F110)
+- Start Progress: 101/120 (84.2%)
+- End Progress: 103/120 (85.8%)
+- Net Gain: +2 features (+1.6%)
+
+### Attempted but Blocked:
+- **F115/F116**: Nangate45 extreme demo improvements
+  * Attempted to create ibex extreme snapshot
+  * ORFS tools not installed locally (need Docker ORFS build)
+  * Requires running full ORFS flow in Docker (30-60 min)
+  * Deferred - will work on other features first
+
+### Architecture Status:
+✅ All core infrastructure complete
+✅ ECO system with 4 types (NoOp, CellResize, BufferInsertion, CellSwap)
+✅ Parameter variation across trials
+✅ Multi-stage ECO accumulation
+✅ ODB propagation between stages
+✅ Doom detection system
+✅ Prior repository with SQLite persistence
+✅ Immutable design rules
+✅ CLI commands for priors export/import
+✅ Extreme snapshots for GCD design
+
+### Next Steps (Priority Order):
+1. **F111**: Timing path breakdown (wire vs cell delay)
+2. **F112**: Heatmap generation from real CSV data
+3. **F113**: Congestion metrics parsing from OpenROAD
+4. **F119**: Demo console shows prior state updates
+5. **F120**: Prior repository database exists after demo
+6. **F100**: Ray Dashboard real-time metrics
+7. **F115/F116**: Revisit with ibex extreme snapshot
+
+### Git Status:
+- Latest commit: F110 trial config ECO parameter variation
+- All tests passing
+- Clean working state
+- 103/120 features passing (85.8%)

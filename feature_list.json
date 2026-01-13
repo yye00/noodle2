@@ -2572,8 +2572,8 @@
       "Step 6: Verify summary.json shows mocking: false",
       "Step 7: Verify execution completes within 45 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:45:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

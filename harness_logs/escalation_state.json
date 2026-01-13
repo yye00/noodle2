@@ -730,9 +730,9 @@
     },
     "F084": {
       "feature_id": "F084",
-      "current_model": "claude-sonnet-4-5-20250929",
-      "attempts_at_current_model": 2,
-      "total_attempts": 2,
+      "current_model": "claude-opus-4-5-20251101",
+      "attempts_at_current_model": 0,
+      "total_attempts": 4,
       "failure_type": null,
       "diagnosis_done": false,
       "research_queries": [],
@@ -750,12 +750,19 @@
           "error_msg": "Session 124 made no progress",
           "error_type": null,
           "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-13T03:28:38.710213",
+          "model": "claude-sonnet-4-5-20250929",
+          "error_msg": "Session 126 made no progress",
+          "error_type": null,
+          "deps_met": true
         }
       ],
       "decomposed": false,
       "sub_features": [],
       "created_at": "2026-01-13T02:36:25.009103",
-      "updated_at": "2026-01-13T02:49:52.920667"
+      "updated_at": "2026-01-13T03:37:56.910018"
     },
     "F044": {
       "feature_id": "F044",
@@ -842,5 +849,5 @@
       "updated_at": "2026-01-13T03:07:07.848074"
     }
   },
-  "updated_at": "2026-01-13T03:07:07.848106"
+  "updated_at": "2026-01-13T03:37:56.910093"
 }

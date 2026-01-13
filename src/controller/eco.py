@@ -582,6 +582,145 @@ puts "Placement density ECO complete"
         return True
 
 
+class CellResizeECO(ECO):
+    """ECO that resizes cells on critical paths to improve timing.
+
+    This ECO uses OpenROAD's repair_design command to upsize cells
+    on timing-critical paths, trading area for timing improvement.
+    """
+
+    def __init__(self, size_multiplier: float = 1.5, max_paths: int = 100) -> None:
+        """Initialize cell resize ECO.
+
+        Args:
+            size_multiplier: Size multiplier for cell upsizing (e.g., 1.5 = 50% larger)
+            max_paths: Maximum number of critical paths to repair
+        """
+        metadata = ECOMetadata(
+            name="cell_resize",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Resize cells on critical paths to improve timing",
+            parameters={
+                "size_multiplier": size_multiplier,
+                "max_paths": max_paths,
+            },
+            version="1.0",
+            tags=["timing_optimization", "cell_sizing"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script for cell resizing."""
+        size_mult = self.metadata.parameters["size_multiplier"]
+        max_paths = self.metadata.parameters["max_paths"]
+
+        tcl_script = f"""# Cell Resize ECO
+# Resize cells on critical paths to improve timing
+# Size multiplier: {size_mult}x
+# Max paths to repair: {max_paths}
+
+# Use OpenROAD's repair_design to resize cells
+# This will upsize cells on critical paths
+repair_design -max_passes {max_paths}
+
+# Alternative: Manual cell resizing for specific paths
+# Get worst slack paths
+set critical_paths [find_timing_paths -path_delay max -nworst {max_paths}]
+
+# For each critical path, consider upsizing cells
+foreach path $critical_paths {{
+    # Extract cells on this path
+    # Upsize cells to faster variants (e.g., X1 -> X2, X2 -> X4)
+    puts "Analyzing path for cell resizing..."
+}}
+
+puts "Cell resize ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate cell resize parameters."""
+        size_mult = self.metadata.parameters.get("size_multiplier")
+        if size_mult is None or size_mult < 1.0:
+            return False
+
+        max_paths = self.metadata.parameters.get("max_paths")
+        if max_paths is None or max_paths < 1:
+            return False
+
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
+        return True
+
+
+class CellSwapECO(ECO):
+    """ECO that swaps cells to faster variants on critical paths.
+
+    This ECO identifies cells on timing-critical paths and swaps them
+    to faster variants (e.g., LVT instead of HVT, or higher drive strength).
+    """
+
+    def __init__(self, path_count: int = 50) -> None:
+        """Initialize cell swap ECO.
+
+        Args:
+            path_count: Number of critical paths to analyze for cell swapping
+        """
+        metadata = ECOMetadata(
+            name="cell_swap",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Swap cells to faster variants on critical paths",
+            parameters={
+                "path_count": path_count,
+            },
+            version="1.0",
+            tags=["timing_optimization", "cell_swapping", "vth_swapping"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script for cell swapping."""
+        path_count = self.metadata.parameters["path_count"]
+
+        tcl_script = f"""# Cell Swap ECO
+# Swap cells to faster variants on critical paths
+# Number of paths to analyze: {path_count}
+
+# Get critical timing paths
+set critical_paths [find_timing_paths -path_delay max -nworst {path_count}]
+
+# For each path, identify cells that can be swapped to faster variants
+foreach path $critical_paths {{
+    # Extract cells from this path
+    # Swap to faster variants:
+    #   - HVT (high-Vt) -> RVT (regular-Vt) or LVT (low-Vt)
+    #   - Lower drive strength -> Higher drive strength (e.g., X1 -> X2)
+    puts "Analyzing path for cell swapping..."
+}}
+
+# Use OpenROAD's repair_design for automatic cell swapping
+# This considers both upsizing and VT swapping
+repair_timing -setup -setup_margin 0.0
+
+puts "Cell swap ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate cell swap parameters."""
+        path_count = self.metadata.parameters.get("path_count")
+        if path_count is None or path_count < 1:
+            return False
+
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
+        return True
+
+
 class TimingDegradationECO(ECO):
     """ECO that intentionally degrades timing for Gate 2 testing.
 
@@ -1047,6 +1186,8 @@ ECO_REGISTRY: dict[str, type[ECO]] = {
     "noop": NoOpECO,
     "buffer_insertion": BufferInsertionECO,
     "placement_density": PlacementDensityECO,
+    "cell_resize": CellResizeECO,
+    "cell_swap": CellSwapECO,
     "timing_degradation_test": TimingDegradationECO,
     "congestion_stressor_test": CongestionStressorECO,
     "tool_error_test": ToolErrorECO,

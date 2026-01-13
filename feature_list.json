@@ -3317,8 +3317,8 @@
       "Step 4: Execute ECO in trial",
       "Step 5: Verify cell instances are swapped and timing changes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T17:39:24.714747+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

@@ -12,13 +12,14 @@ if TYPE_CHECKING:
 
 
 class AbortReason(Enum):
-    """Reasons why a stage might be aborted."""
+    """Reasons why a stage or study might be aborted."""
 
     WNS_THRESHOLD_VIOLATED = "wns_threshold_violated"
     CATASTROPHIC_FAILURE_RATE = "catastrophic_failure_rate"
     ECO_CLASS_BLOCKED = "eco_class_blocked"
     NO_SURVIVORS = "no_survivors"
     TIMEOUT_EXCEEDED = "timeout_exceeded"
+    CATASTROPHIC_FAILURE_COUNT = "catastrophic_failure_count"
 
 
 @dataclass
@@ -47,6 +48,29 @@ class StageAbortDecision:
             "reason": self.reason.value if self.reason else None,
             "details": self.details,
             "violating_trials": self.violating_trials,
+        }
+
+
+@dataclass
+class StudyAbortDecision:
+    """
+    Decision about whether to abort an entire study.
+
+    This captures study-level abort conditions that span multiple stages.
+    """
+
+    should_abort: bool
+    reason: AbortReason | None
+    details: str
+    catastrophic_count: int = 0  # Total catastrophic failures across all stages
+
+    def to_dict(self) -> dict:
+        """Convert to dictionary for JSON serialization."""
+        return {
+            "should_abort": self.should_abort,
+            "reason": self.reason.value if self.reason else None,
+            "details": self.details,
+            "catastrophic_count": self.catastrophic_count,
         }
 
 
@@ -470,4 +494,85 @@ def evaluate_stage_abort(
         should_abort=False,
         reason=None,
         details="All abort checks passed",
+    )
+
+
+def check_study_catastrophic_failure_count(
+    all_trial_results: list[TrialResult],
+    max_catastrophic_failures: int | None,
+) -> StudyAbortDecision:
+    """
+    Check if the study has exceeded the catastrophic failure count threshold.
+
+    This is a study-level check that counts catastrophic failures across ALL stages.
+    If the total count exceeds the threshold, the entire study should be halted.
+
+    This is distinct from stage-level catastrophic_failure_rate which looks at
+    the percentage within a single stage. This counts absolute failures across
+    the entire study.
+
+    Args:
+        all_trial_results: All trial results from all stages in the study
+        max_catastrophic_failures: Maximum allowed catastrophic failures (study-wide)
+
+    Returns:
+        StudyAbortDecision indicating whether to abort the study
+
+    Example:
+        max_catastrophic_failures = 3  # Abort study after 3 catastrophic failures
+        2 catastrophic failures so far # Study continues
+        3 catastrophic failures        # Study halts
+    """
+    if max_catastrophic_failures is None:
+        # No threshold configured - never abort based on catastrophic count
+        return StudyAbortDecision(
+            should_abort=False,
+            reason=None,
+            details="No catastrophic failure count threshold configured",
+            catastrophic_count=0,
+        )
+
+    if not all_trial_results:
+        return StudyAbortDecision(
+            should_abort=False,
+            reason=None,
+            details="No trials executed yet",
+            catastrophic_count=0,
+        )
+
+    # Count catastrophic failures across all trials
+    catastrophic_count = 0
+    catastrophic_trials: list[str] = []
+
+    for trial in all_trial_results:
+        if not trial.success and trial.failure is not None:
+            # Check if failure is catastrophic
+            from src.controller.failure import FailureClassifier
+
+            if FailureClassifier.is_catastrophic(trial.failure):
+                catastrophic_count += 1
+                catastrophic_trials.append(trial.config.case_name)
+
+    if catastrophic_count >= max_catastrophic_failures:
+        details = (
+            f"Study catastrophic failure threshold reached: {catastrophic_count} "
+            f"catastrophic failures (threshold: {max_catastrophic_failures}). "
+            f"Study must be halted. "
+            f"Failed trials: {', '.join(catastrophic_trials[:5])}"
+        )
+        if len(catastrophic_trials) > 5:
+            details += f" and {len(catastrophic_trials) - 5} more"
+
+        return StudyAbortDecision(
+            should_abort=True,
+            reason=AbortReason.CATASTROPHIC_FAILURE_COUNT,
+            details=details,
+            catastrophic_count=catastrophic_count,
+        )
+
+    return StudyAbortDecision(
+        should_abort=False,
+        reason=None,
+        details=f"Catastrophic failure count acceptable: {catastrophic_count}/{max_catastrophic_failures}",
+        catastrophic_count=catastrophic_count,
     )

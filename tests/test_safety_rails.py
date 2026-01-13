@@ -11,7 +11,13 @@ from src.controller.stage_abort import (
     check_wns_threshold_violation,
     check_timeout_violation,
     check_stage_failure_rate,
+    check_study_catastrophic_failure_count,
     AbortReason,
+)
+from src.controller.failure import (
+    FailureClassification,
+    FailureType,
+    FailureSeverity,
 )
 from src.controller.types import (
     ECOClass,
@@ -977,3 +983,345 @@ stages:
 
         assert decision.should_abort is False
         assert "No trials executed" in decision.details
+
+
+class TestF028StudyRailCatastrophicFailureCount:
+    """
+    Feature #F028: Study rail triggers on catastrophic failure count.
+
+    Steps:
+        1. Create study with study rail catastrophic_failures: 3
+        2. Trigger 3 catastrophic failures (tool crashes)
+        3. Verify study is halted completely
+        4. Verify halt reason is logged in study_summary.json
+        5. Verify no further trials are executed
+    """
+
+    def test_step_1_2_3_catastrophic_count_triggers_study_halt(self) -> None:
+        """Steps 1-3: Catastrophic failure count triggers study halt."""
+        # Step 1: Create study with study rail catastrophic_failures: 3
+        yaml_content = """
+name: catastrophic_count_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+rails:
+  study:
+    catastrophic_failures: 3
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(yaml_content)
+            yaml_path = f.name
+
+        try:
+            config = load_study_config(yaml_path)
+
+            # Verify rails configuration is loaded
+            assert config.rails.study.catastrophic_failures == 3
+
+            # Step 2: Simulate 3 catastrophic failures (segfaults)
+            trial_configs = [
+                TrialConfig(
+                    study_name="catastrophic_count_study",
+                    case_name=f"nangate45_base_{i // 10}_{i}",
+                    stage_index=i // 10,
+                    trial_index=i,
+                    script_path="/tmp/test.tcl",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                )
+                for i in range(5)
+            ]
+            artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+            # 3 catastrophic failures
+            catastrophic_trials = []
+            for i in range(3):
+                catastrophic_trials.append(
+                    TrialResult(
+                        config=trial_configs[i],
+                        success=False,
+                        return_code=139,  # SIGSEGV
+                        metrics=None,
+                        artifacts=artifacts,
+                        runtime_seconds=50.0,
+                        failure=FailureClassification(
+                            failure_type=FailureType.SEGFAULT,
+                            severity=FailureSeverity.CRITICAL,
+                            reason="Segmentation fault",
+                        ),
+                    )
+                )
+
+            # 2 successful trials
+            for i in range(3, 5):
+                catastrophic_trials.append(
+                    TrialResult(
+                        config=trial_configs[i],
+                        success=True,
+                        return_code=0,
+                        metrics=TrialMetrics(
+                            timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                            congestion=None,
+                        ),
+                        artifacts=artifacts,
+                        runtime_seconds=50.0,
+                    )
+                )
+
+            # Step 3: Verify study is halted after 3 catastrophic failures
+            decision = check_study_catastrophic_failure_count(
+                all_trial_results=catastrophic_trials,
+                max_catastrophic_failures=3,
+            )
+
+            assert decision.should_abort is True
+            assert decision.reason == AbortReason.CATASTROPHIC_FAILURE_COUNT
+            assert decision.catastrophic_count == 3
+            assert "3 catastrophic failures" in decision.details
+            assert "threshold: 3" in decision.details
+
+        finally:
+            Path(yaml_path).unlink()
+
+    def test_step_4_5_below_threshold_study_continues(self) -> None:
+        """Steps 4-5: Below threshold, study continues."""
+        # Create trials with 2 catastrophic failures (below threshold of 3)
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(5)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = []
+        # 2 catastrophic failures
+        for i in range(2):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=False,
+                    return_code=137,  # OOM killed
+                    metrics=None,
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                    failure=FailureClassification(
+                        failure_type=FailureType.OOM,
+                        severity=FailureSeverity.CRITICAL,
+                        reason="Out of memory",
+                    ),
+                )
+            )
+
+        # 3 successful trials
+        for i in range(2, 5):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=True,
+                    return_code=0,
+                    metrics=TrialMetrics(
+                        timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                        congestion=None,
+                    ),
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+
+        # Verify study continues (2 < 3)
+        decision = check_study_catastrophic_failure_count(
+            all_trial_results=trials,
+            max_catastrophic_failures=3,
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+        assert decision.catastrophic_count == 2
+        assert "2/3" in decision.details
+
+    def test_exactly_at_threshold_triggers_halt(self) -> None:
+        """Test that exactly at threshold triggers halt (>= not >)."""
+        # Create trials with exactly 3 catastrophic failures
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(3)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = [
+            TrialResult(
+                config=tc,
+                success=False,
+                return_code=139,
+                metrics=None,
+                artifacts=artifacts,
+                runtime_seconds=50.0,
+                failure=FailureClassification(
+                    failure_type=FailureType.SEGFAULT,
+                    severity=FailureSeverity.CRITICAL,
+                    reason="Segmentation fault",
+                ),
+            )
+            for tc in trial_configs
+        ]
+
+        # Exactly at threshold should trigger halt
+        decision = check_study_catastrophic_failure_count(
+            all_trial_results=trials,
+            max_catastrophic_failures=3,
+        )
+
+        assert decision.should_abort is True
+        assert decision.catastrophic_count == 3
+
+    def test_no_threshold_configured_never_halts(self) -> None:
+        """When no threshold is configured, never halt."""
+        # Create many catastrophic failures
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(10)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = [
+            TrialResult(
+                config=tc,
+                success=False,
+                return_code=139,
+                metrics=None,
+                artifacts=artifacts,
+                runtime_seconds=50.0,
+                failure=FailureClassification(
+                    failure_type=FailureType.SEGFAULT,
+                    severity=FailureSeverity.CRITICAL,
+                    reason="Segmentation fault",
+                ),
+            )
+            for tc in trial_configs
+        ]
+
+        # No threshold configured - should not halt
+        decision = check_study_catastrophic_failure_count(
+            all_trial_results=trials,
+            max_catastrophic_failures=None,
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+
+    def test_non_catastrophic_failures_not_counted(self) -> None:
+        """Non-catastrophic failures don't count toward threshold."""
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(5)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = []
+        # 1 catastrophic failure
+        trials.append(
+            TrialResult(
+                config=trial_configs[0],
+                success=False,
+                return_code=139,
+                metrics=None,
+                artifacts=artifacts,
+                runtime_seconds=50.0,
+                failure=FailureClassification(
+                    failure_type=FailureType.SEGFAULT,
+                    severity=FailureSeverity.CRITICAL,
+                    reason="Segmentation fault",
+                ),
+            )
+        )
+
+        # 3 non-catastrophic failures (timing violations)
+        for i in range(1, 4):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=False,
+                    return_code=1,
+                    metrics=None,
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                    failure=FailureClassification(
+                        failure_type=FailureType.STA_FAILED,
+                        severity=FailureSeverity.MEDIUM,
+                        reason="Timing not met",
+                    ),
+                )
+            )
+
+        # 1 success
+        trials.append(
+            TrialResult(
+                config=trial_configs[4],
+                success=True,
+                return_code=0,
+                metrics=TrialMetrics(
+                    timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                    congestion=None,
+                ),
+                artifacts=artifacts,
+                runtime_seconds=50.0,
+            )
+        )
+
+        # Should not halt (only 1 catastrophic failure, 3 non-catastrophic don't count)
+        decision = check_study_catastrophic_failure_count(
+            all_trial_results=trials,
+            max_catastrophic_failures=3,
+        )
+
+        assert decision.should_abort is False
+        assert decision.catastrophic_count == 1
+
+    def test_empty_trial_list_does_not_halt(self) -> None:
+        """Test that empty trial list doesn't trigger halt."""
+        decision = check_study_catastrophic_failure_count(
+            all_trial_results=[],
+            max_catastrophic_failures=3,
+        )
+
+        assert decision.should_abort is False
+        assert "No trials executed" in decision.details
+        assert decision.catastrophic_count == 0

@@ -1277,3 +1277,143 @@ Previous: 25/85 (29.4%)
 Improvement: +2 features, +2.4%
 
 Ready for next session with solid safety rails foundation in place.
+
+================================================================================
+SESSION 7 PROGRESS - Safety Rails Expansion
+================================================================================
+Date: 2026-01-12
+Agent: Coding Agent (Session 7)
+Status: SUCCESSFUL
+
+FEATURES COMPLETED:
+------------------
+
+1. Feature F026 (COMPLETED):
+   - Abort rail triggers on timeout violation
+   - Implementation: check_timeout_violation() in stage_abort.py
+   - Detects trials that exceed configured timeout_seconds threshold
+   - Properly handles no-timeout configuration
+   - Supports multiple trial violations
+   - Boundary case handling (exactly at timeout = OK)
+   - 5 comprehensive tests passing
+
+2. Feature F027 (COMPLETED):
+   - Stage rail triggers on high failure rate
+   - Implementation: check_stage_failure_rate() in stage_abort.py
+   - Detects when stage failure rate exceeds configured threshold
+   - Distinct from catastrophic_failure_rate (counts ALL failures)
+   - Properly handles no-threshold configuration
+   - Threshold behavior: >threshold triggers abort (not ≥)
+   - 5 comprehensive tests passing
+
+TECHNICAL DETAILS:
+------------------
+
+Files Modified:
+- src/controller/stage_abort.py: Added 2 new abort check functions
+  * check_timeout_violation(): Detects runtime > timeout_seconds
+  * check_stage_failure_rate(): Detects failure_rate > threshold
+  * Updated evaluate_stage_abort() to include new checks in priority order
+
+- tests/test_safety_rails.py: Added 10 new tests
+  * TestF026AbortRailTimeoutViolation: 5 tests
+  * TestF027StageRailFailureRate: 5 tests
+
+- feature_list.json: Updated F026 and F027 status to passing
+
+Test Coverage:
+- F026: 5 tests (timeout violation detection and edge cases)
+- F027: 5 tests (failure rate detection and threshold behavior)
+- Total safety rail tests: 19 (F024: 5, F025: 4, F026: 5, F027: 5)
+- All existing stage_abort tests: 24 tests (no regressions)
+- Total: 43 tests passing
+
+Code Quality:
+- Clean function design following existing patterns
+- Comprehensive docstrings with examples
+- Proper type hints throughout
+- Edge case handling (None thresholds, empty lists, boundary values)
+- Clear error messages with context
+
+Abort Priority Order (in evaluate_stage_abort):
+1. WNS threshold violations (F025)
+2. Timeout violations (F026) ← NEW
+3. Stage failure rate (F027) ← NEW
+4. Catastrophic failure rate (existing)
+5. No survivors (existing)
+
+SAFETY RAILS SYSTEM STATUS:
+----------------------------
+
+Implemented Rails:
+✓ F024: ECO class enforcement (safety domains)
+✓ F025: Abort rail - WNS threshold
+✓ F026: Abort rail - timeout violation
+✓ F027: Stage rail - failure rate threshold
+
+Remaining Rails:
+⧗ F028: Study rail - catastrophic failure count
+⧗ Study rail - max runtime hours
+
+The core safety rails infrastructure is now complete with comprehensive
+abort logic covering timing, timeout, and failure rate conditions.
+
+VERIFICATION:
+-------------
+
+All tests passing:
+```
+tests/test_safety_rails.py::TestF026AbortRailTimeoutViolation - 5/5 PASSED
+tests/test_safety_rails.py::TestF027StageRailFailureRate - 5/5 PASSED
+tests/test_stage_abort.py - 24/24 PASSED
+tests/test_study_config.py - 9/9 PASSED
+tests/test_base_case_execution.py - 7/7 PASSED
+```
+
+No regressions detected in existing functionality.
+
+NEXT PRIORITIES:
+----------------
+
+Based on dependency analysis and current state:
+
+CRITICAL (dependencies satisfied):
+1. F016: Ray Dashboard shows running trials in Jobs tab
+   - Depends on: F003 (Ray) ✓
+   - Challenging to test (UI verification)
+
+HIGH PRIORITY (ready to implement):
+1. F028: Study rail triggers on catastrophic failure count
+   - Depends on: F007 ✓
+   - Completes the study-level rails
+
+2. F029: Single-stage study can execute to completion
+   - Depends on: F006 ✓
+   - Critical for end-to-end workflows
+
+3. F031: Case naming follows deterministic convention
+   - Depends on: F004 ✓
+   - Important for artifact organization
+
+MEDIUM PRIORITY:
+- F035: Auto-diagnosis produces combined diagnosis report
+- F036: Trial failure classification works for tool crashes
+- F037: Trial failure classification works for parse failures
+
+================================================================================
+SESSION SUMMARY
+================================================================================
+
+Status: SUCCESSFUL
+Features completed: 2 (F026, F027)
+Tests added: 10 (all passing)
+Code quality: High - clean function design with comprehensive coverage
+Codebase status: Clean, all tests passing
+
+Progress: 29/85 features passing (34.1%)
+Previous: 27/85 (31.8%)
+Improvement: +2 features, +2.4%
+
+Safety rails system is now mature with comprehensive abort logic covering
+timing quality, execution timeouts, and stage-level failure rates.
+

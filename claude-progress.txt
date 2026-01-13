@@ -1156,3 +1156,124 @@ Codebase status: Clean, all tests passing (64 core tests)
 
 Ready for next session.
 
+
+================================================================================
+SESSION 6 - SAFETY RAILS IMPLEMENTATION
+================================================================================
+
+Date: 2026-01-13
+Duration: ~2 hours
+Status: SUCCESSFUL - 27/85 features passing (+2)
+
+ACCOMPLISHMENTS:
+----------------
+
+1. Rails Configuration Infrastructure:
+   - Added RailsConfig dataclass with three sub-configs:
+     * AbortRailConfig: Trial-level safety (WNS, timeout)
+     * StageRailConfig: Stage-level safety (failure rate)
+     * StudyRailConfig: Study-level safety (catastrophic failures, max runtime)
+   - Integrated rails into StudyConfig with proper YAML parsing
+   - Added validation logic for all rail parameters
+
+2. Feature F007 (Already Passing):
+   - Rails configuration can be parsed from study YAML
+   - Tests verify full, partial, and default rails configs
+   - 3 comprehensive tests passing
+
+3. Feature F024 (COMPLETED):
+   - ECO class enforcement for safety domains
+   - Locked domain blocks global_disruptive ECOs
+   - Guarded domain blocks global_disruptive ECOs
+   - Sandbox domain allows all ECO classes
+   - 5 tests passing - full verification
+
+4. Feature F025 (COMPLETED):
+   - Abort rail triggers on WNS threshold violation
+   - Properly detects trials worse than WNS threshold
+   - Supports partial trial violations (some pass, some fail)
+   - Correctly handles no-threshold configuration
+   - 4 tests passing - comprehensive coverage
+
+TECHNICAL DETAILS:
+------------------
+
+Files Modified:
+- src/controller/types.py: Added 4 new dataclasses for rails config
+- src/controller/study.py: Added _parse_rails_config() function
+- tests/test_study_config.py: Added 3 rails parsing tests
+- tests/test_safety_rails.py: NEW - 9 tests for F024 and F025
+
+Test Coverage:
+- F007: 3 tests (rails YAML parsing)
+- F024: 5 tests (ECO class enforcement)
+- F025: 4 tests (WNS threshold abort)
+- Total new tests: 12 (all passing)
+
+Code Quality:
+- Clean dataclass design with validation
+- Proper type hints throughout
+- Follows existing code patterns
+- Comprehensive test coverage
+
+INFRASTRUCTURE MATURITY:
+------------------------
+
+Safety Rails System:
+✓ Configuration parsing complete
+✓ Abort rail (WNS threshold) verified
+✓ ECO class enforcement working
+⧗ Abort rail (timeout) - needs integration testing
+⧗ Stage rail (failure rate) - needs integration testing
+⧗ Study rail (catastrophic failures) - needs integration testing
+
+The foundation is solid. F026-F028 require deeper integration with trial
+execution infrastructure, which exists but needs end-to-end testing.
+
+NEXT PRIORITIES:
+----------------
+
+Based on dependency analysis, ready to work on (dependencies satisfied):
+
+CRITICAL:
+1. F016: Ray Dashboard shows running trials in Jobs tab
+   - Depends on: F003 (Ray) ✓
+   - Requires UI verification (challenging to automate)
+
+HIGH PRIORITY (Ready to implement):
+1. F026: Abort rail timeout violation
+   - Implementation exists, needs integration tests
+   
+2. F027: Stage rail failure rate trigger
+   - Implementation exists in stage_abort.py, needs tests
+
+3. F028: Study rail catastrophic failure count
+   - Implementation exists, needs study-level tests
+
+4. F029: Single-stage study can execute to completion
+   - Critical for end-to-end workflows
+   - Depends on: F006 ✓
+
+5. F031: Case naming follows deterministic convention
+   - Important for artifact organization
+   - Depends on: F004 ✓
+
+MEDIUM PRIORITY:
+- F035: Auto-diagnosis produces combined diagnosis report
+- F036: Trial failure classification works for tool crashes
+
+================================================================================
+SESSION SUMMARY
+================================================================================
+
+Status: SUCCESSFUL
+Features completed: 2 (F024, F025)
+Tests added: 12 (all passing)
+Code quality: High - clean dataclass design with proper validation
+Codebase status: Clean, all tests passing
+
+Progress: 27/85 features passing (31.8%)
+Previous: 25/85 (29.4%)
+Improvement: +2 features, +2.4%
+
+Ready for next session with solid safety rails foundation in place.

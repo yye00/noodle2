@@ -313,3 +313,149 @@ small clock periods (0.001ns = 1ps). This is because:
 - Clean working state
 - 92/120 features passing (76.7%)
 
+
+## Current Session (Session 37) - Doom Detection System
+
+### ✅ Completed Features This Session: 3 features
+1. **F086**: Doom detection identifies metric-hopeless cases and terminates them
+   - Metric thresholds: WNS < -10000ps, hot_ratio > 0.8, TNS < -500000ps
+   - High-confidence doom classification (95% for WNS hopeless)
+   - Rich metadata for audit trails
+   - Serializable for study output logging
+   - 14 comprehensive tests, all passing
+   - Status: ✅ PASSING
+
+2. **F087**: Doom detection identifies trajectory-doomed cases after stagnation
+   - Detects < 2% improvement across 3+ consecutive stages
+   - Regression detection (>10% degradation triggers doom)
+   - Stagnation counter resets on significant improvement
+   - Configurable stagnation thresholds and consecutive stage requirements
+   - 14 comprehensive tests, all passing
+   - Status: ✅ PASSING
+
+3. **F088**: Doom detection identifies ECO exhaustion when all ECOs failed or suspicious
+   - Triggers when all ECOs are "failed" or mix of "failed"/"suspicious"
+   - Requires 3+ ECO priors for exhaustion determination
+   - Uncertain/successful ECOs prevent doom (still have potential)
+   - Detailed failure/suspicious counts in metadata
+   - 16 comprehensive tests, all passing
+   - Status: ✅ PASSING
+
+### 🏗️ Implementation Details:
+
+**Doom Detection Module (src/controller/doom_detection.py):**
+```python
+class DoomDetector:
+    def check_doom(
+        case, metrics, stage_history=None, eco_priors=None
+    ) -> DoomClassification
+```
+
+**Doom Types:**
+- `metric_hopeless`: Metrics beyond recovery thresholds
+- `trajectory_doom`: Stagnation or regression over multiple stages
+- `eco_exhaustion`: No viable ECO options remaining
+
+**DoomConfig Fields:**
+- `enabled`: Master switch for doom detection
+- `wns_ps_hopeless`: -10000 (default)
+- `hot_ratio_hopeless`: 0.8 (default)
+- `tns_ps_hopeless`: -500000 (default)
+- `trajectory_enabled`: Enable trajectory analysis
+- `stagnation_threshold`: 0.02 (2% improvement threshold)
+- `consecutive_stagnation`: 3 stages
+- `regression_threshold`: 0.1 (10% regression)
+- `eco_exhaustion_enabled`: Enable ECO exhaustion check
+
+**DoomClassification Fields:**
+- `is_doomed`: bool
+- `doom_type`: DoomType enum
+- `trigger`: What triggered doom (machine-readable)
+- `reason`: Human-readable explanation
+- `confidence`: 0.0 to 1.0
+- `metadata`: Dict with diagnostic details
+
+**format_doom_report():**
+Produces human-readable reports like:
+```
+⚠ DOOM DETECTED - Case Termination Recommended
+  Type: metric_hopeless
+  Confidence: 95%
+  Trigger: wns_ps=-12000 < threshold=-10000
+
+Reason:
+  WNS of -12000ps is beyond recovery threshold (-10ns).
+  This indicates fundamental design issues that ECOs cannot fix.
+
+Details:
+  wns_ps: -12000
+  threshold: -10000
+  metric_type: wns_ps
+```
+
+### Session Statistics:
+- Features Completed: 3 (F086, F087, F088)
+- Tests Added: 44 new tests (all passing)
+  * test_f086_doom_metric_hopeless.py: 14 tests
+  * test_f087_doom_trajectory.py: 14 tests
+  * test_f088_doom_eco_exhaustion.py: 16 tests
+- Start Progress: 92/120 (76.7%)
+- End Progress: 95/120 (79.2%)
+- Net Gain: +3 features (+2.5%)
+
+### Safety-Critical Design:
+Doom detection is **safety-critical** because false positives terminate potentially viable cases:
+- Conservative confidence thresholds (>0.8)
+- Multiple independent checks (metrics + trajectory + ECO state)
+- Each doom type can be disabled independently
+- Rich metadata for debugging false positives
+- Serializable results for audit trails
+
+### Remaining High-Priority Features:
+**Critical (Priority 1):**
+- F115-F116: Nangate45 extreme demo achieving real improvements
+  * Blocked on extreme snapshot creation (WNS < -1500ps)
+  * GCD design can only achieve -415ps (critical path too short)
+  * Need larger design (ibex) or degraded placement
+
+**High Priority (Priority 2):**
+- F090-F092: Cross-project prior repository (SQLite persistence)
+- F095-F097: Immutable design rules (protect macros/nets/cells)
+- F100: Ray Dashboard real-time metrics during demos
+
+### Next Steps:
+1. **Create ibex-based extreme snapshot** (F106 revisited for F115/F116)
+   - Ibex is larger RISC-V core with longer critical paths
+   - Use aggressive clock constraint (0.5ns vs 2.2ns default)
+   - Should achieve WNS < -1500ps target
+   - Started script (create_ibex_extreme_snapshot.py) but needs Docker ORFS run
+
+2. **Implement prior persistence** (F090-F092)
+   - SQLite database for cross-project prior sharing
+   - Export/import functionality
+   - Prior versioning and compatibility checks
+
+3. **Implement immutable design rules** (F095-F097)
+   - Protect macro locations from ECO modification
+   - Pattern-based net protection
+   - Cell instance protection
+
+### Architecture Status:
+✅ Trial execution infrastructure
+✅ Study orchestration and staging
+✅ Metric collection (STA, congestion)
+✅ Visualization generation
+✅ Ray parallel execution with dashboard
+✅ Demo scripts with real execution
+✅ ECO TCL generation and execution
+✅ ODB propagation between stages
+✅ Multi-stage ECO accumulation
+✅ Extreme snapshot generation (Nangate45 GCD)
+✅ Doom detection system **NEW!**
+⚠️  Extreme snapshots for larger designs (ibex - needs work)
+
+## Git Status:
+- Latest commit: F086-F088 doom detection implementation
+- All doom detection tests passing (44/44)
+- Clean working state
+- 95/120 features passing (79.2%)

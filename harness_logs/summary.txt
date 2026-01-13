@@ -1,0 +1,11 @@
+Autonomous Coding Agent - Harness Summary
+==================================================
+
+Project: /home/captain/work/PhysicalDesign/noodle2
+Last updated: 2026-01-12T21:57:58.929255
+
+Total sessions run: 106
+Features: 280/280 passing (100.0%)
+
+Session logs: harness_logs/sessions/
+Sync backups: harness_logs/sync_backups/

@@ -125,6 +125,7 @@ class StudyExecutor:
         skip_base_case_verification: bool = False,
         enable_graceful_shutdown: bool = True,
         approval_simulator: ApprovalGateSimulator | None = None,
+        use_ray: bool = False,
     ) -> None:
         """
         Initialize Study executor.
@@ -138,6 +139,7 @@ class StudyExecutor:
             skip_base_case_verification: Skip base case verification (for testing only)
             enable_graceful_shutdown: Enable graceful shutdown on SIGTERM/SIGINT (default: True)
             approval_simulator: Approval gate simulator for testing (optional)
+            use_ray: Use Ray for parallel trial execution (default: False)
         """
         self.config = config
         self.artifacts_root = Path(artifacts_root)
@@ -186,6 +188,15 @@ class StudyExecutor:
 
         # Track completed approval gates for dependency enforcement
         self.completed_approvals: set[str] = set()
+
+        # Ray parallel execution
+        self.use_ray = use_ray
+        self.ray_executor = None
+        if use_ray:
+            from src.trial_runner.ray_executor import RayTrialExecutor
+            self.ray_executor = RayTrialExecutor(
+                artifacts_root=self.artifacts_root,
+            )
 
     def verify_base_case(self) -> tuple[bool, str]:
         """
@@ -1021,8 +1032,9 @@ class StudyExecutor:
         # The budget controls total number of trials, cycling through input cases if needed
         trials_to_execute = stage_config.trial_budget
 
-        # Create derived cases for each trial (in reality these would be created as ECOs are applied)
+        # Create derived cases and trial configs for all trials
         trial_cases: list[Case] = []
+        trial_configs: list[TrialConfig] = []
 
         for trial_index in range(trials_to_execute):
             # Cycle through input cases using modulo
@@ -1065,49 +1077,70 @@ class StudyExecutor:
                     "pdk": self.config.pdk,
                 },
             )
+            trial_configs.append(trial_config)
 
-            # Emit trial start event
-            self.event_stream.emit_trial_start(
-                study_name=self.config.name,
-                case_name=str(trial_case.identifier),
-                stage_index=stage_index,
-                trial_index=trial_index,
-            )
+        # Execute trials - parallel with Ray or sequential
+        if self.use_ray and self.ray_executor:
+            # Parallel execution with Ray
+            print(f"  Executing {len(trial_configs)} trials in parallel with Ray...")
+            trial_results = self.ray_executor.execute_trials_parallel(trial_configs)
 
-            # Execute trial using Trial.execute() for real OpenROAD execution
-            # Trial will create artifacts at: artifacts_root/study_name/case_name/stage_X/trial_Y/
-            trial = Trial(
-                config=trial_config,
-                artifacts_root=self.artifacts_root,
-            )
-
-            try:
-                result = trial.execute()
-                trial_results.append(result)
-            except Exception as e:
-                # Handle trial execution errors gracefully
-                from src.trial_runner.trial import TrialArtifacts
-                error_result = TrialResult(
-                    config=trial_config,
-                    success=False,
-                    return_code=1,
-                    runtime_seconds=0.0,
-                    artifacts=TrialArtifacts(trial_dir=trial.trial_dir),
-                    stderr=str(e),
+            # Emit events for all completed trials
+            for trial_config, result in zip(trial_configs, trial_results):
+                self.event_stream.emit_trial_complete(
+                    study_name=self.config.name,
+                    case_name=trial_config.case_name,
+                    stage_index=stage_index,
+                    trial_index=trial_config.trial_index,
+                    success=result.success,
+                    runtime_seconds=result.runtime_seconds,
+                    metrics=result.metrics,
                 )
-                trial_results.append(error_result)
-                result = error_result
+        else:
+            # Sequential execution
+            for trial_index, (trial_case, trial_config) in enumerate(zip(trial_cases, trial_configs)):
+                # Emit trial start event
+                self.event_stream.emit_trial_start(
+                    study_name=self.config.name,
+                    case_name=str(trial_case.identifier),
+                    stage_index=stage_index,
+                    trial_index=trial_index,
+                )
 
-            # Emit trial complete event
-            self.event_stream.emit_trial_complete(
-                study_name=self.config.name,
-                case_name=str(trial_case.identifier),
-                stage_index=stage_index,
-                trial_index=trial_index,
-                success=result.success,
-                runtime_seconds=result.runtime_seconds,
-                metrics=result.metrics,
-            )
+                # Execute trial using Trial.execute() for real OpenROAD execution
+                # Trial will create artifacts at: artifacts_root/study_name/case_name/stage_X/trial_Y/
+                trial = Trial(
+                    config=trial_config,
+                    artifacts_root=self.artifacts_root,
+                )
+
+                try:
+                    result = trial.execute()
+                    trial_results.append(result)
+                except Exception as e:
+                    # Handle trial execution errors gracefully
+                    from src.trial_runner.trial import TrialArtifacts
+                    error_result = TrialResult(
+                        config=trial_config,
+                        success=False,
+                        return_code=1,
+                        runtime_seconds=0.0,
+                        artifacts=TrialArtifacts(trial_dir=trial.trial_dir),
+                        stderr=str(e),
+                    )
+                    trial_results.append(error_result)
+                    result = error_result
+
+                # Emit trial complete event
+                self.event_stream.emit_trial_complete(
+                    study_name=self.config.name,
+                    case_name=str(trial_case.identifier),
+                    stage_index=stage_index,
+                    trial_index=trial_index,
+                    success=result.success,
+                    runtime_seconds=result.runtime_seconds,
+                    metrics=result.metrics,
+                )
 
         # Select survivors based on configured count
         survivors = self._select_survivors(

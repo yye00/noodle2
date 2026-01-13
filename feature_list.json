@@ -242,8 +242,8 @@
       "Step 4: Verify timing_report.txt exists and has content",
       "Step 5: Verify execution completes in under 5 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:35:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -272,8 +272,8 @@
       "Step 4: Extract tns_ps (total negative slack)",
       "Step 5: Verify metrics are valid numbers (not None or NaN)"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:36:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -394,8 +394,8 @@
       "Step 4: Wait for completion using ray.get()",
       "Step 5: Verify trial results are returned correctly"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:37:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -424,8 +424,8 @@
       "Step 4: Verify all 5 trials completed successfully",
       "Step 5: Verify trials ran in parallel (total time < sum of individual times)"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:38:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

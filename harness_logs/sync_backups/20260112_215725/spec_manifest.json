@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "spec_history": [
+    {
+      "version": 1,
+      "hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "timestamp": "2026-01-09T00:00:00",
+      "note": "Original 200-feature spec (pre-update)"
+    },
+    {
+      "version": 2,
+      "hash": "89a43f9ae94d259b61f76d332100cd3171a1d71c6306f907ecf9a267a2a067d4",
+      "timestamp": "2026-01-11T23:49:29.687859Z",
+      "note": "Major expansion: auto-diagnosis, differential visualizations, replay/debug, study comparison, compound ECOs, warm-start enhancements, demo infrastructure"
+    }
+  ],
+  "current_spec_hash": "89a43f9ae94d259b61f76d332100cd3171a1d71c6306f907ecf9a267a2a067d4",
+  "current_version": 2,
+  "total_features": 271,
+  "features_passing": 200,
+  "bootstrap_mode": false,
+  "bootstrap_note": "Created to enable feature-sync detection of new spec"
+}

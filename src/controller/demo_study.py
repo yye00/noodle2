@@ -358,6 +358,7 @@ def create_nangate45_extreme_demo_study(
     """
     if snapshot_path is None:
         # Default to studies/nangate45_extreme relative to project root
+        # (uses extreme snapshot with timing violations and high congestion)
         snapshot_path = str(Path("studies") / "nangate45_extreme")
 
     # Stage 0: Aggressive exploration to find any improvements
@@ -482,6 +483,7 @@ def create_asap7_extreme_demo_study(
     """
     if snapshot_path is None:
         # Default to studies/asap7_extreme relative to project root
+        # (uses extreme snapshot with timing violations for 7nm)
         snapshot_path = str(Path("studies") / "asap7_extreme")
 
     # Stage 0: STA-first exploration (ASAP7 best practice)
@@ -617,6 +619,7 @@ def create_sky130_extreme_demo_study(
     """
     if snapshot_path is None:
         # Default to studies/sky130_extreme relative to project root
+        # (uses extreme snapshot with timing violations for 130nm)
         snapshot_path = str(Path("studies") / "sky130_extreme")
 
     # Stage 0: Aggressive exploration

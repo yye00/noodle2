@@ -1,17 +1,21 @@
-# Noodle 2 - Real STA Execution for Nangate45
+# Noodle 2 - Real STA Execution for ASAP7
 # This script runs ACTUAL OpenROAD Static Timing Analysis
 # NO fake metrics - real STA on real design
 
 puts "=== Noodle 2 Real STA Execution ==="
 puts "Design: GCD (placed)"
-puts "PDK: Nangate45"
+puts "PDK: ASAP7 (7nm FinFET)"
 puts ""
 
 # Paths inside ORFS container
-set platform_dir "/OpenROAD-flow-scripts/flow/platforms/nangate45"
-set lib_file "$platform_dir/lib/NangateOpenCellLibrary_typical.lib"
-set lef_file "$platform_dir/lef/NangateOpenCellLibrary.macro.mod.lef"
-set tech_lef "$platform_dir/lef/NangateOpenCellLibrary.tech.lef"
+set platform_dir "/OpenROAD-flow-scripts/flow/platforms/asap7"
+set lib_dir "$platform_dir/lib"
+set lef_dir "$platform_dir/lef"
+
+# ASAP7 has multiple lib files for different corners
+set lib_file "$lib_dir/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
+set tech_lef "$lef_dir/asap7_tech_1x_201209.lef"
+set cell_lef "$lef_dir/asap7sc7p5t_28_R_1x_220121a.lef"
 
 # Input/output paths
 set snapshot_dir "/snapshot"
@@ -19,17 +23,16 @@ set work_dir "/work"
 set odb_file "$snapshot_dir/gcd_placed.odb"
 
 puts "Loading timing library: $lib_file"
-puts "Loading LEF: $lef_file"
+puts "Loading tech LEF: $tech_lef"
+puts "Loading cell LEF: $cell_lef"
 puts "Loading design: $odb_file"
 puts ""
 
-# Read technology LEF first if it exists
-if {[file exists $tech_lef]} {
-    read_lef $tech_lef
-}
+# Read technology LEF
+read_lef $tech_lef
 
 # Read standard cell LEF
-read_lef $lef_file
+read_lef $cell_lef
 
 # Read timing library
 read_liberty $lib_file
@@ -37,12 +40,11 @@ read_liberty $lib_file
 # Read the placed design
 read_db $odb_file
 
-# Create a clock (GCD design typically uses 'clk')
-# Clock period affects WNS - use aggressive period to create violations
-create_clock -name clk -period 0.5 [get_ports clk]
+# Create a clock (aggressive for 7nm - 1GHz target)
+create_clock -name clk -period 1.0 [get_ports clk]
 
 # Set output delays only (avoid warning about input delay on clock port)
-set_output_delay -clock clk 0.1 [all_outputs]
+set_output_delay -clock clk 0.05 [all_outputs]
 
 puts "=== Running Static Timing Analysis ==="
 puts ""
@@ -54,7 +56,7 @@ report_checks -path_delay min_max -fields {slew cap input_pin net} -digits 4
 set wns [sta::worst_slack -max]
 set tns [sta::total_negative_slack -max]
 
-# Convert to picoseconds (OpenROAD uses nanoseconds internally)
+# Convert to picoseconds
 set wns_ps [expr {int($wns * 1000)}]
 set tns_ps [expr {int($tns * 1000)}]
 
@@ -76,13 +78,13 @@ if {$wns < 0} {
 
 puts "Hot ratio (estimated): [format %.4f $hot_ratio]"
 
-# Generate timing report file
+# Generate timing report
 set timing_report "$work_dir/timing_report.txt"
 set fp [open $timing_report w]
 puts $fp "=== Noodle 2 Real STA Report ==="
 puts $fp "Design: GCD (placed)"
-puts $fp "PDK: Nangate45"
-puts $fp "Clock period: 0.5 ns (aggressive)"
+puts $fp "PDK: ASAP7 (7nm FinFET)"
+puts $fp "Clock period: 1.0 ns (1 GHz)"
 puts $fp ""
 puts $fp "Timing Summary:"
 puts $fp "  WNS: $wns ns ($wns_ps ps)"
@@ -99,12 +101,12 @@ set metrics_file "$work_dir/metrics.json"
 set fp [open $metrics_file w]
 puts $fp "{"
 puts $fp "  \"design\": \"gcd\","
-puts $fp "  \"pdk\": \"nangate45\","
+puts $fp "  \"pdk\": \"asap7\","
 puts $fp "  \"execution_type\": \"real_sta\","
 puts $fp "  \"wns_ps\": $wns_ps,"
 puts $fp "  \"tns_ps\": $tns_ps,"
 puts $fp "  \"hot_ratio\": [format %.6f $hot_ratio],"
-puts $fp "  \"clock_period_ns\": 0.5,"
+puts $fp "  \"clock_period_ns\": 1.0,"
 if {$wns_ps < 0} {
     puts $fp "  \"status\": \"timing_violation\""
 } else {

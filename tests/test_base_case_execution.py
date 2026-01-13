@@ -57,7 +57,7 @@ class TestBaseCase:
             stage_index=0,
             trial_index=0,
             script_path=nangate45_base_script,
-            snapshot_dir=None,  # No snapshot needed for this minimal test
+            snapshot_dir=Path("studies/nangate45_base"),  # Snapshot with gcd_placed.odb
             timeout_seconds=120,
             metadata={"test": "base_case_execution"},
         )
@@ -114,6 +114,7 @@ class TestBaseCase:
             stage_index=0,
             trial_index=1,  # Different trial index
             script_path=nangate45_base_script,
+            snapshot_dir=Path("studies/nangate45_base"),
         )
 
         trial = Trial(config=config, artifacts_root=temp_artifacts_dir)
@@ -141,6 +142,7 @@ class TestBaseCase:
             stage_index=0,
             trial_index=2,
             script_path=nangate45_base_script,
+            snapshot_dir=Path("studies/nangate45_base"),
         )
 
         trial = Trial(config=config, artifacts_root=temp_artifacts_dir)
@@ -174,6 +176,7 @@ class TestBaseCase:
             stage_index=0,
             trial_index=3,
             script_path=nangate45_base_script,
+            snapshot_dir=Path("studies/nangate45_base"),
         )
 
         trial = Trial(config=config, artifacts_root=temp_artifacts_dir)
@@ -198,6 +201,7 @@ class TestBaseCase:
             stage_index=0,
             trial_index=4,
             script_path=nangate45_base_script,
+            snapshot_dir=Path("studies/nangate45_base"),
         )
 
         trial = Trial(config=config, artifacts_root=temp_artifacts_dir)
@@ -217,6 +221,7 @@ class TestBaseCase:
                 stage_index=0,
                 trial_index=i,
                 script_path=nangate45_base_script,
+                snapshot_dir=Path("studies/nangate45_base"),
             )
             for i in range(3)
         ]

@@ -1,1040 +1,120 @@
 {
   "sessions": [
     {
-      "session_num": 45,
-      "started_at": "2026-01-11T22:30:54.905832",
-      "ended_at": "2026-01-11T22:54:17.920188",
-      "passing_at_start": 224,
-      "passing_at_end": 226,
-      "features_completed": [
-        "F272",
-        "F273"
-      ],
-      "features_attempted": [
-        "F272",
-        "F273"
-      ]
-    },
-    {
-      "session_num": 46,
-      "started_at": "2026-01-11T22:54:21.927149",
-      "ended_at": "2026-01-11T23:20:36.454954",
-      "passing_at_start": 226,
-      "passing_at_end": 228,
-      "features_completed": [
-        "F274",
-        "F275"
-      ],
-      "features_attempted": [
-        "F274",
-        "F275"
-      ]
-    },
-    {
-      "session_num": 47,
-      "started_at": "2026-01-11T23:20:40.461973",
-      "ended_at": "2026-01-11T23:35:22.203260",
-      "passing_at_start": 228,
-      "passing_at_end": 229,
-      "features_completed": [
-        "F276"
-      ],
-      "features_attempted": [
-        "F276"
-      ]
-    },
-    {
-      "session_num": 48,
-      "started_at": "2026-01-11T23:35:26.223233",
-      "ended_at": "2026-01-12T00:10:00.253778",
-      "passing_at_start": 229,
-      "passing_at_end": 230,
-      "features_completed": [
-        "F277"
-      ],
-      "features_attempted": [
-        "F277"
-      ]
-    },
-    {
-      "session_num": 49,
-      "started_at": "2026-01-12T00:10:04.274393",
-      "ended_at": "2026-01-12T00:22:30.157211",
-      "passing_at_start": 230,
-      "passing_at_end": 231,
-      "features_completed": [
-        "F278"
-      ],
-      "features_attempted": [
-        "F278"
-      ]
-    },
-    {
-      "session_num": 50,
-      "started_at": "2026-01-12T00:22:34.177311",
-      "ended_at": "2026-01-12T00:42:06.843869",
-      "passing_at_start": 231,
-      "passing_at_end": 232,
-      "features_completed": [
-        "F279"
-      ],
-      "features_attempted": [
-        "F279"
-      ]
-    },
-    {
-      "session_num": 51,
-      "started_at": "2026-01-12T00:42:10.864891",
-      "ended_at": "2026-01-12T01:04:12.370830",
-      "passing_at_start": 232,
-      "passing_at_end": 234,
-      "features_completed": [
-        "F241",
-        "F280"
-      ],
-      "features_attempted": [
-        "F241",
-        "F280"
-      ]
-    },
-    {
-      "session_num": 52,
-      "started_at": "2026-01-12T01:04:16.378787",
-      "ended_at": "2026-01-12T01:22:29.431890",
-      "passing_at_start": 234,
-      "passing_at_end": 236,
-      "features_completed": [
-        "F242",
-        "F244"
-      ],
-      "features_attempted": [
-        "F242",
-        "F244"
-      ]
-    },
-    {
-      "session_num": 53,
-      "started_at": "2026-01-12T01:22:33.439628",
-      "ended_at": "2026-01-12T01:29:52.312217",
-      "passing_at_start": 236,
-      "passing_at_end": 239,
-      "features_completed": [
-        "F269",
-        "F270",
-        "F271"
-      ],
-      "features_attempted": [
-        "F269",
-        "F270",
-        "F271"
-      ]
-    },
-    {
-      "session_num": 54,
-      "started_at": "2026-01-12T01:29:56.319592",
-      "ended_at": "2026-01-12T01:46:35.569053",
-      "passing_at_start": 239,
-      "passing_at_end": 240,
-      "features_completed": [
-        "F246"
-      ],
-      "features_attempted": [
-        "F246"
-      ]
-    },
-    {
-      "session_num": 55,
-      "started_at": "2026-01-12T01:46:39.589304",
-      "ended_at": "2026-01-12T02:00:55.413332",
-      "passing_at_start": 240,
-      "passing_at_end": 241,
-      "features_completed": [
-        "F249"
-      ],
-      "features_attempted": [
-        "F249"
-      ]
-    },
-    {
-      "session_num": 56,
-      "started_at": "2026-01-12T02:00:59.433198",
-      "ended_at": "2026-01-12T02:12:11.330665",
-      "passing_at_start": 241,
-      "passing_at_end": 242,
-      "features_completed": [
-        "F252"
-      ],
-      "features_attempted": [
-        "F252"
-      ]
-    },
-    {
-      "session_num": 57,
-      "started_at": "2026-01-12T02:12:15.351152",
-      "ended_at": "2026-01-12T02:22:52.640816",
-      "passing_at_start": 242,
-      "passing_at_end": 243,
-      "features_completed": [
-        "F253"
-      ],
-      "features_attempted": [
-        "F253"
-      ]
-    },
-    {
-      "session_num": 58,
-      "started_at": "2026-01-12T02:22:56.659514",
-      "ended_at": "2026-01-12T02:36:02.866060",
-      "passing_at_start": 243,
-      "passing_at_end": 245,
-      "features_completed": [
-        "F257",
-        "F256"
-      ],
-      "features_attempted": [
-        "F257",
-        "F256"
-      ]
-    },
-    {
-      "session_num": 59,
-      "started_at": "2026-01-12T02:36:06.873423",
-      "ended_at": "2026-01-12T02:49:18.045719",
-      "passing_at_start": 245,
-      "passing_at_end": 248,
-      "features_completed": [
-        "F258",
-        "F263",
-        "F262"
-      ],
-      "features_attempted": [
-        "F258",
-        "F263",
-        "F262"
-      ]
-    },
-    {
-      "session_num": 60,
-      "started_at": "2026-01-12T02:49:22.053129",
-      "ended_at": "2026-01-12T03:10:42.882369",
-      "passing_at_start": 248,
-      "passing_at_end": 250,
-      "features_completed": [
-        "F207",
-        "F210"
-      ],
-      "features_attempted": [
-        "F207",
-        "F210"
-      ]
-    },
-    {
-      "session_num": 61,
-      "started_at": "2026-01-12T03:10:46.889349",
-      "ended_at": "2026-01-12T03:25:55.731028",
-      "passing_at_start": 250,
-      "passing_at_end": 252,
-      "features_completed": [
-        "F213",
-        "F211"
-      ],
-      "features_attempted": [
-        "F213",
-        "F211"
-      ]
-    },
-    {
-      "session_num": 62,
-      "started_at": "2026-01-12T03:25:59.738285",
-      "ended_at": "2026-01-12T03:41:00.522130",
-      "passing_at_start": 252,
-      "passing_at_end": 254,
-      "features_completed": [
-        "F221",
-        "F220"
-      ],
-      "features_attempted": [
-        "F221",
-        "F220"
-      ]
-    },
-    {
-      "session_num": 63,
-      "started_at": "2026-01-12T03:41:04.529602",
-      "ended_at": "2026-01-12T03:56:28.229912",
-      "passing_at_start": 254,
-      "passing_at_end": 255,
-      "features_completed": [
-        "F223"
-      ],
-      "features_attempted": [
-        "F223"
-      ]
-    },
-    {
-      "session_num": 64,
-      "started_at": "2026-01-12T03:56:32.236199",
-      "ended_at": "2026-01-12T04:08:57.471007",
-      "passing_at_start": 255,
-      "passing_at_end": 257,
-      "features_completed": [
-        "F227",
-        "F224"
-      ],
-      "features_attempted": [
-        "F227",
-        "F224"
-      ]
-    },
-    {
-      "session_num": 65,
-      "started_at": "2026-01-12T04:09:01.478192",
-      "ended_at": "2026-01-12T04:22:51.823378",
-      "passing_at_start": 257,
-      "passing_at_end": 260,
-      "features_completed": [
-        "F238",
-        "F233",
-        "F230"
-      ],
-      "features_attempted": [
-        "F238",
-        "F233",
-        "F230"
-      ]
-    },
-    {
-      "session_num": 66,
-      "started_at": "2026-01-12T04:22:55.830295",
-      "ended_at": "2026-01-12T04:40:25.033159",
-      "passing_at_start": 260,
-      "passing_at_end": 262,
-      "features_completed": [
-        "F243",
-        "F240"
-      ],
-      "features_attempted": [
-        "F243",
-        "F240"
-      ]
-    },
-    {
-      "session_num": 67,
-      "started_at": "2026-01-12T04:40:29.040150",
-      "ended_at": "2026-01-12T05:19:31.182181",
-      "passing_at_start": 262,
-      "passing_at_end": 262,
+      "session_num": 106,
+      "started_at": "2026-01-12T22:01:11.230808",
+      "ended_at": "2026-01-12T22:11:36.398353",
+      "passing_at_start": 0,
+      "passing_at_end": 0,
       "features_completed": [],
       "features_attempted": []
     },
     {
-      "session_num": 68,
-      "started_at": "2026-01-12T05:19:35.189350",
-      "ended_at": "2026-01-12T05:34:39.154724",
-      "passing_at_start": 262,
-      "passing_at_end": 264,
+      "session_num": 107,
+      "started_at": "2026-01-12T22:11:40.403664",
+      "ended_at": "2026-01-12T22:32:13.657406",
+      "passing_at_start": 0,
+      "passing_at_end": 8,
       "features_completed": [
-        "F247",
-        "F245"
+        "F004",
+        "F002",
+        "F006",
+        "F008",
+        "F003",
+        "F005",
+        "F001",
+        "F007"
       ],
       "features_attempted": [
-        "F247",
-        "F245"
+        "F004",
+        "F002",
+        "F006",
+        "F008",
+        "F003",
+        "F005",
+        "F001",
+        "F007"
       ]
     },
     {
-      "session_num": 69,
-      "started_at": "2026-01-12T05:34:43.162467",
-      "ended_at": "2026-01-12T05:44:18.128196",
-      "passing_at_start": 264,
-      "passing_at_end": 265,
-      "features_completed": [
-        "F250"
-      ],
-      "features_attempted": [
-        "F250"
-      ]
-    },
-    {
-      "session_num": 70,
-      "started_at": "2026-01-12T05:44:22.147182",
-      "ended_at": "2026-01-12T05:58:28.270625",
-      "passing_at_start": 265,
-      "passing_at_end": 266,
-      "features_completed": [
-        "F251"
-      ],
-      "features_attempted": [
-        "F251"
-      ]
-    },
-    {
-      "session_num": 71,
-      "started_at": "2026-01-12T05:58:32.277136",
-      "ended_at": "2026-01-12T06:14:14.614576",
-      "passing_at_start": 266,
-      "passing_at_end": 270,
-      "features_completed": [
-        "F259",
-        "F254",
-        "F260",
-        "F255"
-      ],
-      "features_attempted": [
-        "F259",
-        "F254",
-        "F260",
-        "F255"
-      ]
-    },
-    {
-      "session_num": 72,
-      "started_at": "2026-01-12T06:14:18.622522",
-      "ended_at": "2026-01-12T06:29:39.513719",
-      "passing_at_start": 270,
-      "passing_at_end": 271,
-      "features_completed": [
-        "F264"
-      ],
-      "features_attempted": [
-        "F264"
-      ]
-    },
-    {
-      "session_num": 73,
-      "started_at": "2026-01-12T06:29:43.521233",
-      "ended_at": "2026-01-12T06:44:14.726070",
-      "passing_at_start": 271,
-      "passing_at_end": 272,
-      "features_completed": [
-        "F261"
-      ],
-      "features_attempted": [
-        "F261"
-      ]
-    },
-    {
-      "session_num": 74,
-      "started_at": "2026-01-12T06:44:18.746826",
-      "ended_at": "2026-01-12T06:59:20.722713",
-      "passing_at_start": 272,
-      "passing_at_end": 273,
-      "features_completed": [
-        "F214"
-      ],
-      "features_attempted": [
-        "F214"
-      ]
-    },
-    {
-      "session_num": 75,
-      "started_at": "2026-01-12T06:59:24.730004",
-      "ended_at": "2026-01-12T07:24:54.883973",
-      "passing_at_start": 273,
-      "passing_at_end": 276,
-      "features_completed": [
-        "F248",
-        "F212",
-        "F215"
-      ],
-      "features_attempted": [
-        "F248",
-        "F212",
-        "F215"
-      ]
-    },
-    {
-      "session_num": 76,
-      "started_at": "2026-01-12T07:24:58.891201",
-      "ended_at": "2026-01-12T07:37:52.659487",
-      "passing_at_start": 276,
-      "passing_at_end": 278,
-      "features_completed": [
-        "F225",
-        "F265"
-      ],
-      "features_attempted": [
-        "F225",
-        "F265"
-      ]
-    },
-    {
-      "session_num": 77,
-      "started_at": "2026-01-12T07:37:56.666232",
-      "ended_at": "2026-01-12T07:50:41.179407",
-      "passing_at_start": 278,
-      "passing_at_end": 280,
-      "features_completed": [
-        "F228",
-        "F235"
-      ],
-      "features_attempted": [
-        "F228",
-        "F235"
-      ]
-    },
-    {
-      "session_num": 78,
-      "started_at": "2026-01-12T07:50:45.186731",
-      "ended_at": "2026-01-12T08:07:43.965924",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 79,
-      "started_at": "2026-01-12T08:07:47.973161",
-      "ended_at": "2026-01-12T08:19:13.209193",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 80,
-      "started_at": "2026-01-12T08:19:17.216435",
-      "ended_at": "2026-01-12T08:33:57.283259",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 81,
-      "started_at": "2026-01-12T08:34:01.290743",
-      "ended_at": "2026-01-12T08:35:58.214592",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 82,
-      "started_at": "2026-01-12T08:36:02.221485",
-      "ended_at": "2026-01-12T08:45:07.961411",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 83,
-      "started_at": "2026-01-12T08:45:11.967834",
-      "ended_at": "2026-01-12T08:48:00.735848",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 84,
-      "started_at": "2026-01-12T08:48:04.742601",
-      "ended_at": "2026-01-12T08:56:34.449514",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 85,
-      "started_at": "2026-01-12T08:56:38.457309",
-      "ended_at": "2026-01-12T08:58:41.760472",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 86,
-      "started_at": "2026-01-12T08:58:45.767192",
-      "ended_at": "2026-01-12T09:11:44.905332",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 87,
-      "started_at": "2026-01-12T09:11:48.912791",
-      "ended_at": "2026-01-12T09:14:49.497734",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 88,
-      "started_at": "2026-01-12T09:14:53.504008",
-      "ended_at": "2026-01-12T09:21:48.767359",
-      "passing_at_start": 280,
-      "passing_at_end": 280,
-      "features_completed": [],
-      "features_attempted": []
-    },
-    {
-      "session_num": 89,
-      "started_at": "2026-01-12T09:21:52.774249",
+      "session_num": 108,
+      "started_at": "2026-01-12T22:32:17.662790",
       "ended_at": null,
-      "passing_at_start": 280,
+      "passing_at_start": 8,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
     }
   ],
   "feature_attempts": {
-    "F272": [
+    "F004": [
       {
-        "timestamp": "2026-01-11T22:54:17.888983",
-        "session_num": 45,
+        "timestamp": "2026-01-12T22:32:13.641402",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F273": [
+    "F002": [
       {
-        "timestamp": "2026-01-11T22:54:17.889223",
-        "session_num": 45,
+        "timestamp": "2026-01-12T22:32:13.641633",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F274": [
+    "F006": [
       {
-        "timestamp": "2026-01-11T23:20:36.439933",
-        "session_num": 46,
+        "timestamp": "2026-01-12T22:32:13.656166",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F275": [
+    "F008": [
       {
-        "timestamp": "2026-01-11T23:20:36.440132",
-        "session_num": 46,
+        "timestamp": "2026-01-12T22:32:13.656368",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F276": [
+    "F003": [
       {
-        "timestamp": "2026-01-11T23:35:22.202416",
-        "session_num": 47,
+        "timestamp": "2026-01-12T22:32:13.656540",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F277": [
+    "F005": [
       {
-        "timestamp": "2026-01-12T00:10:00.252935",
-        "session_num": 48,
+        "timestamp": "2026-01-12T22:32:13.656666",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F278": [
+    "F001": [
       {
-        "timestamp": "2026-01-12T00:22:30.156374",
-        "session_num": 49,
+        "timestamp": "2026-01-12T22:32:13.656791",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ],
-    "F279": [
+    "F007": [
       {
-        "timestamp": "2026-01-12T00:42:06.842978",
-        "session_num": 50,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F241": [
-      {
-        "timestamp": "2026-01-12T01:04:12.369679",
-        "session_num": 51,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F280": [
-      {
-        "timestamp": "2026-01-12T01:04:12.369914",
-        "session_num": 51,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F242": [
-      {
-        "timestamp": "2026-01-12T01:22:29.416517",
-        "session_num": 52,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F244": [
-      {
-        "timestamp": "2026-01-12T01:22:29.416751",
-        "session_num": 52,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F269": [
-      {
-        "timestamp": "2026-01-12T01:29:52.296641",
-        "session_num": 53,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F270": [
-      {
-        "timestamp": "2026-01-12T01:29:52.296906",
-        "session_num": 53,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F271": [
-      {
-        "timestamp": "2026-01-12T01:29:52.311216",
-        "session_num": 53,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F246": [
-      {
-        "timestamp": "2026-01-12T01:46:35.567789",
-        "session_num": 54,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F249": [
-      {
-        "timestamp": "2026-01-12T02:00:55.412431",
-        "session_num": 55,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F252": [
-      {
-        "timestamp": "2026-01-12T02:12:11.329588",
-        "session_num": 56,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F253": [
-      {
-        "timestamp": "2026-01-12T02:22:52.639743",
-        "session_num": 57,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F257": [
-      {
-        "timestamp": "2026-01-12T02:36:02.850895",
-        "session_num": 58,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F256": [
-      {
-        "timestamp": "2026-01-12T02:36:02.851190",
-        "session_num": 58,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F258": [
-      {
-        "timestamp": "2026-01-12T02:49:18.012250",
-        "session_num": 59,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F263": [
-      {
-        "timestamp": "2026-01-12T02:49:18.012569",
-        "session_num": 59,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F262": [
-      {
-        "timestamp": "2026-01-12T02:49:18.044536",
-        "session_num": 59,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F207": [
-      {
-        "timestamp": "2026-01-12T03:10:42.866863",
-        "session_num": 60,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F210": [
-      {
-        "timestamp": "2026-01-12T03:10:42.867185",
-        "session_num": 60,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F213": [
-      {
-        "timestamp": "2026-01-12T03:25:55.729894",
-        "session_num": 61,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F211": [
-      {
-        "timestamp": "2026-01-12T03:25:55.730187",
-        "session_num": 61,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F221": [
-      {
-        "timestamp": "2026-01-12T03:41:00.505656",
-        "session_num": 62,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F220": [
-      {
-        "timestamp": "2026-01-12T03:41:00.505990",
-        "session_num": 62,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F223": [
-      {
-        "timestamp": "2026-01-12T03:56:28.228915",
-        "session_num": 63,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F227": [
-      {
-        "timestamp": "2026-01-12T04:08:57.454907",
-        "session_num": 64,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F224": [
-      {
-        "timestamp": "2026-01-12T04:08:57.455277",
-        "session_num": 64,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F238": [
-      {
-        "timestamp": "2026-01-12T04:22:51.820790",
-        "session_num": 65,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F233": [
-      {
-        "timestamp": "2026-01-12T04:22:51.821110",
-        "session_num": 65,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F230": [
-      {
-        "timestamp": "2026-01-12T04:22:51.822442",
-        "session_num": 65,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F243": [
-      {
-        "timestamp": "2026-01-12T04:40:25.031574",
-        "session_num": 66,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F240": [
-      {
-        "timestamp": "2026-01-12T04:40:25.031920",
-        "session_num": 66,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F247": [
-      {
-        "timestamp": "2026-01-12T05:34:39.153219",
-        "session_num": 68,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F245": [
-      {
-        "timestamp": "2026-01-12T05:34:39.153592",
-        "session_num": 68,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F250": [
-      {
-        "timestamp": "2026-01-12T05:44:18.127193",
-        "session_num": 69,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F251": [
-      {
-        "timestamp": "2026-01-12T05:58:28.269203",
-        "session_num": 70,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F259": [
-      {
-        "timestamp": "2026-01-12T06:14:14.581407",
-        "session_num": 71,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F254": [
-      {
-        "timestamp": "2026-01-12T06:14:14.581738",
-        "session_num": 71,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F260": [
-      {
-        "timestamp": "2026-01-12T06:14:14.613456",
-        "session_num": 71,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F255": [
-      {
-        "timestamp": "2026-01-12T06:14:14.613693",
-        "session_num": 71,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F264": [
-      {
-        "timestamp": "2026-01-12T06:29:39.512260",
-        "session_num": 72,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F261": [
-      {
-        "timestamp": "2026-01-12T06:44:14.724921",
-        "session_num": 73,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F214": [
-      {
-        "timestamp": "2026-01-12T06:59:20.721661",
-        "session_num": 74,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F248": [
-      {
-        "timestamp": "2026-01-12T07:24:54.882167",
-        "session_num": 75,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F212": [
-      {
-        "timestamp": "2026-01-12T07:24:54.882556",
-        "session_num": 75,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F215": [
-      {
-        "timestamp": "2026-01-12T07:24:54.882817",
-        "session_num": 75,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F225": [
-      {
-        "timestamp": "2026-01-12T07:37:52.643454",
-        "session_num": 76,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F265": [
-      {
-        "timestamp": "2026-01-12T07:37:52.643880",
-        "session_num": 76,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F228": [
-      {
-        "timestamp": "2026-01-12T07:50:41.163626",
-        "session_num": 77,
-        "success": true,
-        "error_msg": null
-      }
-    ],
-    "F235": [
-      {
-        "timestamp": "2026-01-12T07:50:41.164074",
-        "session_num": 77,
+        "timestamp": "2026-01-12T22:32:13.656929",
+        "session_num": 107,
         "success": true,
         "error_msg": null
       }
     ]
   },
-  "last_passing_count": 280,
-  "sessions_without_progress": 11,
+  "last_passing_count": 8,
+  "sessions_without_progress": 0,
   "stuck_features": [],
-  "created_at": "2026-01-11T22:30:54.902059",
-  "reset_at": "2026-01-11T22:30:54.902060"
+  "created_at": "2026-01-12T22:01:11.229422",
+  "reset_at": "2026-01-12T22:01:11.229428"
 }

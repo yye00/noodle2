@@ -455,8 +455,8 @@
       "Step 5: Verify trial appears in Jobs tab with status",
       "Step 6: Verify status updates to completed when done"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T04:51:19.349807+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

@@ -1781,8 +1781,8 @@
       "Step 5: Save differential heatmap as PNG",
       "Step 6: Verify PNG shows regions of improvement vs degradation"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T06:50:17Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

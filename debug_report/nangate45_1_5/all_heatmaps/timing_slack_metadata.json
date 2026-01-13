@@ -2,7 +2,7 @@
   "heatmap_type": "timing_slack",
   "case_name": "nangate45_1_5",
   "trial_index": 0,
-  "generated_at": "2026-01-13T06:30:02.971852+00:00",
+  "generated_at": "2026-01-13T06:43:26.975943+00:00",
   "description": "Heatmap visualization for timing_slack",
   "format": "png",
   "dimensions": {

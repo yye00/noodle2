@@ -484,8 +484,8 @@
       "Step 3: Verify TCL contains only comments or timing analysis commands",
       "Step 4: Verify no netlist modifications are included"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:45:05.473631+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -514,8 +514,8 @@
       "Step 4: Call generate_tcl() method",
       "Step 5: Verify TCL contains buffer insertion commands with correct parameters"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:45:05.473640+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

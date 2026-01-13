@@ -2146,8 +2146,8 @@
       "Step 4: Verify TCL contains all component ECOs in correct order",
       "Step 5: Verify eco_class is inherited from most restrictive component"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:18:49.949274+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

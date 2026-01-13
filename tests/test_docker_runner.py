@@ -14,7 +14,7 @@ def test_docker_runner_initialization() -> None:
     """Test Docker runner can be initialized."""
     runner = DockerTrialRunner()
     assert runner is not None
-    assert runner.config.image == "efabless/openlane:ci2504-dev-amd64"
+    assert runner.config.image == "openroad/orfs:latest"
 
 
 def test_verify_openroad_available() -> None:

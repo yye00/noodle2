@@ -15,7 +15,7 @@ from docker.models.containers import Container
 class DockerRunConfig:
     """Configuration for Docker trial execution."""
 
-    image: str = "efabless/openlane:ci2504-dev-amd64"
+    image: str = "openroad/orfs:latest"  # ORFS container with PDKs for real STA
     working_dir: str = "/work"
     timeout_seconds: int = 3600
     memory_limit: str = "8g"
@@ -141,12 +141,14 @@ class DockerTrialRunner:
 
         # Build command
         script_name = script_path.name
+        # Full path to openroad in ORFS container
+        openroad_bin = "/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad"
         if self.config.gui_mode:
             # GUI mode: use openroad -gui (requires X11)
-            command = f"openroad -gui -exit /scripts/{script_name}"
+            command = f"{openroad_bin} -gui -exit /scripts/{script_name}"
         else:
             # Non-GUI mode: standard batch execution
-            command = f"openroad -exit /scripts/{script_name}"
+            command = f"{openroad_bin} -exit /scripts/{script_name}"
 
         # Merge environment variables
         env = self.config.environment or {}
@@ -279,12 +281,13 @@ class DockerTrialRunner:
             True if OpenROAD is on PATH and executable
         """
         try:
+            # Check if openroad binary exists at the known location in ORFS container
             result = self.client.containers.run(
                 image=self.config.image,
-                command="which openroad",
+                command="/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad -version",
                 remove=True,
             )
-            return b"/openroad" in result or b"openroad" in result
+            return b"Q" in result  # Version string contains "Q" (e.g., 24Q3)
         except Exception:
             return False
 

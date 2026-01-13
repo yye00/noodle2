@@ -1,6 +1,65 @@
 # Noodle 2 Development Progress
 
-## Current Session (Session 38) - F115/F116 Tests + F090 Complete
+## Current Session (Session 44) - F089 Complete ✅
+
+### ✅ Work Completed This Session:
+
+**F089: Doom Response Logs Compute Saved and Provides Recommendations (COMPLETED ✅)**
+
+1. **Enhanced DoomClassification dataclass**
+   - Added `compute_saved_trials` field to track trials avoided by early termination
+   - Added `recommendation` field with actionable guidance for users
+   - Updated `to_dict()` method to serialize new fields
+
+2. **Implemented recommendation system**
+   - Created `_enhance_doom_result()` to populate compute saved and recommendations
+   - Implemented doom-type-specific recommendation generators:
+     * `_recommend_metric_hopeless()`: WNS/hot_ratio/TNS specific guidance
+     * `_recommend_trajectory_doom()`: Stagnation vs regression specific advice
+     * `_recommend_eco_exhaustion()`: Failure pattern analysis
+   - Each recommendation provides 4 concrete actionable steps
+
+3. **Updated DoomDetector.check_doom() interface**
+   - Added optional `remaining_budget` parameter to calculate compute saved
+   - Automatically enhances doom results with compute saved and recommendations
+   - Backwards compatible with existing code (remaining_budget defaults to 0)
+
+4. **Enhanced doom report formatting**
+   - Updated `format_doom_report()` to include:
+     * "Compute Saved" section showing trials avoided
+     * "Recommendation" section with actionable guidance
+   - Well-formatted multi-section reports for user clarity
+
+5. **Comprehensive test suite**
+   - Created `test_f089_doom_compute_saved.py` with 9 tests:
+     * 5 tests covering feature steps (trigger, JSON, compute saved, recommendations, formatting)
+     * 4 additional quality tests for recommendation specificity
+   - All F089 tests passing ✓
+   - All existing doom tests (F086-F088: 44 tests) still passing ✓
+
+6. **Updated feature tracking**
+   - Marked F089 as passing in feature_list.json
+   - This unblocks F117 and F118 which depend on F089
+
+### 📊 Current Status:
+- Total features: 120
+- Passing: 108 (was 107)
+- Failing: 12 (was 13)
+- F089 complete and committed ✓
+
+### 🔄 What's Next:
+Priority features to work on:
+1. **F115** (critical): Nangate45 extreme demo achieves >50% WNS improvement - BLOCKED on snapshot quality
+2. **F116** (critical): Nangate45 extreme demo reduces hot_ratio by >60% - BLOCKED on snapshot quality
+3. **F100** (high): Ray Dashboard shows trial execution metrics in real-time
+4. **F107** (high): Extreme snapshots use high utilization and aggressive timing
+5. **F113** (high): Congestion metrics parsed from actual global_route output
+6. **F117** (medium): Doom response is written to doom.json in case directory - NOW UNBLOCKED
+7. **F118** (medium): Study summary includes doom events with compute saved - NOW UNBLOCKED
+
+---
+
+## Previous Session (Session 38) - F115/F116 Tests + F090 Complete
 
 ### ✅ Work Completed This Session:
 

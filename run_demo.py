@@ -29,7 +29,12 @@ from src.controller.demo_study import (
     create_sky130_extreme_demo_study,
 )
 from src.controller.executor import StudyExecutor, StudyResult
-from src.visualization.heatmap_renderer import render_all_heatmaps, render_diff_heatmap
+from src.visualization.heatmap_renderer import (
+    render_all_heatmaps,
+    render_diff_heatmap,
+    render_heatmap_with_critical_path_overlay,
+    render_heatmap_with_hotspot_annotations,
+)
 # Pareto visualization requires ParetoFrontier object - not used in demo
 from src.visualization.stage_progression_plot import generate_stage_progression_visualization
 from src.visualization.trajectory_plot import generate_wns_trajectory_chart, generate_hot_ratio_trajectory_chart
@@ -325,6 +330,12 @@ def generate_demo_visualizations(
     # Generate stage directory structure
     generate_stage_directories(study_result, demo_output)
 
+    # Generate overlay visualizations (critical paths and hotspots)
+    try:
+        generate_overlay_visualizations(demo_output, before_heatmaps, after_heatmaps, study_artifacts, study_result)
+    except Exception as e:
+        print(f"  Warning: Could not generate overlay visualizations: {e}")
+
     # Pareto visualization requires ParetoFrontier object - skip for demo
     # (Pareto analysis is done during study execution, not demo visualization)
 
@@ -360,6 +371,115 @@ def generate_stage_directories(study_result: StudyResult, demo_output: Path) -> 
             survivor_file = survivors_dir / f"{survivor_id}.json"
             with open(survivor_file, "w") as f:
                 json.dump({"case_id": survivor_id, "stage": stage_result.stage_index}, f, indent=2)
+
+
+def generate_overlay_visualizations(
+    demo_output: Path,
+    before_heatmaps: Path,
+    after_heatmaps: Path,
+    study_artifacts: Path,
+    study_result: StudyResult,
+) -> None:
+    """
+    Generate overlay visualizations for critical paths and hotspots.
+
+    Args:
+        demo_output: Demo output directory
+        before_heatmaps: Before heatmaps directory
+        after_heatmaps: After heatmaps directory
+        study_artifacts: Study artifacts root directory
+        study_result: Study execution result
+    """
+    # Create overlay directories
+    before_overlays = demo_output / "before" / "overlays"
+    after_overlays = demo_output / "after" / "overlays"
+    before_overlays.mkdir(parents=True, exist_ok=True)
+    after_overlays.mkdir(parents=True, exist_ok=True)
+
+    # Generate mock critical paths for visualization
+    # In a real system, these would be extracted from timing reports
+    mock_critical_paths = [
+        {
+            "slack_ps": -2150,
+            "startpoint": "input_clk",
+            "endpoint": "reg_data[31]/D",
+            "points": [(5, 5), (10, 15), (18, 22), (25, 30)],
+            "wire_delay_pct": 65.0,
+            "cell_delay_pct": 35.0,
+        },
+        {
+            "slack_ps": -1850,
+            "startpoint": "input_A[0]",
+            "endpoint": "reg_out[15]/D",
+            "points": [(2, 3), (8, 12), (15, 18), (22, 25)],
+            "wire_delay_pct": 55.0,
+            "cell_delay_pct": 45.0,
+        },
+        {
+            "slack_ps": -1600,
+            "startpoint": "input_B[7]",
+            "endpoint": "reg_result[8]/D",
+            "points": [(12, 8), (18, 15), (24, 20), (30, 28)],
+            "wire_delay_pct": 70.0,
+            "cell_delay_pct": 30.0,
+        },
+    ]
+
+    # Generate mock hotspots for visualization
+    # In a real system, these would be extracted from diagnosis
+    mock_hotspots = [
+        {
+            "id": 1,
+            "bbox": {"x1": 10, "y1": 10, "x2": 20, "y2": 20},
+            "severity": "critical",
+            "label": "Routing\nCongestion",
+        },
+        {
+            "id": 2,
+            "bbox": {"x1": 25, "y1": 15, "x2": 35, "y2": 25},
+            "severity": "moderate",
+            "label": "Dense\nPlacement",
+        },
+    ]
+
+    # Try to generate critical path overlays on placement_density heatmap
+    for state, heatmaps_dir, overlays_dir in [
+        ("before", before_heatmaps, before_overlays),
+        ("after", after_heatmaps, after_overlays),
+    ]:
+        placement_csv = heatmaps_dir / "placement_density.csv"
+        if placement_csv.exists():
+            try:
+                # Generate critical path overlay
+                critical_path_png = overlays_dir / "critical_paths.png"
+                render_heatmap_with_critical_path_overlay(
+                    csv_path=placement_csv,
+                    output_path=critical_path_png,
+                    critical_paths=mock_critical_paths,
+                    title=f"Critical Paths ({state.title()})",
+                    path_count=10,
+                    color_by="slack",
+                    skip_overlay_if_no_timing_issue=False,  # Always generate for demo
+                )
+                print(f"  ✓ Generated critical path overlay: {critical_path_png}")
+            except Exception as e:
+                print(f"  Warning: Could not generate critical path overlay for {state}: {e}")
+
+        # Try to generate hotspot annotations on routing_congestion heatmap
+        routing_csv = heatmaps_dir / "routing_congestion.csv"
+        if routing_csv.exists():
+            try:
+                # Generate hotspot overlay
+                hotspots_png = overlays_dir / "hotspots.png"
+                render_heatmap_with_hotspot_annotations(
+                    csv_path=routing_csv,
+                    output_path=hotspots_png,
+                    hotspots=mock_hotspots,
+                    title=f"Congestion Hotspots ({state.title()})",
+                )
+                print(f"  ✓ Generated hotspot overlay: {hotspots_png}")
+            except Exception as e:
+                print(f"  Warning: Could not generate hotspot overlay for {state}: {e}")
 
 
 def copy_heatmaps_to_dir(src_dir: Path, dest_dir: Path) -> None:

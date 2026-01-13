@@ -1914,3 +1914,155 @@ High priority features ready for implementation:
 
 The codebase remains in a clean, fully-tested state with all tests passing.
 
+
+================================================================================
+SESSION 13 - FAILURE CLASSIFICATION AND CASE NAMING FEATURES
+================================================================================
+
+Date: 2026-01-13
+Agent Role: Feature Implementation Agent (Session 13)
+Status: COMPLETE
+
+================================================================================
+TASKS COMPLETED
+================================================================================
+
+✓ 1. Implemented F031: Case naming follows deterministic convention <pdk>_<stage>_<derived>
+     - Created comprehensive test suite: tests/test_f031_case_naming_convention.py
+     - Verified CaseIdentifier format generates correct naming
+     - Verified base case is named <pdk>_0_0
+     - Verified derived cases follow <pdk>_<stage>_<derived> pattern
+     - Verified naming consistency across all PDKs (Nangate45, ASAP7, Sky130)
+     - All 14 tests passing in 0.21s
+     - Feature was already implemented - tests verify existing functionality
+
+✓ 2. Implemented F036: Trial failure classification works for tool crashes
+     - Created comprehensive test suite: tests/test_f036_tool_crash_classification.py
+     - Verified tool crash detection from non-zero exit codes
+     - Verified failure_type == FailureType.TOOL_CRASH
+     - Verified severity is HIGH (appropriate for serious failures)
+     - Verified crash details are logged and serializable
+     - Verified specific scenarios: TCL errors, assertions, segfaults
+     - All 17 tests passing in 0.20s
+     - Feature was already implemented - tests verify existing functionality
+
+✓ 3. Implemented F037: Trial failure classification works for parse failures
+     - Created comprehensive test suite: tests/test_f037_parse_failure_classification.py
+     - Verified classify_parse_failure() method
+     - Verified failure_type == FailureType.PARSE_FAILURE
+     - Verified severity == HIGH
+     - Verified parse failures include file name and error message
+     - Verified distinction from tool crashes
+     - Tested JSON, timing, congestion parsing failures
+     - All 22 tests passing in 0.21s
+     - Feature was already implemented - tests verify existing functionality
+
+✓ 4. Implemented F038: Trial failure classification works for metric regressions
+     - Added METRIC_REGRESSION to FailureType enum
+     - Implemented classify_metric_regression() method in FailureClassifier
+     - Created comprehensive test suite: tests/test_f038_metric_regression_classification.py
+     - Verified failure_type == FailureType.METRIC_REGRESSION
+     - Verified severity == MEDIUM (recoverable, can try different ECOs)
+     - Verified delta metrics are logged (baseline, current, percent change)
+     - Tested WNS, TNS, congestion, power regressions
+     - Handles edge case: zero baseline treated as 100% change
+     - All 24 tests passing in 0.21s
+     - NEW IMPLEMENTATION: Added metric regression classification support
+
+================================================================================
+FEATURE STATUS
+================================================================================
+
+Completed in this session:
+- F031: Case naming convention ✓
+- F036: Tool crash classification ✓
+- F037: Parse failure classification ✓
+- F038: Metric regression classification ✓ (NEW CODE)
+
+Total features passing: 42/85 (49.4%)
+- F001-F030: Previously implemented (30 features)
+- F031: Case naming (NEW VERIFICATION)
+- F032-F035: Auto-diagnosis (previously implemented)
+- F036-F038: Failure classification (NEW VERIFICATION + CODE)
+- F055-F058: Visualization (previously implemented)
+
+Features ready to implement (dependencies satisfied):
+- F039: ECO priors track unknown state
+- F040-F042: ECO prior updates (trusted, suspicious, mixed)
+- F043: Warm start priors
+- F044-F045: Survivor selection strategies
+
+================================================================================
+TECHNICAL HIGHLIGHTS
+================================================================================
+
+1. Case Naming Convention (F031)
+   - CaseIdentifier uses format: <case_name>_<stage_index>_<derived_index>
+   - Examples: nangate45_0_0, nangate45_1_2, asap7_2_5
+   - Deterministic and parseable with from_string() method
+   - Consistent across all PDKs and stages
+
+2. Failure Classification System (F036-F038)
+   - Comprehensive failure taxonomy with FailureType enum
+   - Three severity levels: HIGH, MEDIUM, CRITICAL
+   - Recoverability assessment (transient vs permanent)
+   - Tool crashes: Non-zero exit codes → HIGH severity
+   - Parse failures: Unparseable output → HIGH severity
+   - Metric regressions: Worse metrics → MEDIUM severity (recoverable)
+   
+3. Metric Regression Classification (F038 - NEW)
+   - New FailureType.METRIC_REGRESSION added to enum
+   - classify_metric_regression() method calculates percent change
+   - Logs delta metrics: baseline, current, percent change
+   - MEDIUM severity: Indicates recoverable failure
+   - Can try different ECOs to improve metrics
+
+================================================================================
+CODE CHANGES
+================================================================================
+
+Modified Files:
+- src/controller/failure.py
+  - Added METRIC_REGRESSION to FailureType enum
+  - Added classify_metric_regression() static method
+  - Calculates percentage change for metric deltas
+  - Returns FailureClassification with MEDIUM severity
+
+New Test Files:
+- tests/test_f031_case_naming_convention.py (14 tests)
+- tests/test_f036_tool_crash_classification.py (17 tests)
+- tests/test_f037_parse_failure_classification.py (22 tests)
+- tests/test_f038_metric_regression_classification.py (24 tests)
+
+Total: 77 new tests, all passing
+
+================================================================================
+COMMITS THIS SESSION
+================================================================================
+
+Commit: caf2b57
+Message: "Implement F031 and F036: Case naming convention and tool crash classification"
+Files Changed:
+- tests/test_f031_case_naming_convention.py (new)
+- tests/test_f036_tool_crash_classification.py (new)
+- feature_list.json (marked F031, F036 as passing)
+
+Commit: 0f346cc
+Message: "Implement F037 and F038: Parse failure and metric regression classification"
+Files Changed:
+- tests/test_f037_parse_failure_classification.py (new)
+- tests/test_f038_metric_regression_classification.py (new)
+- src/controller/failure.py (added metric regression support)
+- feature_list.json (marked F037, F038 as passing)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+High priority features ready for implementation:
+1. F039: ECO priors track unknown state by default
+2. F040: ECO priors update to trusted after consistent improvements
+3. F041: ECO priors update to suspicious after failures
+4. F042: ECO priors update to mixed after variable results
+
+The codebase remains in a clean, fully-tested state with all tests passing.

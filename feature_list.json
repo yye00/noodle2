@@ -3626,8 +3626,8 @@
       "Step 4: Verify state transitions (unknown -> trusted/suspicious/mixed)",
       "Step 5: Verify prior updates appear after each trial"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T18:41:53.881156+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -3656,8 +3656,8 @@
       "Step 4: Query database to verify ECO prior records exist",
       "Step 5: Verify priors persist across demo runs"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T18:40:48.089909+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

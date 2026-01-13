@@ -16,6 +16,7 @@ from src.controller.eco import (
 )
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
 from src.controller.graceful_shutdown import GracefulShutdownHandler
+from src.controller.prior_repository_sqlite import SQLitePriorRepository
 from src.controller.safety import check_study_legality, generate_legality_report
 from src.controller.safety_trace import SafetyTrace
 from src.controller.stage_abort import evaluate_stage_abort, StageAbortDecision
@@ -265,6 +266,9 @@ class StudyExecutor:
         # Track ECO effectiveness across all trials
         self.eco_effectiveness_map: dict[str, ECOEffectiveness] = {}
         self.eco_class_map: dict[str, str] = {}  # Map ECO name to ECO class
+
+        # Initialize SQLite prior repository for cross-session persistence
+        self.prior_repository = SQLitePriorRepository()
 
         # Initialize graceful shutdown handler
         self.shutdown_handler = GracefulShutdownHandler() if enable_graceful_shutdown else None
@@ -1396,6 +1400,12 @@ class StudyExecutor:
                     metrics=result.metrics,
                 )
 
+        # Track ECO effectiveness for all trials and persist to SQLite
+        self._update_and_persist_eco_effectiveness(
+            trial_results=trial_results,
+            trial_configs=trial_configs,
+        )
+
         # Select survivors based on configured count
         survivors = self._select_survivors(
             trial_results=trial_results,
@@ -1489,6 +1499,70 @@ class StudyExecutor:
         survivors = sorted_trials[:survivor_count]
 
         return [trial.config.case_name for trial in survivors]
+
+    def _update_and_persist_eco_effectiveness(
+        self,
+        trial_results: list[TrialResult],
+        trial_configs: list[TrialConfig],
+    ) -> None:
+        """
+        Update ECO effectiveness tracking and persist to SQLite database.
+
+        This method:
+        1. Updates in-memory eco_effectiveness_map with trial results
+        2. Persists each ECO's effectiveness data to SQLite
+        3. Prints prior state updates to console for F119
+
+        Args:
+            trial_results: Results from executed trials
+            trial_configs: Configurations for the executed trials
+        """
+        if not trial_results or not trial_configs:
+            return
+
+        for trial_result, trial_config in zip(trial_results, trial_configs):
+            # Extract ECO name from trial metadata
+            eco_name = trial_config.metadata.get("eco_type", "unknown")
+
+            # Skip no-op ECOs and unknown ECOs
+            if eco_name in ("no_eco", "unknown", ""):
+                continue
+
+            # Get or create ECOEffectiveness for this ECO
+            if eco_name not in self.eco_effectiveness_map:
+                self.eco_effectiveness_map[eco_name] = ECOEffectiveness(eco_name=eco_name)
+
+            eco_effectiveness = self.eco_effectiveness_map[eco_name]
+
+            # Calculate WNS delta if metrics are available
+            wns_delta_ps = 0.0
+            if trial_result.metrics and "timing" in trial_result.metrics:
+                timing = trial_result.metrics["timing"]
+                current_wns = timing.get("wns_ps", 0)
+                # Compare against baseline WNS if available
+                if self.baseline_wns_ps is not None:
+                    wns_delta_ps = current_wns - self.baseline_wns_ps
+                else:
+                    # Use absolute WNS as improvement (negative WNS = violation)
+                    wns_delta_ps = current_wns
+
+            # Update ECO effectiveness with trial result
+            eco_effectiveness.update(
+                success=trial_result.success,
+                wns_delta_ps=wns_delta_ps,
+            )
+
+            # Persist to SQLite database
+            try:
+                self.prior_repository.store_prior(eco_effectiveness)
+            except Exception as e:
+                print(f"Warning: Failed to persist ECO prior '{eco_name}' to database: {e}")
+
+            # Print prior state update for console visibility (F119)
+            success_count = eco_effectiveness.successful_applications
+            failure_count = eco_effectiveness.failed_applications
+            prior_state = eco_effectiveness.prior.value
+            print(f"  [PRIOR] {eco_name}: {success_count}S/{failure_count}F -> state={prior_state}")
 
     def _emit_stage_telemetry(
         self,

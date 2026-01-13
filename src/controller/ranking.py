@@ -17,7 +17,9 @@ class RankingPolicy(str, Enum):
     WNS_DELTA = "wns_delta"  # Rank by timing improvement
     CONGESTION_DELTA = "congestion_delta"  # Rank by congestion reduction
     MULTI_OBJECTIVE = "multi_objective"  # Combine timing and congestion
+    PURE_TOP_N = "pure_top_n"  # Select top N by primary metric (deterministic)
     DIVERSE_TOP_N = "diverse_top_n"  # Select top N while maintaining diversity
+    PARETO_FRONT = "pareto_front"  # Select non-dominated Pareto-optimal trials
 
 
 class DiversityMetric(str, Enum):
@@ -254,6 +256,66 @@ def rank_by_congestion_delta(
 
     # Sort by delta descending (best reduction first)
     sorted_trials = sorted(trials_with_delta, key=lambda x: x[1], reverse=True)
+
+    # Select top N survivors
+    survivors = sorted_trials[:survivor_count]
+
+    return [trial.config.case_name for trial, _ in survivors]
+
+
+def rank_pure_top_n(
+    trial_results: list[TrialResult],
+    baseline_wns_ps: int,
+    survivor_count: int,
+) -> list[str]:
+    """
+    Select top N trials by best WNS (deterministic ranking).
+
+    This is similar to rank_by_wns_delta but explicitly named for clarity
+    when specifying survivor selection method as "pure_top_n".
+
+    Ranking is deterministic: trials with identical WNS are ordered by case name
+    to ensure consistent selection across runs.
+
+    Args:
+        trial_results: All trial results from stage
+        baseline_wns_ps: Baseline WNS in picoseconds
+        survivor_count: Number of survivors to select
+
+    Returns:
+        List of case names for survivors, ordered by WNS (best first)
+    """
+    # Filter successful trials with timing metrics
+    successful_trials = [
+        t
+        for t in trial_results
+        if t.success and t.artifacts.metrics_json and t.artifacts.metrics_json.exists()
+    ]
+
+    if not successful_trials:
+        return []
+
+    # Load WNS for each trial
+    trials_with_wns = []
+    for trial in successful_trials:
+        with open(trial.artifacts.metrics_json) as f:
+            metrics = json.load(f)
+
+        wns_ps = metrics.get("timing", {}).get("wns_ps")
+        if wns_ps is None:
+            continue
+
+        trials_with_wns.append((trial, wns_ps))
+
+    if not trials_with_wns:
+        return []
+
+    # Sort by WNS descending (higher/less negative is better), then by case name for determinism
+    sorted_trials = sorted(
+        trials_with_wns,
+        key=lambda x: (-x[1], x[0].config.case_name),  # -WNS for descending, case_name for tiebreaker
+        reverse=False
+    )
 
     # Select top N survivors
     survivors = sorted_trials[:survivor_count]
@@ -575,6 +637,43 @@ def rank_diverse_top_n(
     return survivors[:survivor_count]
 
 
+def rank_pareto_front(
+    trial_results: list[TrialResult],
+    objectives: list,  # list[ObjectiveSpec] - avoiding circular import
+    survivor_count: int,
+) -> list[str]:
+    """
+    Select survivors from Pareto frontier (non-dominated trials).
+
+    Computes the Pareto frontier and selects non-dominated trials as survivors.
+    If the Pareto frontier has more trials than survivor_count, selects a subset.
+
+    Args:
+        trial_results: All trial results from stage
+        objectives: List of ObjectiveSpec defining optimization objectives
+        survivor_count: Number of survivors to select
+
+    Returns:
+        List of case names for Pareto-optimal survivors
+    """
+    # Import here to avoid circular dependency
+    from src.controller.pareto import compute_pareto_frontier
+
+    # Compute Pareto frontier
+    frontier = compute_pareto_frontier(trial_results, objectives)
+
+    # Get all Pareto-optimal case names
+    pareto_cases = frontier.get_pareto_case_names()
+
+    if not pareto_cases:
+        return []
+
+    # If we have more Pareto-optimal cases than needed, select subset
+    # For now, take first N (deterministic based on order returned)
+    # Future: could add preference-based selection or diversity within Pareto front
+    return pareto_cases[:survivor_count]
+
+
 def create_survivor_selector(
     policy: RankingPolicy,
     baseline_wns_ps: int,
@@ -635,6 +734,13 @@ def create_survivor_selector(
 
         return selector
 
+    elif policy == RankingPolicy.PURE_TOP_N:
+
+        def selector(trial_results: list[TrialResult], survivor_count: int) -> list[str]:
+            return rank_pure_top_n(trial_results, baseline_wns_ps, survivor_count)
+
+        return selector
+
     elif policy == RankingPolicy.DIVERSE_TOP_N:
         if baseline_hot_ratio is None:
             raise ValueError(
@@ -654,6 +760,14 @@ def create_survivor_selector(
             )
 
         return selector
+
+    elif policy == RankingPolicy.PARETO_FRONT:
+        # Note: This requires objectives to be passed somehow
+        # For now, we'll raise an error directing to use rank_pareto_front directly
+        raise ValueError(
+            "PARETO_FRONT policy requires objectives list. "
+            "Use rank_pareto_front() directly with ObjectiveSpec list."
+        )
 
     else:
         raise ValueError(f"Unknown ranking policy: {policy}")

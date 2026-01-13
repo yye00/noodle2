@@ -1652,6 +1652,47 @@ class StudyExecutor:
             print(f"  [ECO] Applied {eco_name} to {case_name}")
             print(f"        WNS: {current_wns} ps")
 
+    def _print_doom_termination(
+        self,
+        case_name: str,
+        doom_classification: Any,  # DoomClassification from doom_detection module
+    ) -> None:
+        """
+        Print doom termination console output with compute saved (F118).
+
+        Displays:
+        - Case terminated message with doom type
+        - Compute saved estimate
+        - Brief recommendation
+
+        Args:
+            case_name: Name of the doomed case
+            doom_classification: DoomClassification object with doom details
+        """
+        # Import here to avoid circular dependency
+        from src.controller.doom_detection import DoomClassification
+
+        if not isinstance(doom_classification, DoomClassification):
+            return
+
+        # Extract doom information
+        doom_type = doom_classification.doom_type.value if doom_classification.doom_type else "unknown"
+        compute_saved = doom_classification.compute_saved_trials
+        reason = doom_classification.reason
+
+        # Print doom termination message
+        print(f"  [DOOM] {case_name} terminated: {doom_type}")
+        print(f"         Reason: {reason}")
+
+        if compute_saved > 0:
+            print(f"         Compute saved: ~{compute_saved} trials")
+
+        # Print recommendation if available (one-line summary)
+        if doom_classification.recommendation:
+            # Take first line of recommendation as summary
+            rec_first_line = doom_classification.recommendation.split('\n')[0]
+            print(f"         Recommendation: {rec_first_line}")
+
     def _emit_stage_telemetry(
         self,
         stage_result: StageResult,

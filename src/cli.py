@@ -115,6 +115,44 @@ This will:
         help="Validate configuration without executing trials",
     )
 
+    # === RESUME command ===
+    resume_parser = subparsers.add_parser(
+        "resume",
+        help="Resume a Study from checkpoint",
+        description="""
+Resume execution of an interrupted Study from a checkpoint.
+
+This will:
+  1. Locate checkpoint file (latest or specified path)
+  2. Validate checkpoint integrity and resumption safety
+  3. Skip already-completed stages
+  4. Resume execution from next incomplete stage
+  5. Preserve all previous results and telemetry
+
+By default, resumes from the latest checkpoint. Use --checkpoint
+to resume from a specific checkpoint file (useful for re-running
+from an earlier stage with different parameters).
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    resume_parser.add_argument(
+        "--study",
+        type=str,
+        required=True,
+        help="Study name or path to Study artifact directory",
+    )
+    resume_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        help="Specific checkpoint file to resume from (default: latest)",
+    )
+    resume_parser.add_argument(
+        "--ray-address",
+        type=str,
+        default="auto",
+        help="Ray cluster address (default: auto, starts local)",
+    )
+
     # === VALIDATE command ===
     validate_parser = subparsers.add_parser(
         "validate",
@@ -578,6 +616,147 @@ def cmd_run(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_resume(args: argparse.Namespace) -> int:
+    """Execute resume command to continue interrupted Study from checkpoint."""
+    from src.controller.study_resumption import load_checkpoint, find_checkpoint, validate_resumption
+    from src.controller.study import load_study_config
+    from src.controller.executor import StudyExecutor
+
+    print("🔄 Resuming Study from checkpoint")
+    print(f"   Study: {args.study}")
+    print()
+
+    try:
+        # Resolve study path
+        study_path = Path(args.study)
+
+        # Check if it's an artifact directory or a study name
+        if study_path.is_dir():
+            artifact_dir = study_path
+        elif (Path("artifacts") / args.study).is_dir():
+            artifact_dir = Path("artifacts") / args.study
+        else:
+            print(f"❌ Error: Study artifact directory not found: {args.study}")
+            print()
+            print("Tip: Provide either:")
+            print("  • Study name (e.g., 'nangate45_baseline')")
+            print("  • Path to Study artifact directory (e.g., 'artifacts/nangate45_baseline')")
+            return 1
+
+        # Find checkpoint file
+        if args.checkpoint:
+            checkpoint_path = args.checkpoint
+            if not checkpoint_path.exists():
+                print(f"❌ Error: Checkpoint file not found: {checkpoint_path}")
+                return 1
+            print(f"   Checkpoint: {checkpoint_path}")
+        else:
+            checkpoint_path = find_checkpoint(artifact_dir)
+            if checkpoint_path is None:
+                print(f"❌ Error: No checkpoint found in {artifact_dir}")
+                print()
+                print("Tip: Create checkpoint during study execution with --checkpoint-dir")
+                return 1
+            print(f"   Checkpoint: {checkpoint_path} (latest)")
+
+        print()
+
+        # Load checkpoint
+        print("📋 Loading checkpoint...")
+        checkpoint = load_checkpoint(checkpoint_path)
+        print(f"   Study name: {checkpoint.study_name}")
+        print(f"   Last completed stage: {checkpoint.last_completed_stage_index}")
+        print(f"   Completed stages: {len(checkpoint.completed_stages)}")
+        print(f"   Next stage: {checkpoint.get_next_stage_index()}")
+        print()
+
+        # Load study configuration
+        # Try to find study config YAML in the artifact directory or studies/
+        study_config_path = None
+        possible_paths = [
+            artifact_dir / f"{checkpoint.study_name}.yaml",
+            artifact_dir.parent / f"{checkpoint.study_name}.yaml",
+            Path("studies") / f"{checkpoint.study_name}.yaml",
+        ]
+
+        for path in possible_paths:
+            if path.exists():
+                study_config_path = path
+                break
+
+        if study_config_path is None:
+            print(f"❌ Error: Study configuration not found for {checkpoint.study_name}")
+            print()
+            print("Searched locations:")
+            for path in possible_paths:
+                print(f"  • {path}")
+            return 1
+
+        print("📋 Loading study configuration...")
+        config = load_study_config(study_config_path)
+        print(f"   PDK: {config.pdk}")
+        print(f"   Safety domain: {config.safety_domain}")
+        print(f"   Total stages: {len(config.stages)}")
+        print()
+
+        # Validate resumption is safe
+        print("🔍 Validating resumption...")
+        is_valid, issues = validate_resumption(checkpoint, len(config.stages))
+
+        if not is_valid:
+            print("❌ Resumption validation failed:")
+            for issue in issues:
+                print(f"   • {issue}")
+            return 1
+
+        print("   ✅ Resumption is safe")
+        print()
+
+        # Initialize executor with checkpoint
+        print("⚙️  Initializing executor...")
+        executor = StudyExecutor(
+            config=config,
+            artifacts_root="artifacts",
+            telemetry_root="telemetry",
+            use_ray=False,
+            checkpoint=checkpoint,  # Pass checkpoint to executor
+        )
+
+        # Resume execution
+        print("🏃 Resuming study execution...")
+        print(f"   Skipping stages 0-{checkpoint.last_completed_stage_index}")
+        print(f"   Starting from stage {checkpoint.get_next_stage_index()}")
+        print()
+
+        result = executor.execute()
+
+        # Print results
+        print()
+        print("=" * 70)
+        print("✅ Study resumption complete!")
+        print(f"   Total stages: {result.total_stages}")
+        print(f"   Stages completed: {result.stages_completed}")
+        print(f"   Total runtime: {result.total_runtime_seconds:.2f}s")
+        print(f"   Final survivors: {len(result.final_survivors)}")
+        if result.aborted:
+            print(f"   ⚠️  Aborted: {result.abort_reason}")
+        print("=" * 70)
+
+        return 0 if not result.aborted else 1
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: {e}")
+        return 1
+    except ValueError as e:
+        print(f"❌ Validation error: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Resumption failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
 def cmd_validate(args: argparse.Namespace) -> int:
     """Execute validate command."""
     print(f"✓ Validating Study: {args.study}")
@@ -987,6 +1166,7 @@ def main() -> int:
     # Dispatch to command handlers
     command_map = {
         "run": cmd_run,
+        "resume": cmd_resume,
         "validate": cmd_validate,
         "list-studies": cmd_list_studies,
         "ls": cmd_list_studies,

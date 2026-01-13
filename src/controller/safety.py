@@ -1,10 +1,10 @@
 """Safety model and legality checking for Noodle 2."""
 
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Any, Optional
 
 from .study import StudyConfig
-from .types import ECOClass, SafetyDomain, StageConfig
+from .types import ECOClass, RailsConfig, SafetyDomain, StageConfig
 
 
 # Safety policy: which ECO classes are allowed in each safety domain
@@ -152,6 +152,7 @@ class RunLegalityReport:
     warnings: list[str]
     stage_count: int
     total_trial_budget: int
+    rails: Optional[RailsConfig] = None
     timestamp: Optional[str] = None
 
     def __str__(self) -> str:
@@ -199,6 +200,33 @@ class RunLegalityReport:
                 lines.append(f"  ⚠ {warning}")
             lines.append("")
 
+        # Rails (abort criteria)
+        if self.rails:
+            lines.append("ABORT CRITERIA (RAILS)")
+            lines.append("  Abort Rail (trial-level):")
+            if self.rails.abort.wns_ps is not None:
+                lines.append(f"    - WNS threshold: {self.rails.abort.wns_ps} ps")
+            if self.rails.abort.timeout_seconds is not None:
+                lines.append(f"    - Timeout: {self.rails.abort.timeout_seconds} seconds")
+            if self.rails.abort.wns_ps is None and self.rails.abort.timeout_seconds is None:
+                lines.append("    - None configured")
+
+            lines.append("  Stage Rail (stage-level):")
+            if self.rails.stage.failure_rate is not None:
+                lines.append(f"    - Max failure rate: {self.rails.stage.failure_rate * 100:.1f}%")
+            else:
+                lines.append("    - None configured")
+
+            lines.append("  Study Rail (study-level):")
+            if self.rails.study.catastrophic_failures is not None:
+                lines.append(f"    - Max catastrophic failures: {self.rails.study.catastrophic_failures}")
+            if self.rails.study.max_runtime_hours is not None:
+                lines.append(f"    - Max runtime: {self.rails.study.max_runtime_hours} hours")
+            if (self.rails.study.catastrophic_failures is None and
+                self.rails.study.max_runtime_hours is None):
+                lines.append("    - None configured")
+            lines.append("")
+
         # Study summary
         lines.append("STUDY SUMMARY")
         lines.append(f"  Stages: {self.stage_count}")
@@ -218,9 +246,9 @@ class RunLegalityReport:
 
         return "\n".join(lines)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert report to dictionary for JSON serialization."""
-        return {
+        result: dict[str, Any] = {
             "study_name": self.study_name,
             "safety_domain": self.safety_domain.value,
             "is_legal": self.is_legal,
@@ -240,6 +268,24 @@ class RunLegalityReport:
             "total_trial_budget": self.total_trial_budget,
             "timestamp": self.timestamp,
         }
+
+        # Add rails if configured
+        if self.rails:
+            result["rails"] = {
+                "abort": {
+                    "wns_ps": self.rails.abort.wns_ps,
+                    "timeout_seconds": self.rails.abort.timeout_seconds,
+                },
+                "stage": {
+                    "failure_rate": self.rails.stage.failure_rate,
+                },
+                "study": {
+                    "catastrophic_failures": self.rails.study.catastrophic_failures,
+                    "max_runtime_hours": self.rails.study.max_runtime_hours,
+                },
+            }
+
+        return result
 
 
 def generate_legality_report(
@@ -270,6 +316,7 @@ def generate_legality_report(
         warnings=result.warnings,
         stage_count=len(study.stages),
         total_trial_budget=total_budget,
+        rails=study.rails,
         timestamp=timestamp,
     )
 

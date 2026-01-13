@@ -2086,8 +2086,8 @@
       "Step 3: Verify report includes: safety domain, proposed ECO classes, applicable rails, abort criteria",
       "Step 4: Verify illegal configurations are flagged with reason"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:06:01Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

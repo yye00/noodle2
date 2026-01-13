@@ -812,3 +812,61 @@ Remaining high-priority features:
 - 103/120 features passing (85.8%)
 
 ## Session 41 - Critical ECO Bugfixes - 2026-01-13
+
+## Session 42 - F111 Timing Path Breakdown - 2026-01-13T18:27:00Z
+
+### Completed Features:
+✅ **F111: Timing path wire vs cell delay breakdown**
+- Added wire_delay_ps and cell_delay_ps fields to TimingPath dataclass
+- Implemented is_wire_dominated property (>65% wire delay threshold)
+- Created parse_timing_path_delays() function for detailed OpenROAD reports
+- Parses report_checks output with -fields {fanout cap slew cell net}
+- Extracts cell delays (gates) and net delays (interconnect) separately
+- Accumulates delays across all path stages
+- Fixed slack regex to handle both "slack N" and "N slack" formats
+- Comprehensive test suite (10 tests, all passing)
+
+### Implementation Details:
+**TimingPath enhancements:**
+- wire_delay_ps: Optional[int] - Net/interconnect delay in picoseconds
+- cell_delay_ps: Optional[int] - Gate/cell delay in picoseconds
+- is_wire_dominated: bool property - True when wire > 65% of total delay
+
+**Parser features:**
+- Detects timing table header ("Delay" and "Time" columns)
+- Parses timing table rows extracting delay values
+- Distinguishes net delays (marked with "(net)") from cell delays
+- Handles multiple paths in a single report
+- Supports negative delays (ideal networks)
+- Correctly handles slack line both inside and outside timing tables
+
+**Test coverage:**
+- Step 1: Parse report_checks with detailed fields
+- Step 2: Extract cell and net delays separately
+- Step 3: Sum cell_delay and wire_delay correctly
+- Step 4: Calculate wire_dominated threshold (>65%)
+- Step 5: Verify classification matches path characteristics
+- Edge cases: missing data, zero delays, multiple paths, negative delays
+- Integration: realistic Nangate45 path with full detail
+
+### Session Statistics:
+- Features Completed: 1 (F111)
+- Tests Added: 10 new tests (all passing)
+- Start Progress: 103/120 (85.8%)
+- End Progress: 104/120 (86.7%)
+- Net Gain: +1 feature (+0.8%)
+
+### Next Priority Features:
+1. **F112**: Heatmap generation from real CSV data
+2. **F113**: Congestion metrics parsing from OpenROAD
+3. **F119**: Demo console shows prior state updates
+4. **F120**: Prior repository database file exists
+5. **F100**: Ray Dashboard real-time metrics
+6. **F115/F116**: Nangate45 extreme demo (needs extreme snapshot)
+7. **F107**: Extreme snapshots with high utilization
+
+### Git Status:
+- Latest commit: F111 timing path wire vs cell delay breakdown
+- All tests passing (including 19 existing timing parser tests)
+- Clean working state
+- 104/120 features passing (86.7%)

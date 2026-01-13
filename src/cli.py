@@ -496,6 +496,11 @@ The comparison helps evaluate:
         default="text",
         help="Output format (default: text)",
     )
+    compare_parser.add_argument(
+        "--visualize",
+        action="store_true",
+        help="Generate comparison visualizations (pareto_comparison.png, trajectory_comparison.png)",
+    )
 
     # === SHOW-PRIORS command ===
     show_priors_parser = subparsers.add_parser(
@@ -990,15 +995,15 @@ def cmd_compare(args: argparse.Namespace) -> int:
         if args.format in ["text", "both"]:
             formatted_report = format_comparison_report(report)
 
-            if args.output and args.format == "text":
+            if args.output and args.format in ["text", "both"]:
                 # Write to file
                 text_output = args.output
                 with open(text_output, "w") as f:
                     f.write(formatted_report)
                 print(f"✅ Comparison report written to: {text_output}")
                 print()
-            else:
-                # Print to stdout
+            elif not args.output:
+                # Print to stdout only if no output file specified
                 print(formatted_report)
                 print()
 
@@ -1015,6 +1020,26 @@ def cmd_compare(args: argparse.Namespace) -> int:
 
             write_comparison_report(report, json_output)
             print(f"✅ JSON comparison report written to: {json_output}")
+            print()
+
+        # Generate visualizations if requested
+        if args.visualize:
+            from src.controller.study_comparison_viz import (
+                generate_all_comparison_visualizations,
+            )
+
+            # Determine output directory
+            if args.output:
+                viz_dir = args.output.parent / "comparison_viz"
+            else:
+                viz_dir = Path(f"comparison_{args.study1}_vs_{args.study2}_viz")
+
+            print(f"🎨 Generating comparison visualizations...")
+            chart_paths = generate_all_comparison_visualizations(report, viz_dir)
+
+            print(f"✅ Visualizations generated:")
+            for chart_type, chart_path in chart_paths.items():
+                print(f"   - {chart_type}: {chart_path}")
             print()
 
         # Print summary

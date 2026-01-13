@@ -1,0 +1,10 @@
+{
+  "design": "gcd",
+  "pdk": "asap7",
+  "type": "extreme",
+  "utilization": 0.85,
+  "clock_period_ns": 0.001,
+  "description": "Extreme snapshot with high utilization and aggressive timing for ASAP7",
+  "creation_date": "2026-01-13",
+  "purpose": "Create both timing and congestion violations for ECO testing on advanced node"
+}

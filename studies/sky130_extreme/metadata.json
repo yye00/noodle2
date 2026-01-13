@@ -1,0 +1,10 @@
+{
+  "design": "gcd",
+  "pdk": "sky130",
+  "type": "extreme",
+  "utilization": 0.85,
+  "clock_period_ns": 0.01,
+  "description": "Extreme snapshot with high utilization and aggressive timing for Sky130",
+  "creation_date": "2026-01-13",
+  "purpose": "Create both timing and congestion violations for ECO testing on open PDK"
+}

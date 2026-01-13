@@ -255,8 +255,8 @@
     "F113": {
       "feature_id": "F113",
       "current_model": "claude-sonnet-4-5-20250929",
-      "attempts_at_current_model": 1,
-      "total_attempts": 1,
+      "attempts_at_current_model": 0,
+      "total_attempts": 2,
       "failure_type": null,
       "diagnosis_done": false,
       "research_queries": [],
@@ -272,7 +272,7 @@
       "decomposed": false,
       "sub_features": [],
       "created_at": "2026-01-13T13:08:41.769261",
-      "updated_at": "2026-01-13T13:08:41.769265"
+      "updated_at": "2026-01-13T14:40:59.821344"
     },
     "F112": {
       "feature_id": "F112",
@@ -373,5 +373,5 @@
       "updated_at": "2026-01-13T14:15:48.397710"
     }
   },
-  "updated_at": "2026-01-13T14:15:48.397777"
+  "updated_at": "2026-01-13T14:40:59.821403"
 }

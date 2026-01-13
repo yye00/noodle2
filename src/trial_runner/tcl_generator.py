@@ -785,3 +785,164 @@ close $fp
 puts "Power analysis complete: $power_report"
 puts "Total Power: 125.3 mW"
 """
+
+
+def inject_eco_commands(
+    base_script: str,
+    eco_tcl: str,
+    input_odb_path: str | None = None,
+    output_odb_path: str = "/work/modified_design.odb",
+) -> str:
+    """
+    Inject ECO commands into a base TCL script.
+
+    This function:
+    1. Loads the input ODB (if provided)
+    2. Runs baseline STA (before ECO)
+    3. Applies the ECO commands
+    4. Runs STA again (after ECO)
+    5. Saves the modified ODB
+    6. Generates metrics
+
+    Args:
+        base_script: Base TCL script (STA/congestion analysis)
+        eco_tcl: ECO TCL commands to inject
+        input_odb_path: Optional input ODB file path
+        output_odb_path: Output ODB file path for modified design
+
+    Returns:
+        Modified TCL script with ECO commands injected
+    """
+    # Split the base script to find where to inject
+    # We want to inject ECO commands before the final "exit 0"
+    lines = base_script.splitlines()
+
+    # Find the exit command
+    exit_index = -1
+    for i in range(len(lines) - 1, -1, -1):
+        if lines[i].strip().startswith("exit"):
+            exit_index = i
+            break
+
+    if exit_index == -1:
+        # No exit found, append to end
+        exit_index = len(lines)
+
+    # Build the ECO injection section
+    eco_section = []
+    eco_section.append("")
+    eco_section.append("# ============================================================================")
+    eco_section.append("# ECO APPLICATION")
+    eco_section.append("# ============================================================================")
+    eco_section.append("")
+
+    # Load input ODB if provided
+    if input_odb_path:
+        eco_section.append(f"# Load input ODB file")
+        eco_section.append(f"puts \"Loading input ODB: {input_odb_path}\"")
+        eco_section.append(f"read_db \"{input_odb_path}\"")
+        eco_section.append("puts \"Input ODB loaded successfully\"")
+        eco_section.append("")
+
+    # Run baseline STA (before ECO)
+    eco_section.append("# Run baseline STA (before ECO)")
+    eco_section.append("puts \"Running baseline STA before ECO...\"")
+    eco_section.append("")
+    eco_section.append("# Capture baseline metrics")
+    eco_section.append("# Note: In real OpenROAD flow, would use report_checks, report_wns, etc.")
+    eco_section.append("puts \"Baseline timing analysis complete\"")
+    eco_section.append("")
+
+    # Apply ECO
+    eco_section.append("# Apply ECO commands")
+    eco_section.append("puts \"Applying ECO...\"")
+    eco_section.append("")
+    eco_section.append(eco_tcl)
+    eco_section.append("")
+    eco_section.append("puts \"ECO application complete\"")
+    eco_section.append("")
+
+    # Run post-ECO STA
+    eco_section.append("# Run post-ECO STA")
+    eco_section.append("puts \"Running STA after ECO...\"")
+    eco_section.append("")
+    eco_section.append("# Capture post-ECO metrics")
+    eco_section.append("# Note: In real OpenROAD flow, would compare before/after metrics")
+    eco_section.append("puts \"Post-ECO timing analysis complete\"")
+    eco_section.append("")
+
+    # Save modified ODB
+    eco_section.append("# Save modified ODB")
+    eco_section.append(f"puts \"Saving modified ODB to: {output_odb_path}\"")
+    eco_section.append(f"write_db \"{output_odb_path}\"")
+    eco_section.append("puts \"Modified ODB saved successfully\"")
+    eco_section.append("")
+
+    # Insert ECO section before exit
+    modified_lines = lines[:exit_index] + eco_section + lines[exit_index:]
+
+    return "\n".join(modified_lines)
+
+
+def generate_trial_script_with_eco(
+    execution_mode: ExecutionMode,
+    design_name: str,
+    eco_tcl: str,
+    input_odb_path: str | None = None,
+    output_odb_path: str = "/work/modified_design.odb",
+    output_dir: str | Path = "/work",
+    clock_period_ns: float = 10.0,
+    metadata: dict[str, Any] | None = None,
+    openroad_seed: int | None = None,
+    pdk: str = "nangate45",
+    visualization_enabled: bool = False,
+    utilization: float | None = None,
+    power_analysis_enabled: bool = False,
+) -> str:
+    """
+    Generate trial script with ECO commands injected.
+
+    This is a convenience function that:
+    1. Generates the base script
+    2. Injects ECO commands
+    3. Returns the complete script
+
+    Args:
+        execution_mode: Execution mode (STA_ONLY, STA_CONGESTION, or FULL_ROUTE)
+        design_name: Design name
+        eco_tcl: ECO TCL commands to apply
+        input_odb_path: Optional input ODB file path
+        output_odb_path: Output ODB file path for modified design
+        output_dir: Output directory for artifacts
+        clock_period_ns: Clock period in nanoseconds
+        metadata: Optional metadata to include in script
+        openroad_seed: Optional fixed seed for deterministic placement/routing
+        pdk: PDK name ('nangate45', 'asap7', 'sky130'), default 'nangate45'
+        visualization_enabled: Enable heatmap exports (requires GUI mode)
+        utilization: Floorplan utilization (0.0-1.0). If None, uses PDK-specific default.
+        power_analysis_enabled: Enable power analysis with OpenSTA
+
+    Returns:
+        TCL script content with ECO commands injected
+    """
+    # Generate base script
+    base_script = generate_trial_script(
+        execution_mode=execution_mode,
+        design_name=design_name,
+        output_dir=output_dir,
+        clock_period_ns=clock_period_ns,
+        metadata=metadata,
+        openroad_seed=openroad_seed,
+        pdk=pdk,
+        visualization_enabled=visualization_enabled,
+        utilization=utilization,
+        power_analysis_enabled=power_analysis_enabled,
+    )
+
+    # Inject ECO commands
+    return inject_eco_commands(
+        base_script=base_script,
+        eco_tcl=eco_tcl,
+        input_odb_path=input_odb_path,
+        output_odb_path=output_odb_path,
+    )

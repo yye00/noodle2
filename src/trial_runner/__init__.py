@@ -21,6 +21,8 @@ from src.trial_runner.provenance import (
 from src.trial_runner.ray_executor import RayTrialExecutor, execute_trial_remote
 from src.trial_runner.tcl_generator import (
     generate_trial_script,
+    generate_trial_script_with_eco,
+    inject_eco_commands,
     write_trial_script,
 )
 from src.trial_runner.command_logging import (
@@ -48,6 +50,8 @@ __all__ = [
     "StageArtifactSummary",
     "generate_trial_artifact_index",
     "generate_trial_script",
+    "generate_trial_script_with_eco",
+    "inject_eco_commands",
     "write_trial_script",
     "ToolProvenance",
     "create_provenance",

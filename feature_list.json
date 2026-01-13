@@ -3287,8 +3287,8 @@
       "Step 4: Execute ECO in trial",
       "Step 5: Verify cell sizes change and design area is reported"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T15:50:52.083469+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

@@ -3383,3 +3383,57 @@ Priority features remaining:
 3. F068: ECO success rate chart (medium)
 4. F069: Study summary JSON (medium)
 
+
+================================================================================
+SESSION 26 - F051 and F052: Study Resume Functionality
+================================================================================
+
+Date: 2026-01-13
+Time: 10:22 UTC
+Agent: Development Agent (Session 26)
+
+FEATURES COMPLETED THIS SESSION:
+- F051: Study can resume from latest checkpoint
+- F052: Study can resume from specific checkpoint file
+
+IMPLEMENTATION DETAILS:
+
+1. CLI Command Enhancement:
+   - Added 'resume' subcommand to CLI parser
+   - Arguments:
+     * --study <name>: Study name or artifact directory path
+     * --checkpoint <path>: Optional specific checkpoint file
+     * --ray-address: Ray cluster address (default: auto)
+   - Command syntax:
+     * Resume from latest: noodle2 resume --study <name>
+     * Resume from specific: noodle2 resume --study <name> --checkpoint <path>
+
+2. cmd_resume() Implementation:
+   - Locates study artifact directory
+   - Finds checkpoint file (latest or specified path)
+   - Loads and validates checkpoint integrity
+   - Validates resumption is safe (no gaps, not already complete)
+   - Loads study configuration YAML
+   - Initializes executor with checkpoint
+   - Resumes execution from next incomplete stage
+   - Skips already-completed stages
+   - Preserves all previous results and telemetry
+
+3. Comprehensive Test Suite (tests/test_resume_command.py):
+   - 13 tests covering all feature steps
+   - All tests passing
+
+TEST RESULTS:
+- All 13 new tests pass
+- Existing checkpoint tests (18 tests) still pass
+- No regressions detected
+
+PROGRESS:
+- Total features: 85
+- Passing: 73 (was 71, +2 this session)
+- Completion: 85.9%
+- Remaining: 12 features
+
+COMMIT:
+30ae933 - Implement F051 and F052: Study resume functionality
+

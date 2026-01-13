@@ -872,13 +872,27 @@ class StudyExecutor:
                     for derived_idx, survivor_id in enumerate(stage_result.survivors):
                         survivor_case = self.case_graph.get_case(survivor_id)
                         if survivor_case:
+                            # Find the trial result for this survivor to get modified ODB path
+                            modified_odb_path = None
+                            for trial_result in stage_result.trial_results:
+                                if trial_result.config.case_name == survivor_id and trial_result.success:
+                                    modified_odb_path = trial_result.modified_odb_path
+                                    break
+
+                            # Use modified ODB as snapshot for next stage, fallback to original
+                            next_snapshot_path = modified_odb_path if modified_odb_path else self.config.snapshot_path
+
                             # Create derived case for next stage
                             derived = survivor_case.derive(
                                 eco_name="pass_through",  # Placeholder for actual ECO
                                 new_stage_index=stage_index + 1,
                                 derived_index=derived_idx,
-                                snapshot_path=self.config.snapshot_path,  # Will be updated when ECO is applied
-                                metadata={"source_trial": survivor_id},
+                                snapshot_path=next_snapshot_path,  # Use modified ODB if available
+                                metadata={
+                                    "source_trial": survivor_id,
+                                    "input_odb_from_stage": stage_index if modified_odb_path else None,
+                                    "accumulated_modifications": modified_odb_path is not None,
+                                },
                             )
                             self.case_graph.add_case(derived)
                             current_cases.append(derived)
@@ -1216,11 +1230,12 @@ class StudyExecutor:
             eco_name = eco.metadata.name if eco else "no_eco"
 
             # Create derived case for this trial with actual ECO
+            # Use base_case.snapshot_path to preserve ODB propagation from previous stage
             trial_case = base_case.derive(
                 eco_name=eco_name,
                 new_stage_index=stage_index,
                 derived_index=trial_index,
-                snapshot_path=self.config.snapshot_path,
+                snapshot_path=base_case.snapshot_path,  # Preserve ODB from previous stage
                 metadata={
                     "trial_index": trial_index,
                     "eco_type": eco_name,
@@ -1242,8 +1257,20 @@ class StudyExecutor:
             )
             trial_dir.mkdir(parents=True, exist_ok=True)
 
-            # Determine script path
-            snapshot_path = Path(self.config.snapshot_path)
+            # Determine snapshot path from base case (could be modified ODB from previous stage)
+            snapshot_path = Path(base_case.snapshot_path)
+
+            # Determine if snapshot_path is a modified ODB file from previous stage
+            input_odb_path = None
+            actual_snapshot_dir = self.config.snapshot_path  # Default to base snapshot
+            if snapshot_path.suffix == ".odb":
+                # This is a modified ODB file from a previous stage
+                input_odb_path = str(snapshot_path)
+                # Snapshot dir should be the parent directory containing the ODB
+                actual_snapshot_dir = str(snapshot_path.parent)
+            else:
+                # Regular snapshot directory
+                actual_snapshot_dir = str(snapshot_path)
 
             # Generate custom trial script with ECO
             if eco and not isinstance(eco, NoOpECO):
@@ -1255,7 +1282,7 @@ class StudyExecutor:
                     execution_mode=stage_config.execution_mode,
                     design_name=self.config.base_case_name,
                     eco_tcl=eco_tcl,
-                    input_odb_path=None,  # Will be populated in future for ODB propagation
+                    input_odb_path=input_odb_path,  # Use modified ODB from previous stage if available
                     output_odb_path=f"/work/modified_design_{trial_index}.odb",
                     clock_period_ns=10.0,  # Default, should come from config
                     pdk=self.config.pdk,
@@ -1278,7 +1305,7 @@ class StudyExecutor:
                 stage_index=stage_index,
                 trial_index=trial_index,
                 script_path=str(script_path),
-                snapshot_dir=self.config.snapshot_path,
+                snapshot_dir=actual_snapshot_dir,  # Use correct snapshot dir (could be ODB parent)
                 timeout_seconds=stage_config.timeout_seconds,
                 execution_mode=stage_config.execution_mode,
                 metadata={
@@ -1287,6 +1314,7 @@ class StudyExecutor:
                     "pdk": self.config.pdk,
                     "eco_type": eco_name,
                     "eco_parameters": eco.metadata.parameters if eco else {},
+                    "input_odb_path": input_odb_path,  # Track if using modified ODB
                 },
             )
             trial_configs.append(trial_config)

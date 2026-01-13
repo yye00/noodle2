@@ -1030,8 +1030,8 @@
       "Step 5: Verify ECO priority queue is generated with addresses field",
       "Step 6: Verify recommended strategy is provided with reasoning"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T01:00:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

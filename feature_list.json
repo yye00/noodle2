@@ -2851,8 +2851,8 @@
       "Step 4: Verify recommendation is generated",
       "Step 5: Verify anti-patterns are included in prior exports"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T21:08:33.972906+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

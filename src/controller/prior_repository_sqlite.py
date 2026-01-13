@@ -110,6 +110,58 @@ class SQLitePriorRepository:
                 )
             """)
 
+            # Table for tracking ECO failures with context
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS eco_failures (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    eco_name TEXT NOT NULL,
+                    context_json TEXT NOT NULL,
+                    reason TEXT,
+                    timestamp TEXT NOT NULL
+                )
+            """)
+
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_failures_eco_name
+                ON eco_failures(eco_name)
+            """)
+
+            # Table for tracking ECO successes with context
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS eco_successes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    eco_name TEXT NOT NULL,
+                    context_json TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                )
+            """)
+
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_successes_eco_name
+                ON eco_successes(eco_name)
+            """)
+
+            # Table for anti-patterns
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS anti_patterns (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    eco_name TEXT NOT NULL,
+                    context_pattern_json TEXT NOT NULL,
+                    failure_rate REAL NOT NULL,
+                    failure_count INTEGER NOT NULL,
+                    success_count INTEGER NOT NULL,
+                    description TEXT,
+                    recommendation TEXT,
+                    created_at TEXT NOT NULL,
+                    UNIQUE(eco_name, context_pattern_json)
+                )
+            """)
+
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_anti_patterns_eco_name
+                ON anti_patterns(eco_name)
+            """)
+
             conn.commit()
 
     def store_prior(
@@ -231,6 +283,19 @@ class SQLitePriorRepository:
             self.store_prior(effectiveness, repository.provenance)
             count += 1
 
+        # Import anti-patterns if present
+        if "anti_patterns" in data:
+            for pattern in data["anti_patterns"]:
+                self.store_anti_pattern(
+                    eco_name=pattern["eco_name"],
+                    context_pattern=pattern["context_pattern"],
+                    failure_rate=pattern["failure_rate"],
+                    failure_count=pattern["failure_count"],
+                    success_count=pattern["success_count"],
+                    description=pattern.get("description"),
+                    recommendation=pattern.get("recommendation"),
+                )
+
         return count
 
     def export_to_json(self, json_path: Path) -> None:
@@ -245,9 +310,13 @@ class SQLitePriorRepository:
         for effectiveness in priors.values():
             repository.add_eco_prior(effectiveness)
 
+        # Convert to dict and add anti-patterns
+        data = repository.to_dict()
+        data["anti_patterns"] = self.get_anti_patterns()
+
         json_path.parent.mkdir(parents=True, exist_ok=True)
         with open(json_path, "w") as f:
-            json.dump(repository.to_dict(), f, indent=2)
+            json.dump(data, f, indent=2)
 
     def query_by_success_rate(
         self,
@@ -540,3 +609,244 @@ class SQLitePriorRepository:
             worst_wns_degradation_ps=weighted_worst_wns,
             prior=aggregated_prior,
         )
+
+    def track_failure(
+        self,
+        eco_name: str,
+        context: dict[str, Any],
+        reason: str | None = None
+    ) -> None:
+        """Track an ECO failure with context information.
+
+        Args:
+            eco_name: Name of the ECO that failed
+            context: Context information (e.g., region type, utilization)
+            reason: Optional reason for the failure
+        """
+        context_json = json.dumps(context, sort_keys=True)
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO eco_failures (eco_name, context_json, reason, timestamp)
+                VALUES (?, ?, ?, ?)
+            """, (eco_name, context_json, reason, datetime.now(UTC).isoformat()))
+            conn.commit()
+
+    def track_success(
+        self,
+        eco_name: str,
+        context: dict[str, Any]
+    ) -> None:
+        """Track an ECO success with context information.
+
+        Args:
+            eco_name: Name of the ECO that succeeded
+            context: Context information
+        """
+        context_json = json.dumps(context, sort_keys=True)
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO eco_successes (eco_name, context_json, timestamp)
+                VALUES (?, ?, ?)
+            """, (eco_name, context_json, datetime.now(UTC).isoformat()))
+            conn.commit()
+
+    def get_failures(self, eco_name: str) -> list[dict[str, Any]]:
+        """Get all tracked failures for an ECO.
+
+        Args:
+            eco_name: Name of the ECO
+
+        Returns:
+            List of failure records with context and reason
+        """
+        failures = []
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT * FROM eco_failures WHERE eco_name = ?
+            """, (eco_name,))
+
+            for row in cursor:
+                failures.append({
+                    "eco_name": row["eco_name"],
+                    "context": json.loads(row["context_json"]),
+                    "reason": row["reason"],
+                    "timestamp": row["timestamp"],
+                })
+
+        return failures
+
+    def identify_anti_patterns(
+        self,
+        failure_threshold: float = 0.7
+    ) -> list[dict[str, Any]]:
+        """Identify anti-patterns based on failure rates.
+
+        Analyzes tracked failures and successes to find patterns where
+        certain ECO+context combinations fail frequently.
+
+        Args:
+            failure_threshold: Minimum failure rate to be considered anti-pattern
+
+        Returns:
+            List of identified anti-patterns
+        """
+        anti_patterns = []
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+
+            # Get all ECO names with failures
+            cursor = conn.execute("""
+                SELECT DISTINCT eco_name FROM eco_failures
+            """)
+            eco_names = [row["eco_name"] for row in cursor]
+
+            for eco_name in eco_names:
+                # Get failure contexts
+                failures_cursor = conn.execute("""
+                    SELECT context_json FROM eco_failures WHERE eco_name = ?
+                """, (eco_name,))
+                failure_contexts = [json.loads(row["context_json"]) for row in failures_cursor]
+
+                # Get success contexts
+                successes_cursor = conn.execute("""
+                    SELECT context_json FROM eco_successes WHERE eco_name = ?
+                """, (eco_name,))
+                success_contexts = [json.loads(row["context_json"]) for row in successes_cursor]
+
+                # Analyze common patterns in failures
+                if failure_contexts:
+                    # Extract common keys from failure contexts
+                    common_keys = set.intersection(
+                        *[set(ctx.keys()) for ctx in failure_contexts]
+                    ) if failure_contexts else set()
+
+                    for key in common_keys:
+                        # Check if this key has a common value in failures
+                        values_in_failures = [ctx.get(key) for ctx in failure_contexts]
+                        if values_in_failures:
+                            # Count occurrences
+                            from collections import Counter
+                            value_counts = Counter(values_in_failures)
+                            most_common_value = value_counts.most_common(1)[0][0] if value_counts else None
+
+                            if most_common_value is not None:
+                                # Count failures and successes with this pattern
+                                pattern_failures = sum(
+                                    1 for ctx in failure_contexts
+                                    if ctx.get(key) == most_common_value
+                                )
+                                pattern_successes = sum(
+                                    1 for ctx in success_contexts
+                                    if ctx.get(key) == most_common_value
+                                )
+
+                                total = pattern_failures + pattern_successes
+                                if total > 0:
+                                    failure_rate = pattern_failures / total
+
+                                    if failure_rate >= failure_threshold:
+                                        anti_patterns.append({
+                                            "eco_name": eco_name,
+                                            "context_pattern": {key: most_common_value},
+                                            "failure_rate": failure_rate,
+                                            "failure_count": pattern_failures,
+                                            "success_count": pattern_successes,
+                                        })
+
+        return anti_patterns
+
+    def store_anti_pattern(
+        self,
+        eco_name: str,
+        context_pattern: dict[str, Any],
+        failure_rate: float,
+        failure_count: int,
+        success_count: int,
+        description: str | None = None,
+        recommendation: str | None = None
+    ) -> None:
+        """Store an identified anti-pattern.
+
+        Args:
+            eco_name: Name of the ECO
+            context_pattern: Pattern of context that causes failures
+            failure_rate: Failure rate for this pattern
+            failure_count: Number of failures
+            success_count: Number of successes
+            description: Description of the anti-pattern
+            recommendation: Recommendation to avoid the pattern
+        """
+        context_pattern_json = json.dumps(context_pattern, sort_keys=True)
+
+        # Auto-generate recommendation if not provided
+        if recommendation is None:
+            pattern_str = ", ".join(f"{k}={v}" for k, v in context_pattern.items())
+            recommendation = f"Avoid {eco_name} when {pattern_str} (failure rate: {failure_rate:.0%})"
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO anti_patterns (
+                    eco_name,
+                    context_pattern_json,
+                    failure_rate,
+                    failure_count,
+                    success_count,
+                    description,
+                    recommendation,
+                    created_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                eco_name,
+                context_pattern_json,
+                failure_rate,
+                failure_count,
+                success_count,
+                description,
+                recommendation,
+                datetime.now(UTC).isoformat(),
+            ))
+            conn.commit()
+
+    def get_anti_patterns(self, eco_name: str | None = None) -> list[dict[str, Any]]:
+        """Get stored anti-patterns.
+
+        Args:
+            eco_name: Optional ECO name to filter by
+
+        Returns:
+            List of anti-patterns
+        """
+        patterns = []
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+
+            if eco_name:
+                cursor = conn.execute("""
+                    SELECT * FROM anti_patterns WHERE eco_name = ?
+                    ORDER BY failure_rate DESC
+                """, (eco_name,))
+            else:
+                cursor = conn.execute("""
+                    SELECT * FROM anti_patterns
+                    ORDER BY failure_rate DESC
+                """)
+
+            for row in cursor:
+                patterns.append({
+                    "eco_name": row["eco_name"],
+                    "context_pattern": json.loads(row["context_pattern_json"]),
+                    "failure_rate": row["failure_rate"],
+                    "failure_count": row["failure_count"],
+                    "success_count": row["success_count"],
+                    "description": row["description"],
+                    "recommendation": row["recommendation"],
+                    "created_at": row["created_at"],
+                })
+
+        return patterns

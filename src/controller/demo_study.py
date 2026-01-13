@@ -366,8 +366,8 @@ def create_nangate45_extreme_demo_study(
     stage_0 = StageConfig(
         name="aggressive_exploration",
         execution_mode=ExecutionMode.STA_CONGESTION,  # Need both metrics
-        trial_budget=15,  # More trials needed for extreme case
-        survivor_count=4,  # Keep more survivors initially
+        trial_budget=20,  # Increased from 15 for more exploration
+        survivor_count=5,  # Keep more survivors initially (was 4)
         allowed_eco_classes=[
             ECOClass.TOPOLOGY_NEUTRAL,
         ],
@@ -380,8 +380,8 @@ def create_nangate45_extreme_demo_study(
     stage_1 = StageConfig(
         name="placement_refinement",
         execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=10,
-        survivor_count=3,
+        trial_budget=15,  # Increased from 10 for more options
+        survivor_count=4,  # Keep more survivors (was 3)
         allowed_eco_classes=[
             ECOClass.TOPOLOGY_NEUTRAL,
             ECOClass.PLACEMENT_LOCAL,
@@ -395,8 +395,8 @@ def create_nangate45_extreme_demo_study(
     stage_2 = StageConfig(
         name="aggressive_closure",
         execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=8,
-        survivor_count=2,
+        trial_budget=12,  # Increased from 8 for more final attempts
+        survivor_count=3,  # Keep more survivors (was 2)
         allowed_eco_classes=[
             ECOClass.TOPOLOGY_NEUTRAL,
             ECOClass.PLACEMENT_LOCAL,
@@ -407,13 +407,30 @@ def create_nangate45_extreme_demo_study(
         timeout_seconds=1200,  # 20 minutes per trial
     )
 
+    # Stage 3: Ultra-aggressive final push (NEW!)
+    # Add a fourth stage to get cumulative improvements over 50%
+    stage_3 = StageConfig(
+        name="ultra_aggressive_closure",
+        execution_mode=ExecutionMode.STA_CONGESTION,
+        trial_budget=10,  # Final attempts with all knowledge
+        survivor_count=2,  # Final winnowing
+        allowed_eco_classes=[
+            ECOClass.TOPOLOGY_NEUTRAL,
+            ECOClass.PLACEMENT_LOCAL,
+            ECOClass.ROUTING_AFFECTING,
+        ],
+        abort_threshold_wns_ps=None,  # No abort
+        visualization_enabled=True,
+        timeout_seconds=1200,  # 20 minutes per trial
+    )
+
     # Create the complete Study configuration
     study = StudyConfig(
         name="nangate45_extreme_demo",
         safety_domain=safety_domain,
         base_case_name="nangate45_extreme",
         pdk="Nangate45",
-        stages=[stage_0, stage_1, stage_2],
+        stages=[stage_0, stage_1, stage_2, stage_3],  # Added stage_3
         snapshot_path=snapshot_path,
         metadata={
             "purpose": "Demonstrate fixing extremely broken Nangate45 design",

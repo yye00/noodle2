@@ -3688,3 +3688,89 @@ Session Statistics (so far):
 - No regressions
 
 ================================================================================
+
+================================================================================
+SESSION 30: F072 and F073 Complete
+================================================================================
+
+FEATURES COMPLETED: F072, F073
+-------------------------------
+
+Feature F072: Compound ECO can combine multiple ECOs into single unit
+----------------------------------------------------------------------
+✓ All 5 steps verified and passing
+
+Implementation Details:
+- Verified existing CompoundECO implementation in src/controller/eco.py
+- CompoundECO class (lines 907-1181) supports:
+  * Sequential application of multiple component ECOs
+  * Logging of component start/completion
+  * TCL generation combining all component TCLs
+  * ECO class inheritance from most restrictive component
+
+Testing:
+- Created tests/test_f072_compound_eco.py
+- 12 comprehensive tests covering:
+  * Step 1: Define compound ECO with 2+ component ECOs
+  * Step 2: Set apply_order: sequential
+  * Step 3: Generate TCL
+  * Step 4: Verify TCL contains all component ECOs in correct order
+  * Step 5: Verify eco_class is inherited from most restrictive component
+  * Validation tests for empty components, invalid apply_order
+  * Integration tests for complete workflow
+- All tests passing
+
+Feature F073: Compound ECO supports rollback_on_failure modes
+--------------------------------------------------------------
+✓ All 5 steps verified and passing
+
+Implementation Details:
+- Verified existing CompoundECO.execute_with_rollback method
+- Supports 3 rollback strategies:
+  * "all": On any component failure, rollback all changes (restore to pre-compound state)
+  * "partial": On component failure, keep successful components, rollback only failed component
+  * "none": No rollback, keep all changes even on failure
+- Uses checkpoint/restore mechanism for state management
+
+Testing:
+- Created tests/test_f073_compound_rollback.py
+- 14 comprehensive tests covering:
+  * Step 1: Create compound ECO with rollback_on_failure: all
+  * Step 2: Force one component ECO to fail
+  * Step 3: Verify all components are rolled back
+  * Step 4: Test rollback_on_failure: partial (rollback failed component only)
+  * Step 5: Test rollback_on_failure: none (no rollback)
+  * Validation tests for all rollback modes
+  * Integration tests for complete workflows
+- All tests passing
+
+PROGRESS SUMMARY:
+-----------------
+Features Complete: 79/85 (92.9%)
+Features Remaining: 6 (all low priority)
+- F074: ECO preconditions can gate ECO application
+- F075: ECO postconditions can verify expected effects
+- F079: Study comparison can compare two completed studies
+- F080: Trial replay can re-execute specific trial with same parameters
+- F081: Trial replay can modify ECO parameters for debugging
+- F082: Debug report can be generated for failed trial
+
+Session Statistics:
+- 2 features completed (F072, F073)
+- 26 new tests added (12 for F072, 14 for F073)
+- 2 files created
+- All tests passing (4949 total tests)
+- 2 clean commits
+- No regressions
+
+Next Steps:
+- F074: ECO preconditions (implementation already exists in eco.py)
+- F075: ECO postconditions (implementation already exists in eco.py)
+- F079: Study comparison
+- F080: Trial replay
+- F081: Trial replay with modified parameters (depends on F080)
+- F082: Debug report
+
+All remaining features are low priority. The core functionality is complete.
+
+================================================================================

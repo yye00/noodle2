@@ -2882,8 +2882,8 @@
       "Step 4: Verify ECO is BLOCKED with immutable_violation error",
       "Step 5: Verify violation severity is critical"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T17:24:09.744400+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2913,8 +2913,8 @@
       "Step 4: Verify ECO is blocked with net protection violation",
       "Step 5: Verify non-protected nets can still be modified"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T17:24:09.744400+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2944,8 +2944,8 @@
       "Step 4: Verify ECO is blocked for protected cells",
       "Step 5: Verify standard cells can still be modified per ECO class"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T17:24:09.744400+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

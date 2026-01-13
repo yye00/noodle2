@@ -220,8 +220,35 @@
     {
       "session_num": 119,
       "started_at": "2026-01-13T00:59:00.175903",
-      "ended_at": null,
+      "ended_at": "2026-01-13T01:20:41.766218",
       "passing_at_start": 38,
+      "passing_at_end": 46,
+      "features_completed": [
+        "F040",
+        "F042",
+        "F039",
+        "F038",
+        "F041",
+        "F031",
+        "F037",
+        "F036"
+      ],
+      "features_attempted": [
+        "F040",
+        "F042",
+        "F039",
+        "F038",
+        "F041",
+        "F031",
+        "F037",
+        "F036"
+      ]
+    },
+    {
+      "session_num": 120,
+      "started_at": "2026-01-13T01:20:45.770426",
+      "ended_at": null,
+      "passing_at_start": 46,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
@@ -531,9 +558,73 @@
         "success": true,
         "error_msg": null
       }
+    ],
+    "F040": [
+      {
+        "timestamp": "2026-01-13T01:20:41.763914",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F042": [
+      {
+        "timestamp": "2026-01-13T01:20:41.764287",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F039": [
+      {
+        "timestamp": "2026-01-13T01:20:41.764522",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F038": [
+      {
+        "timestamp": "2026-01-13T01:20:41.764753",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F041": [
+      {
+        "timestamp": "2026-01-13T01:20:41.764995",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F031": [
+      {
+        "timestamp": "2026-01-13T01:20:41.765229",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F037": [
+      {
+        "timestamp": "2026-01-13T01:20:41.765463",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F036": [
+      {
+        "timestamp": "2026-01-13T01:20:41.765700",
+        "session_num": 119,
+        "success": true,
+        "error_msg": null
+      }
     ]
   },
-  "last_passing_count": 38,
+  "last_passing_count": 46,
   "sessions_without_progress": 0,
   "stuck_features": [],
   "created_at": "2026-01-12T22:01:11.229422",

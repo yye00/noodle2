@@ -14,12 +14,17 @@ from matplotlib.colors import LinearSegmentedColormap
 matplotlib.use("Agg")
 
 
-def parse_heatmap_csv(csv_path: str | Path) -> tuple[np.ndarray, dict[str, Any]]:
+def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.ndarray, dict[str, Any]]:
     """
     Parse heatmap CSV file exported by OpenROAD gui::dump_heatmap.
 
+    Supports two formats:
+    1. OpenROAD bbox format: x0,y0,x1,y1,value (with header)
+    2. Simple grid format: comma-separated grid values (no header)
+
     Args:
         csv_path: Path to CSV file
+        grid_size: Size of output grid for bbox format (default: 50x50)
 
     Returns:
         Tuple of (data_array, metadata) where data_array is 2D numpy array
@@ -33,23 +38,94 @@ def parse_heatmap_csv(csv_path: str | Path) -> tuple[np.ndarray, dict[str, Any]]
     if not csv_path.exists():
         raise FileNotFoundError(f"Heatmap CSV not found: {csv_path}")
 
-    # Read CSV data
-    rows: list[list[float]] = []
+    # Read CSV data and detect format
     with open(csv_path) as f:
         reader = csv.reader(f)
-        for row in reader:
-            # Skip empty rows
-            if not row:
-                continue
-            # Convert to floats, handling empty cells as 0
-            float_row = [float(val) if val.strip() else 0.0 for val in row]
-            rows.append(float_row)
+        first_row = next(reader, None)
 
-    if not rows:
-        raise ValueError(f"Empty CSV file: {csv_path}")
+        if not first_row:
+            raise ValueError(f"Empty CSV file: {csv_path}")
 
-    # Convert to numpy array
-    data = np.array(rows, dtype=np.float64)
+        # Check if it's OpenROAD bbox format (header with x0,y0,x1,y1,value)
+        if len(first_row) == 5 and 'x0' in first_row[0].lower():
+            # OpenROAD bbox format - convert to grid
+            boxes = []
+            for row in reader:
+                if len(row) == 5:
+                    try:
+                        x0, y0, x1, y1, value = row
+                        boxes.append({
+                            'x0': float(x0),
+                            'y0': float(y0),
+                            'x1': float(x1),
+                            'y1': float(y1),
+                            'value': float(value),
+                        })
+                    except ValueError:
+                        # Skip rows that can't be parsed
+                        continue
+
+            if not boxes:
+                raise ValueError(f"No valid bbox data found in CSV: {csv_path}")
+
+            # Determine bounds
+            min_x = min(b['x0'] for b in boxes)
+            max_x = max(b['x1'] for b in boxes)
+            min_y = min(b['y0'] for b in boxes)
+            max_y = max(b['y1'] for b in boxes)
+
+            # Create grid
+            data = np.zeros((grid_size, grid_size), dtype=np.float64)
+
+            # Map boxes to grid
+            dx = (max_x - min_x) / grid_size if max_x > min_x else 1.0
+            dy = (max_y - min_y) / grid_size if max_y > min_y else 1.0
+
+            for box in boxes:
+                # Find grid cells overlapped by this box
+                i0 = int((box['y0'] - min_y) / dy)
+                i1 = min(int((box['y1'] - min_y) / dy) + 1, grid_size)
+                j0 = int((box['x0'] - min_x) / dx)
+                j1 = min(int((box['x1'] - min_x) / dx) + 1, grid_size)
+
+                # Clamp to grid bounds
+                i0 = max(0, min(i0, grid_size - 1))
+                i1 = max(0, min(i1, grid_size))
+                j0 = max(0, min(j0, grid_size - 1))
+                j1 = max(0, min(j1, grid_size))
+
+                # Fill grid cells with box value
+                data[i0:i1, j0:j1] = box['value']
+
+        else:
+            # Simple grid format - read all rows
+            rows: list[list[float]] = []
+            # Process first row
+            try:
+                float_row = [float(val) if val.strip() else 0.0 for val in first_row]
+                rows.append(float_row)
+            except ValueError:
+                # First row might be a text header - skip it
+                pass
+
+            # Process remaining rows
+            for row in reader:
+                # Skip empty rows
+                if not row:
+                    continue
+                try:
+                    # Convert to floats, handling empty cells as 0
+                    float_row = [float(val) if val.strip() else 0.0 for val in row]
+                    rows.append(float_row)
+                except ValueError:
+                    # Skip rows that can't be parsed as floats
+                    continue
+
+            if not rows:
+                raise ValueError(f"No valid grid data found in CSV: {csv_path}")
+
+            # Convert to numpy array
+            data = np.array(rows, dtype=np.float64)
 
     # Extract metadata
     metadata = {

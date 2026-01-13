@@ -45,6 +45,7 @@ logs/
 # Temporary files
 *.tmp
 *.bak
+temp_scripts/
 
 # Docker
 .dockerignore

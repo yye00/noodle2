@@ -853,6 +853,13 @@ def inject_eco_commands(
     eco_section.append("puts \"Baseline timing analysis complete\"")
     eco_section.append("")
 
+    # Set wire RC parameters (required for repair_timing, buffer insertion, etc.)
+    eco_section.append("# Configure wire RC parameters for ECO commands")
+    eco_section.append("# These are required for repair_timing, buffer insertion, and resizing")
+    eco_section.append("set_wire_rc -signal -layer metal3")
+    eco_section.append("set_wire_rc -clock -layer metal5")
+    eco_section.append("")
+
     # Apply ECO
     eco_section.append("# Apply ECO commands")
     eco_section.append("puts \"Applying ECO...\"")

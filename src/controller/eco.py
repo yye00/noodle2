@@ -623,16 +623,8 @@ class CellResizeECO(ECO):
 # This will upsize cells on critical paths to fix setup violations
 repair_timing -setup -setup_margin 0.0
 
-# Alternative: Manual cell resizing for specific paths
-# Get worst slack paths
-set critical_paths [find_timing_paths -path_delay max -nworst {max_paths}]
-
-# For each critical path, consider upsizing cells
-foreach path $critical_paths {{
-    # Extract cells on this path
-    # Upsize cells to faster variants (e.g., X1 -> X2, X2 -> X4)
-    puts "Analyzing path for cell resizing..."
-}}
+# Note: repair_timing automatically identifies and resizes cells on critical paths
+# Manual path analysis is not needed - repair_timing handles it internally
 
 puts "Cell resize ECO complete"
 """

@@ -1,8 +1,86 @@
 # Noodle 2 Development Progress
 
-## Current Session (Session 44) - F089 Complete ✅
+## Current Session (Session 45) - F117 and F118 Complete ✅
 
 ### ✅ Work Completed This Session:
+
+**F117: Demo Console Output Shows ECO Application with Before/After WNS (COMPLETED ✅)**
+
+1. **Added case_metrics_map to StudyExecutor**
+   - Tracks metrics for each case across stages
+   - Enables before/after comparison for ECO applications
+   - Initialized in __init__ as empty dict
+
+2. **Implemented _print_eco_application() method**
+   - Displays ECO name, case name, before/after WNS, improvement percentage
+   - Format: `[ECO] Applied <eco_name> to <case>`
+   -         `WNS Before: X ps → After: Y ps (Z% improvement)`
+   - Handles missing parent metrics gracefully (falls back to baseline)
+   - Skips no_eco and trials without WNS metrics
+
+3. **Integrated ECO logging into execution flow**
+   - Added calls after both Ray parallel and sequential trial execution
+   - Updates case_metrics_map after each successful trial
+   - Stores baseline metrics after base case verification
+   - Passes parent_case_id for accurate before/after comparison
+
+4. **Improvement calculation logic**
+   - Positive improvement: WNS gets less negative (closer to 0)
+   - Formula: (current - previous) / abs(previous) * 100
+   - Handles regression (negative improvement) correctly
+   - Shows sign in output: +50.0% or -25.0%
+
+5. **Comprehensive test suite**
+   - Created `test_f117_eco_console_output.py` with 9 tests
+   - Tests cover all 5 feature steps plus edge cases
+   - Validates format, improvement calculations, multiple ECOs
+   - All tests passing ✓
+
+**F118: Demo Console Output Shows Doom Termination with Compute Saved (COMPLETED ✅)**
+
+1. **Implemented _print_doom_termination() method**
+   - Displays doom type, reason, compute saved, recommendation
+   - Format: `[DOOM] <case> terminated: <doom_type>`
+   -         `Reason: <reason>`
+   -         `Compute saved: ~X trials`
+   -         `Recommendation: <first_line>`
+   - Handles all doom types: metric_hopeless, trajectory_doom, eco_exhaustion
+
+2. **Robust output formatting**
+   - Shows first line of multiline recommendations for brevity
+   - Skips compute saved line when value is 0
+   - Skips recommendation line when empty
+   - Consistent indentation with other console output
+   - Gracefully handles invalid doom classification objects
+
+3. **Comprehensive test suite**
+   - Created `test_f118_doom_console_output.py` with 11 tests
+   - Tests cover all 5 feature steps plus edge cases
+   - Validates format for all doom types
+   - Tests zero compute saved, multiline recommendations, missing fields
+   - All tests passing ✓
+
+### 📊 Current Status:
+- Total features: 120
+- Passing: 110 (was 108)
+- Failing: 10 (was 12)
+- F117 and F118 complete and committed ✓
+
+### 🔄 What's Next:
+Priority features to work on:
+1. **F115** (critical): Nangate45 extreme demo achieves >50% WNS improvement
+2. **F116** (critical): Nangate45 extreme demo reduces hot_ratio by >60%
+3. **F100** (high): Ray Dashboard shows trial execution metrics in real-time
+4. **F107** (high): Extreme snapshots use high utilization and aggressive timing
+5. **F113** (high): Congestion metrics parsed from actual global_route output
+6. **F093** (medium): Prior repository supports cross-project aggregation with decay
+7. **F094** (medium): Prior repository tracks anti-patterns and failure modes
+
+---
+
+## Previous Session (Session 44) - F089 Complete ✅
+
+### ✅ Work Completed Previous Session:
 
 **F089: Doom Response Logs Compute Saved and Provides Recommendations (COMPLETED ✅)**
 

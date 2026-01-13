@@ -81,7 +81,73 @@ class StudyResult:
     description: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
-        """Convert to dictionary for JSON serialization."""
+        """Convert to dictionary for JSON serialization with aggregate statistics."""
+        # Compute aggregate statistics
+        total_trials = sum(stage.trials_executed for stage in self.stage_results)
+        successful_trials = sum(
+            sum(1 for trial in stage.trial_results if trial.success)
+            for stage in self.stage_results
+        )
+        failed_trials = total_trials - successful_trials
+
+        # Compute ECO success rate (from cases with parent_id, excluding base case)
+        eco_applications = 0
+        eco_successes = 0
+        for stage in self.stage_results:
+            for trial in stage.trial_results:
+                # Check if this trial represents an ECO application
+                # ECO trials have case names that indicate derivation (non-base cases)
+                case_name = trial.config.case_name
+                # Base case is typically stage_0_0 or similar, ECO cases have different patterns
+                if "_" in case_name:
+                    parts = case_name.split("_")
+                    # If this is not the first trial (trial 0) of stage 0, it's likely an ECO
+                    if not (trial.config.stage_index == 0 and trial.config.trial_index == 0):
+                        eco_applications += 1
+                        if trial.success:
+                            eco_successes += 1
+
+        eco_success_rate = (eco_successes / eco_applications * 100) if eco_applications > 0 else 0.0
+
+        # Find baseline (first trial of first stage) and final metrics
+        baseline_metrics = None
+        final_metrics = None
+
+        if self.stage_results and self.stage_results[0].trial_results:
+            baseline_trial = self.stage_results[0].trial_results[0]
+            baseline_metrics = baseline_trial.metrics.copy() if baseline_trial.metrics else {}
+
+        # Final metrics from last successful trial of final stage
+        if self.stage_results and self.final_survivors:
+            final_stage = self.stage_results[-1]
+            # Find the trial for the first final survivor
+            final_survivor_id = self.final_survivors[0]
+            for trial in reversed(final_stage.trial_results):
+                if trial.config.case_name == final_survivor_id and trial.success:
+                    final_metrics = trial.metrics.copy() if trial.metrics else {}
+                    break
+
+        # Compute improvement deltas
+        improvement_deltas = {}
+        if baseline_metrics and final_metrics:
+            if "wns_ps" in baseline_metrics and "wns_ps" in final_metrics:
+                wns_delta = final_metrics["wns_ps"] - baseline_metrics["wns_ps"]
+                improvement_deltas["wns_ps"] = wns_delta
+                if baseline_metrics["wns_ps"] != 0:
+                    improvement_deltas["wns_improvement_percent"] = (wns_delta / abs(baseline_metrics["wns_ps"])) * 100
+
+            if "tns_ps" in baseline_metrics and "tns_ps" in final_metrics:
+                tns_delta = final_metrics["tns_ps"] - baseline_metrics["tns_ps"]
+                improvement_deltas["tns_ps"] = tns_delta
+                if baseline_metrics["tns_ps"] != 0:
+                    improvement_deltas["tns_improvement_percent"] = (tns_delta / abs(baseline_metrics["tns_ps"])) * 100
+
+            if "hot_ratio" in baseline_metrics and "hot_ratio" in final_metrics:
+                hot_ratio_delta = baseline_metrics["hot_ratio"] - final_metrics["hot_ratio"]  # Reduction is positive
+                improvement_deltas["hot_ratio_reduction"] = hot_ratio_delta
+                if baseline_metrics["hot_ratio"] != 0:
+                    improvement_deltas["hot_ratio_improvement_percent"] = (hot_ratio_delta / baseline_metrics["hot_ratio"]) * 100
+
         result = {
             "study_name": self.study_name,
             "total_stages": self.total_stages,
@@ -91,6 +157,18 @@ class StudyResult:
             "final_survivors": self.final_survivors,
             "aborted": self.aborted,
             "abort_reason": self.abort_reason,
+            # Aggregate statistics (F069 requirements)
+            "aggregate_statistics": {
+                "total_trials": total_trials,
+                "successful_trials": successful_trials,
+                "failed_trials": failed_trials,
+                "success_rate_percent": (successful_trials / total_trials * 100) if total_trials > 0 else 0.0,
+                "eco_success_rate_percent": eco_success_rate,
+                "stages_to_converge": self.stages_completed,
+            },
+            "baseline_metrics": baseline_metrics,
+            "final_metrics": final_metrics,
+            "improvement_deltas": improvement_deltas,
         }
 
         # Include metadata if present

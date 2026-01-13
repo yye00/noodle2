@@ -454,7 +454,7 @@ class StudyExecutor:
             )
             self.telemetry_emitter.emit_study_telemetry(study_telemetry)
 
-            return StudyResult(
+            study_result = StudyResult(
                 study_name=self.config.name,
                 total_stages=len(self.config.stages),
                 stages_completed=0,
@@ -467,6 +467,14 @@ class StudyExecutor:
                 creation_date=self.config.creation_date,
                 description=self.config.description,
             )
+
+            # Save study result as JSON
+            study_summary_json_path = report_dir / "study_summary.json"
+            with open(study_summary_json_path, "w") as f:
+                import json
+                json.dump(study_result.to_dict(), f, indent=2)
+
+            return study_result
 
         # SAFETY GATE 2: Verify base case before ECO experimentation
         if not self.skip_base_case_verification:
@@ -511,7 +519,7 @@ class StudyExecutor:
                 )
                 self.telemetry_emitter.emit_study_telemetry(study_telemetry)
 
-                return StudyResult(
+                study_result = StudyResult(
                     study_name=self.config.name,
                     total_stages=len(self.config.stages),
                     stages_completed=0,
@@ -524,6 +532,14 @@ class StudyExecutor:
                     creation_date=self.config.creation_date,
                     description=self.config.description,
                 )
+
+                # Save study result as JSON
+                study_summary_json_path = report_dir / "study_summary.json"
+                with open(study_summary_json_path, "w") as f:
+                    import json
+                    json.dump(study_result.to_dict(), f, indent=2)
+
+                return study_result
 
         # Start with base case for stage 0
         current_cases = [self.base_case]
@@ -740,7 +756,7 @@ class StudyExecutor:
                 self.telemetry_emitter.emit_study_telemetry(study_telemetry)
                 self.telemetry_emitter.flush_all_case_telemetry()
 
-                return StudyResult(
+                study_result = StudyResult(
                     study_name=self.config.name,
                     total_stages=len(self.config.stages),
                     stages_completed=stage_index + 1,
@@ -753,6 +769,14 @@ class StudyExecutor:
                     creation_date=self.config.creation_date,
                     description=self.config.description,
                 )
+
+                # Save study result as JSON
+                study_summary_json_path = report_dir / "study_summary.json"
+                with open(study_summary_json_path, "w") as f:
+                    import json
+                    json.dump(study_result.to_dict(), f, indent=2)
+
+                return study_result
 
             # Prepare cases for next stage (only for execution stages)
             if stage_config.stage_type == StageType.EXECUTION:
@@ -840,6 +864,24 @@ class StudyExecutor:
             case_telemetries,
         )
         print(f"\nStudy Summary Report saved to: {summary_path}")
+
+        # Save study result as JSON for programmatic access
+        study_result_for_json = StudyResult(
+            study_name=self.config.name,
+            total_stages=len(self.config.stages),
+            stages_completed=len(stage_results),
+            total_runtime_seconds=study_runtime,
+            stage_results=stage_results,
+            final_survivors=final_survivors,
+            aborted=False,
+            author=self.config.author,
+            creation_date=self.config.creation_date,
+            description=self.config.description,
+        )
+        study_summary_json_path = report_dir / "study_summary.json"
+        with open(study_summary_json_path, "w") as f:
+            import json
+            json.dump(study_result_for_json.to_dict(), f, indent=2)
 
         # Generate ECO effectiveness leaderboard
         if self.eco_effectiveness_map:

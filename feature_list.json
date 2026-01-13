@@ -2206,8 +2206,8 @@
       "Step 4: Run on case with timing violations",
       "Step 5: Verify ECO is applied (precondition met)"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:22:23.116186+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

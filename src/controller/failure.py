@@ -24,6 +24,7 @@ class FailureType(str, Enum):
     STA_FAILED = "sta_failed"
     DRC_VIOLATION = "drc_violation"
     LVS_VIOLATION = "lvs_violation"
+    METRIC_REGRESSION = "metric_regression"  # Metrics significantly worse than baseline
 
     # Configuration/input failures
     INVALID_ECO = "invalid_eco"
@@ -513,6 +514,53 @@ class FailureClassifier:
             severity=FailureSeverity.INFO,
             reason=f"Visualization not available: {reason}",
             recoverable=True,  # Can fall back to non-GUI mode
+        )
+
+    @staticmethod
+    def classify_metric_regression(
+        metric_name: str,
+        baseline_value: float | int,
+        current_value: float | int,
+        regression_threshold: float = 0.2,
+        delta_metrics: dict[str, Any] | None = None,
+    ) -> FailureClassification:
+        """
+        Classify a metric regression (metrics significantly worse than baseline).
+
+        Args:
+            metric_name: Name of the metric that regressed (e.g., "wns_ps")
+            baseline_value: Baseline metric value
+            current_value: Current (worse) metric value
+            regression_threshold: Threshold for significant regression (default 20%)
+            delta_metrics: Optional dictionary of all metric deltas for logging
+
+        Returns:
+            FailureClassification for metric regression
+        """
+        # Calculate percentage change
+        if baseline_value != 0:
+            pct_change = abs((current_value - baseline_value) / baseline_value) * 100
+        else:
+            pct_change = 100.0  # Treat 0->non-zero as 100% change
+
+        # Build reason string
+        reason = (
+            f"Metric regression detected: {metric_name} "
+            f"changed from {baseline_value} to {current_value} "
+            f"({pct_change:.1f}% worse)"
+        )
+
+        return FailureClassification(
+            failure_type=FailureType.METRIC_REGRESSION,
+            severity=FailureSeverity.MEDIUM,
+            reason=reason,
+            metrics=delta_metrics or {
+                "metric_name": metric_name,
+                "baseline_value": baseline_value,
+                "current_value": current_value,
+                "percent_change": pct_change,
+            },
+            recoverable=True,  # Can try different ECOs
         )
 
     @staticmethod

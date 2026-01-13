@@ -1090,8 +1090,8 @@
       "Step 4: Verify severity is 'high'",
       "Step 5: Verify failure is logged"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T06:14:28.138490+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1119,8 +1119,8 @@
       "Step 3: Verify severity is 'medium'",
       "Step 4: Verify delta metrics are logged"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T06:16:01.866469+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

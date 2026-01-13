@@ -2,6 +2,11 @@
 Visualization module - Heatmap rendering, Pareto plots, and graph generation.
 """
 
+from .eco_success_rate_chart import (
+    generate_eco_success_rate_chart,
+    plot_eco_success_rate_chart,
+    save_eco_success_rate_chart,
+)
 from .heatmap_renderer import (
     get_recommended_colormap,
     parse_heatmap_csv,
@@ -50,4 +55,7 @@ __all__ = [
     "plot_stage_progression",
     "save_stage_progression_plot",
     "generate_stage_progression_visualization",
+    "plot_eco_success_rate_chart",
+    "save_eco_success_rate_chart",
+    "generate_eco_success_rate_chart",
 ]

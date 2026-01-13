@@ -73,6 +73,8 @@ class DoomClassification:
     reason: str  # Human-readable explanation
     confidence: float  # 0.0 to 1.0, how certain we are
     metadata: dict[str, Any] = field(default_factory=dict)
+    compute_saved_trials: int = 0  # Number of trials avoided by early termination
+    recommendation: str = ""  # Actionable recommendation for user
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -83,6 +85,8 @@ class DoomClassification:
             "reason": self.reason,
             "confidence": self.confidence,
             "metadata": self.metadata,
+            "compute_saved_trials": self.compute_saved_trials,
+            "recommendation": self.recommendation,
         }
 
 
@@ -100,6 +104,7 @@ class DoomDetector:
         metrics: dict[str, Any],
         stage_history: list[dict[str, Any]] | None = None,
         eco_priors: list["ECOPrior"] | None = None,
+        remaining_budget: int = 0,
     ) -> DoomClassification:
         """
         Check if a case is doomed and should be terminated.
@@ -109,6 +114,7 @@ class DoomDetector:
             metrics: Current metrics for the case
             stage_history: Historical metrics from previous stages (optional)
             eco_priors: ECO prior knowledge for exhaustion check (optional)
+            remaining_budget: Number of trials remaining in budget (for compute saved calc)
 
         Returns:
             DoomClassification with doom status and reasoning
@@ -125,18 +131,22 @@ class DoomDetector:
         # Check 1: Metric-hopeless
         metric_doom = self._check_metric_hopeless(metrics)
         if metric_doom.is_doomed:
+            # Add compute saved and recommendation
+            self._enhance_doom_result(metric_doom, remaining_budget)
             return metric_doom
 
         # Check 2: Trajectory-doomed (requires history)
         if stage_history and self.config.trajectory_enabled:
             trajectory_doom = self._check_trajectory_doom(metrics, stage_history)
             if trajectory_doom.is_doomed:
+                self._enhance_doom_result(trajectory_doom, remaining_budget)
                 return trajectory_doom
 
         # Check 3: ECO exhaustion (requires priors)
         if eco_priors and self.config.eco_exhaustion_enabled:
             eco_doom = self._check_eco_exhaustion(eco_priors)
             if eco_doom.is_doomed:
+                self._enhance_doom_result(eco_doom, remaining_budget)
                 return eco_doom
 
         # Not doomed
@@ -419,6 +429,121 @@ class DoomDetector:
             },
         )
 
+    def _enhance_doom_result(
+        self, doom: DoomClassification, remaining_budget: int
+    ) -> None:
+        """
+        Enhance doom classification with compute saved and recommendations.
+
+        This modifies the doom classification in-place to add:
+        - compute_saved_trials: Number of trials avoided by early termination
+        - recommendation: Actionable guidance for the user
+
+        Args:
+            doom: DoomClassification to enhance
+            remaining_budget: Number of trials that would have been attempted
+        """
+        # Calculate compute saved
+        doom.compute_saved_trials = remaining_budget
+
+        # Generate recommendation based on doom type
+        if doom.doom_type == DoomType.METRIC_HOPELESS:
+            doom.recommendation = self._recommend_metric_hopeless(doom)
+        elif doom.doom_type == DoomType.TRAJECTORY_DOOM:
+            doom.recommendation = self._recommend_trajectory_doom(doom)
+        elif doom.doom_type == DoomType.ECO_EXHAUSTION:
+            doom.recommendation = self._recommend_eco_exhaustion(doom)
+        else:
+            doom.recommendation = "Review case configuration and constraints."
+
+    def _recommend_metric_hopeless(self, doom: DoomClassification) -> str:
+        """Generate recommendation for metric-hopeless cases."""
+        metric_type = doom.metadata.get("metric_type", "unknown")
+
+        if metric_type == "wns_ps":
+            return (
+                "WNS violations are beyond ECO recovery scope. "
+                "Recommended actions: "
+                "(1) Relax clock period constraint, "
+                "(2) Re-run synthesis with higher effort, "
+                "(3) Increase placement density to reduce wire delays, "
+                "(4) Consider design-level changes (pipelining, retiming)."
+            )
+        elif metric_type == "hot_ratio":
+            return (
+                "Over 80% of paths are timing-critical - violations are pervasive. "
+                "Recommended actions: "
+                "(1) Significantly relax timing constraints, "
+                "(2) Reduce clock frequency target, "
+                "(3) Re-synthesize with lower density to improve routability, "
+                "(4) Consider architectural changes to reduce critical path count."
+            )
+        elif metric_type == "tns_ps":
+            return (
+                "Total negative slack is extreme - indicates widespread violations. "
+                "Recommended actions: "
+                "(1) Relax timing constraints globally, "
+                "(2) Re-run placement with timing-driven mode, "
+                "(3) Increase core utilization slack, "
+                "(4) Review synthesis QoR - may need re-optimization."
+            )
+        else:
+            return (
+                "Metrics beyond recovery threshold. "
+                "Recommended: Review design constraints and re-run PD flow."
+            )
+
+    def _recommend_trajectory_doom(self, doom: DoomClassification) -> str:
+        """Generate recommendation for trajectory-doomed cases."""
+        if "regression" in doom.trigger:
+            return (
+                "ECOs are causing regression - making timing worse. "
+                "Recommended actions: "
+                "(1) Review ECO selection strategy - current ECOs may be poorly targeted, "
+                "(2) Check if ECOs conflict with existing placement, "
+                "(3) Consider resetting to earlier checkpoint and trying different ECO sequence, "
+                "(4) Analyze which ECOs caused regression and blacklist them for this case."
+            )
+        else:
+            # Stagnation
+            return (
+                "Multiple stages show no meaningful progress (<2% improvement). "
+                "Recommended actions: "
+                "(1) Current ECO strategy is ineffective - try more aggressive ECO types, "
+                "(2) Consider checkpoint rollback to earlier high-potential state, "
+                "(3) Analyze critical paths to identify root cause bottlenecks, "
+                "(4) May need full re-place with different settings rather than incremental ECOs."
+            )
+
+    def _recommend_eco_exhaustion(self, doom: DoomClassification) -> str:
+        """Generate recommendation for ECO-exhausted cases."""
+        failed_count = doom.metadata.get("failed_count", 0)
+        suspicious_count = doom.metadata.get("suspicious_count", 0)
+
+        if failed_count > 0 and suspicious_count > 0:
+            return (
+                f"All ECOs either failed ({failed_count}) or suspicious ({suspicious_count}). "
+                "Recommended actions: "
+                "(1) Reset to base case and try completely different ECO sequence, "
+                "(2) Review why ECOs failed - may indicate fundamental design issues, "
+                "(3) Consider re-running placement with different initial conditions, "
+                "(4) Expand ECO library with additional mutation types if available."
+            )
+        elif failed_count > 0:
+            return (
+                f"All {failed_count} applicable ECOs have failed. "
+                "Recommended actions: "
+                "(1) Analyze failure patterns - what do failed ECOs have in common?, "
+                "(2) Case may require non-ECO intervention (re-place, re-route), "
+                "(3) Review ECO targeting - are ECOs being applied to wrong locations?, "
+                "(4) Consider if design is fundamentally unroutable at current density."
+            )
+        else:
+            return (
+                "ECO inventory exhausted with no viable options. "
+                "Recommended: Reset case or try alternative placement strategy."
+            )
+
 
 def format_doom_report(doom: DoomClassification) -> str:
     """
@@ -442,6 +567,22 @@ def format_doom_report(doom: DoomClassification) -> str:
         "Reason:",
         f"  {doom.reason}",
     ]
+
+    # Add compute saved information
+    if doom.compute_saved_trials > 0:
+        report_lines.append("")
+        report_lines.append("Compute Saved:")
+        report_lines.append(f"  {doom.compute_saved_trials} trials avoided by early termination")
+
+    # Add recommendation
+    if doom.recommendation:
+        report_lines.append("")
+        report_lines.append("Recommendation:")
+        # Wrap long recommendation text
+        rec_lines = doom.recommendation.split(". ")
+        for line in rec_lines:
+            if line:
+                report_lines.append(f"  {line.strip()}.")
 
     if doom.metadata:
         report_lines.append("")

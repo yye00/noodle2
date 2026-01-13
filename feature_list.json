@@ -2393,8 +2393,8 @@
       "Step 4: Verify detailed output is shown (verbose mode)",
       "Step 5: Verify results match original trial"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:43:10.243071+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

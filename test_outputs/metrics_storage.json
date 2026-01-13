@@ -1,9 +1,0 @@
-{
-  "wns_ps": 20.0,
-  "tns_ps": null,
-  "whs_ps": 106.0,
-  "ths_ps": null,
-  "clock_period_ps": null,
-  "setup_violation_count": 0,
-  "hold_violation_count": 0
-}

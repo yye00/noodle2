@@ -9,11 +9,16 @@ puts ""
 
 # Paths inside ORFS container
 set platform_dir "/OpenROAD-flow-scripts/flow/platforms/asap7"
-set lib_dir "$platform_dir/lib"
+set lib_dir "$platform_dir/lib/NLDM"
 set lef_dir "$platform_dir/lef"
 
 # ASAP7 has multiple lib files for different corners
-set lib_file "$lib_dir/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
+# For basic STA, we need the SEQ, SIMPLE, INVBUF libraries (RVT TT corner)
+set lib_files [list \
+    "$lib_dir/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib" \
+    "$lib_dir/asap7sc7p5t_SIMPLE_RVT_TT_nldm_211120.lib.gz" \
+    "$lib_dir/asap7sc7p5t_INVBUF_RVT_TT_nldm_220122.lib.gz" \
+]
 set tech_lef "$lef_dir/asap7_tech_1x_201209.lef"
 set cell_lef "$lef_dir/asap7sc7p5t_28_R_1x_220121a.lef"
 
@@ -22,7 +27,10 @@ set snapshot_dir "/snapshot"
 set work_dir "/work"
 set odb_file "$snapshot_dir/gcd_placed.odb"
 
-puts "Loading timing library: $lib_file"
+puts "Loading timing libraries:"
+foreach lib $lib_files {
+    puts "  - $lib"
+}
 puts "Loading tech LEF: $tech_lef"
 puts "Loading cell LEF: $cell_lef"
 puts "Loading design: $odb_file"
@@ -34,8 +42,10 @@ read_lef $tech_lef
 # Read standard cell LEF
 read_lef $cell_lef
 
-# Read timing library
-read_liberty $lib_file
+# Read timing libraries (multiple files for ASAP7)
+foreach lib $lib_files {
+    read_liberty $lib
+}
 
 # Read the placed design
 read_db $odb_file

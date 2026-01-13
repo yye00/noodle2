@@ -302,8 +302,8 @@
       "Step 4: Verify OpenROAD completes with rc=0",
       "Step 5: Verify timing_report.txt exists"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:41:52.476177+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -332,8 +332,8 @@
       "Step 4: Verify OpenROAD completes with rc=0",
       "Step 5: Verify timing_report.txt exists"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T03:41:52.476189+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

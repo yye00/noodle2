@@ -450,13 +450,28 @@ class Trial:
         if artifacts.metrics_json and artifacts.metrics_json.exists():
             # Prefer JSON metrics if available
             try:
+                import json
                 content = artifacts.metrics_json.read_text()
+
+                # Load raw JSON first to get all fields (including hot_ratio)
+                raw_metrics = json.loads(content)
+
+                # Parse timing-specific fields using existing parser
                 timing_obj = parse_openroad_metrics_json(content)
                 metrics["wns_ps"] = timing_obj.wns_ps
                 if timing_obj.tns_ps is not None:
                     metrics["tns_ps"] = timing_obj.tns_ps
                 if timing_obj.failing_endpoints is not None:
                     metrics["failing_endpoints"] = timing_obj.failing_endpoints
+
+                # Additionally extract hot_ratio if present
+                if "hot_ratio" in raw_metrics:
+                    metrics["hot_ratio"] = raw_metrics["hot_ratio"]
+
+                # Extract any other custom metrics from JSON
+                if "clock_period_ns" in raw_metrics:
+                    metrics["clock_period_ns"] = raw_metrics["clock_period_ns"]
+
             except Exception as e:
                 metrics["timing_parse_error"] = str(e)
 

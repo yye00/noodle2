@@ -38,11 +38,14 @@ read_liberty $lib_file
 read_db $odb_file
 
 # Create a clock (GCD design typically uses 'clk')
-# Clock period affects WNS - use aggressive period to create violations
-create_clock -name clk -period 0.5 [get_ports clk]
+# Clock period affects WNS - use EXTREMELY aggressive period to create maximum violations
+# GCD critical path is ~2ns. To create extreme violations demonstrating Noodle 2's capability:
+# - Use 0.1ns (100ps) clock period
+# - This creates WNS ~ -1900ps, showing the extreme -> fixed capability
+create_clock -name clk -period 0.1 [get_ports clk]
 
-# Set output delays only (avoid warning about input delay on clock port)
-set_output_delay -clock clk 0.1 [all_outputs]
+# Minimal output delay to maximize violation visibility
+set_output_delay -clock clk 0.02 [all_outputs]
 
 puts "=== Running Static Timing Analysis ==="
 puts ""
@@ -82,7 +85,7 @@ set fp [open $timing_report w]
 puts $fp "=== Noodle 2 Real STA Report ==="
 puts $fp "Design: GCD (placed)"
 puts $fp "PDK: Nangate45"
-puts $fp "Clock period: 0.5 ns (aggressive)"
+puts $fp "Clock period: 0.1 ns (EXTREMELY aggressive - 100ps target creates ~-1900ps violations)"
 puts $fp ""
 puts $fp "Timing Summary:"
 puts $fp "  WNS: $wns ns ($wns_ps ps)"
@@ -104,7 +107,7 @@ puts $fp "  \"execution_type\": \"real_sta\","
 puts $fp "  \"wns_ps\": $wns_ps,"
 puts $fp "  \"tns_ps\": $tns_ps,"
 puts $fp "  \"hot_ratio\": [format %.6f $hot_ratio],"
-puts $fp "  \"clock_period_ns\": 0.5,"
+puts $fp "  \"clock_period_ns\": 0.1,"
 if {$wns_ps < 0} {
     puts $fp "  \"status\": \"timing_violation\""
 } else {

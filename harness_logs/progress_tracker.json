@@ -368,8 +368,33 @@
     {
       "session_num": 129,
       "started_at": "2026-01-13T04:01:34.509873",
-      "ended_at": null,
+      "ended_at": "2026-01-13T04:25:40.467962",
       "passing_at_start": 60,
+      "passing_at_end": 67,
+      "features_completed": [
+        "F062",
+        "F064",
+        "F067",
+        "F066",
+        "F054",
+        "F065",
+        "F063"
+      ],
+      "features_attempted": [
+        "F062",
+        "F064",
+        "F067",
+        "F066",
+        "F054",
+        "F065",
+        "F063"
+      ]
+    },
+    {
+      "session_num": 130,
+      "started_at": "2026-01-13T04:25:44.474059",
+      "ended_at": null,
+      "passing_at_start": 67,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
@@ -855,9 +880,65 @@
         "success": true,
         "error_msg": null
       }
+    ],
+    "F062": [
+      {
+        "timestamp": "2026-01-13T04:25:40.464615",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F064": [
+      {
+        "timestamp": "2026-01-13T04:25:40.465189",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F067": [
+      {
+        "timestamp": "2026-01-13T04:25:40.465580",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F066": [
+      {
+        "timestamp": "2026-01-13T04:25:40.465978",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F054": [
+      {
+        "timestamp": "2026-01-13T04:25:40.466370",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F065": [
+      {
+        "timestamp": "2026-01-13T04:25:40.466793",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F063": [
+      {
+        "timestamp": "2026-01-13T04:25:40.467212",
+        "session_num": 129,
+        "success": true,
+        "error_msg": null
+      }
     ]
   },
-  "last_passing_count": 60,
+  "last_passing_count": 67,
   "sessions_without_progress": 0,
   "stuck_features": [],
   "created_at": "2026-01-12T22:01:11.229422",

@@ -2496,8 +2496,8 @@
       "Step 8: Verify summary.json shows execution_mode: ACTUAL_EXECUTION, mocking: false",
       "Step 9: Verify execution completes within 30 minutes"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T09:50:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

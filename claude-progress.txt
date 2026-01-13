@@ -1529,3 +1529,97 @@ Alternative: Work on F093/F094/F098/F101 (medium priority, all require new imple
 - No regressions
 - Codebase stable and ready for next session
 
+
+
+## Session 51 Summary - Two Features Completed! ✅
+
+### Work Completed This Session:
+
+**F093: Prior repository cross-project aggregation with decay (COMPLETED ✅)**
+
+1. **Extended SQLitePriorRepository with multi-project support**
+   - Added eco_priors_multi table for storing multiple priors per ECO with weights
+   - Added decay_config table for time-based prior decay configuration
+   - Supports importing priors from different projects with configurable weights
+
+2. **Implemented weighted aggregation with decay**
+   - `import_prior_with_weight()`: Import priors with weights and provenance
+   - `configure_decay()`: Configure half-life for time-based decay
+   - `get_all_priors_with_decay()`: Apply exponential decay based on age
+   - `get_aggregated_prior()`: Weighted averaging with decay applied
+   - Decay formula: weight * (0.5 ** (age_days / half_life_days))
+
+3. **Comprehensive testing**
+   - Created `test_f093_cross_project_aggregation.py` with 7 tests
+   - Tests cover import with weights, decay configuration, aggregation
+   - Validates weighted averaging: (100 * 1.0 + 50 * 0.5) / 1.5 = 83.33
+   - Validates decay: 60 days old with 30-day half-life = 0.25x weight
+   - All tests passing ✓
+
+**F094: Prior repository tracks anti-patterns and failure modes (COMPLETED ✅)**
+
+1. **Implemented failure/success tracking with context**
+   - Added eco_failures and eco_successes tables with context JSON
+   - `track_failure()`: Track ECO failures with context (region, utilization, etc.)
+   - `track_success()`: Track ECO successes with context
+   - `get_failures()`: Retrieve all failures for an ECO
+
+2. **Implemented anti-pattern identification**
+   - `identify_anti_patterns()`: Analyze failure/success patterns
+   - Identifies ECO+context combinations with failure_rate > threshold
+   - Uses pattern matching to find common failure contexts
+   - Returns identified patterns with failure rates and counts
+
+3. **Implemented anti-pattern storage and recommendations**
+   - Added anti_patterns table with context patterns
+   - `store_anti_pattern()`: Store identified patterns with descriptions
+   - `get_anti_patterns()`: Retrieve stored patterns
+   - Auto-generates recommendations: "Avoid {eco} when {pattern} (failure rate: X%)"
+
+4. **Export/import support**
+   - Updated `export_to_json()` to include anti_patterns
+   - Updated `import_from_json()` to restore anti_patterns
+   - Full round-trip support for anti-pattern data
+
+5. **Comprehensive testing**
+   - Created `test_f094_anti_patterns.py` with 7 tests
+   - Tests cover tracking, identification, storage, recommendations, export/import
+   - All tests passing ✓
+
+### Overall Progress:
+- Started: 114/120 passing (95.0%)
+- Ended: 116/120 passing (96.7%)
+- **Improvement: +2 features completed** 🎉
+- **Only 4 features remaining (3.3% of total)**
+
+### Remaining Features (4):
+Critical Priority:
+- F115: Nangate45 extreme demo >50% WNS improvement (needs ibex extreme snapshot)
+- F116: Nangate45 extreme demo >60% hot_ratio reduction (needs ibex extreme snapshot)
+
+Medium Priority:
+- F098: Mutation permissions matrix enforces ECO class restrictions
+- F101: Human approval gates for stages
+
+### Technical Notes:
+- F093/F094 build on existing prior repository infrastructure (F090, F091, F092)
+- Prior aggregation enables warm-starting from multiple historical projects
+- Anti-pattern tracking helps identify problematic ECO+context combinations
+- Decay mechanism ensures recent priors have more influence than old ones
+
+### Next Steps:
+Option 1 (Critical): Work on F115/F116 - requires creating ibex extreme snapshot
+  - Script exists: `create_ibex_extreme_snapshot.py`
+  - Requires running ORFS synthesis/placement (30+ minutes)
+  - Will enable demo to achieve required performance targets
+
+Option 2 (Medium): Work on F098 or F101 - pure implementation tasks
+  - Both have dependencies satisfied
+  - F098: Mutation permission matrix
+  - F101: Human approval gates
+
+### Code Quality:
+- All commits clean and documented
+- All new tests passing (F093: 7/7, F094: 7/7)
+- No regressions
+- Codebase stable at 96.7% completion

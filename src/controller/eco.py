@@ -498,19 +498,15 @@ class BufferInsertionECO(ECO):
         buffer_cell = self.metadata.parameters["buffer_cell"]
 
         tcl_script = f"""# Buffer Insertion ECO
-# Insert buffers on nets with capacitance > {max_cap} pF
+# Insert buffers on nets to fix capacitance violations and improve timing
 
-# Find high-capacitance nets
-set high_cap_nets [get_nets -filter "capacitance > {max_cap}"]
-
-# Insert buffers
-foreach net $high_cap_nets {{
-    # Use repair_timing to insert buffers
-    puts "Buffering net: [get_property $net full_name]"
-}}
-
-# Alternative: use OpenROAD's repair_design
+# Use OpenROAD's repair_design to fix capacitance violations
+# This automatically identifies high-capacitance nets and inserts buffers
 repair_design -max_cap {max_cap}
+
+# Additionally use repair_timing to optimize timing-critical paths
+# This may insert additional buffers on critical paths
+repair_timing -setup -setup_margin 0.0
 
 puts "Buffer insertion ECO complete"
 """
@@ -680,21 +676,17 @@ class CellSwapECO(ECO):
 # Swap cells to faster variants on critical paths
 # Number of paths to analyze: {path_count}
 
-# Get critical timing paths
-set critical_paths [find_timing_paths -path_delay max -nworst {path_count}]
-
-# For each path, identify cells that can be swapped to faster variants
-foreach path $critical_paths {{
-    # Extract cells from this path
-    # Swap to faster variants:
-    #   - HVT (high-Vt) -> RVT (regular-Vt) or LVT (low-Vt)
-    #   - Lower drive strength -> Higher drive strength (e.g., X1 -> X2)
-    puts "Analyzing path for cell swapping..."
-}}
-
-# Use OpenROAD's repair_design for automatic cell swapping
-# This considers both upsizing and VT swapping
+# Use OpenROAD's repair_timing for automatic cell swapping
+# This considers both upsizing and VT swapping on critical paths
+# The -setup flag focuses on fixing setup violations (WNS improvement)
+# The -setup_margin allows some slack margin (0.0 = fix violations only)
 repair_timing -setup -setup_margin 0.0
+
+# Note: repair_timing internally:
+# - Identifies critical paths automatically
+# - Swaps cells to faster variants (higher drive, lower Vt)
+# - Inserts buffers as needed
+# - Considers area/timing tradeoffs
 
 puts "Cell swap ECO complete"
 """

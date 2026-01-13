@@ -363,6 +363,18 @@ class TimingPath:
     endpoint: str  # Ending point (e.g., register or output port)
     path_group: str | None = None  # Path group (e.g., clock name)
     path_type: str | None = None  # Path type (e.g., "max", "min")
+    wire_delay_ps: int | None = None  # Net/interconnect delay in picoseconds
+    cell_delay_ps: int | None = None  # Cell/gate delay in picoseconds
+
+    @property
+    def is_wire_dominated(self) -> bool:
+        """Check if path is wire-dominated (wire delay > 65% of total)."""
+        if self.wire_delay_ps is None or self.cell_delay_ps is None:
+            return False
+        total = self.wire_delay_ps + self.cell_delay_ps
+        if total == 0:
+            return False
+        return self.wire_delay_ps > 0.65 * total
 
 
 @dataclass

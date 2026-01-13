@@ -78,6 +78,38 @@ class SQLitePriorRepository:
                 ON eco_priors(last_updated)
             """)
 
+            # Table for multi-project priors with weights
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS eco_priors_multi (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    eco_name TEXT NOT NULL,
+                    total_applications INTEGER NOT NULL DEFAULT 0,
+                    successful_applications INTEGER NOT NULL DEFAULT 0,
+                    failed_applications INTEGER NOT NULL DEFAULT 0,
+                    average_wns_improvement_ps REAL NOT NULL DEFAULT 0.0,
+                    best_wns_improvement_ps REAL NOT NULL DEFAULT 0.0,
+                    worst_wns_degradation_ps REAL NOT NULL DEFAULT 0.0,
+                    prior TEXT NOT NULL DEFAULT 'unknown',
+                    weight REAL NOT NULL DEFAULT 1.0,
+                    import_timestamp TEXT NOT NULL,
+                    provenance_json TEXT
+                )
+            """)
+
+            # Create index on eco_name for multi-project queries
+            conn.execute("""
+                CREATE INDEX IF NOT EXISTS idx_multi_eco_name
+                ON eco_priors_multi(eco_name)
+            """)
+
+            # Table for decay configuration
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS decay_config (
+                    key TEXT PRIMARY KEY,
+                    value TEXT NOT NULL
+                )
+            """)
+
             conn.commit()
 
     def store_prior(
@@ -296,4 +328,215 @@ class SQLitePriorRepository:
         """
         with sqlite3.connect(self.db_path) as conn:
             conn.execute("DELETE FROM eco_priors")
+            conn.execute("DELETE FROM eco_priors_multi")
             conn.commit()
+
+    def import_prior_with_weight(
+        self,
+        effectiveness: ECOEffectiveness,
+        provenance: PriorProvenance,
+        weight: float = 1.0
+    ) -> None:
+        """Import a prior from another project with an assigned weight.
+
+        This allows multiple priors for the same ECO to be stored and
+        aggregated with different weights.
+
+        Args:
+            effectiveness: ECO effectiveness data
+            provenance: Provenance information for tracking source
+            weight: Weight for this prior (default: 1.0)
+        """
+        provenance_json = json.dumps(provenance.to_dict())
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT INTO eco_priors_multi (
+                    eco_name,
+                    total_applications,
+                    successful_applications,
+                    failed_applications,
+                    average_wns_improvement_ps,
+                    best_wns_improvement_ps,
+                    worst_wns_degradation_ps,
+                    prior,
+                    weight,
+                    import_timestamp,
+                    provenance_json
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                effectiveness.eco_name,
+                effectiveness.total_applications,
+                effectiveness.successful_applications,
+                effectiveness.failed_applications,
+                effectiveness.average_wns_improvement_ps,
+                effectiveness.best_wns_improvement_ps,
+                effectiveness.worst_wns_degradation_ps,
+                effectiveness.prior.value,
+                weight,
+                datetime.now(UTC).isoformat(),
+                provenance_json,
+            ))
+            conn.commit()
+
+    def get_all_priors_with_weights(self, eco_name: str) -> list[dict[str, Any]]:
+        """Get all priors for an ECO with their weights.
+
+        Args:
+            eco_name: Name of the ECO
+
+        Returns:
+            List of dictionaries containing effectiveness, weight, and provenance
+        """
+        priors = []
+
+        with sqlite3.connect(self.db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.execute("""
+                SELECT * FROM eco_priors_multi WHERE eco_name = ?
+            """, (eco_name,))
+
+            for row in cursor:
+                effectiveness = ECOEffectiveness(
+                    eco_name=row["eco_name"],
+                    total_applications=row["total_applications"],
+                    successful_applications=row["successful_applications"],
+                    failed_applications=row["failed_applications"],
+                    average_wns_improvement_ps=row["average_wns_improvement_ps"],
+                    best_wns_improvement_ps=row["best_wns_improvement_ps"],
+                    worst_wns_degradation_ps=row["worst_wns_degradation_ps"],
+                    prior=ECOPrior(row["prior"]),
+                )
+
+                provenance_data = json.loads(row["provenance_json"]) if row["provenance_json"] else {}
+                provenance = PriorProvenance(
+                    source_study_id=provenance_data.get("source_study_id", "unknown"),
+                    export_timestamp=provenance_data.get("export_timestamp", ""),
+                    source_study_snapshot_hash=provenance_data.get("source_study_snapshot_hash"),
+                    export_metadata=provenance_data.get("export_metadata", {}),
+                )
+
+                priors.append({
+                    "effectiveness": effectiveness,
+                    "weight": row["weight"],
+                    "provenance": provenance_data,
+                    "import_timestamp": row["import_timestamp"],
+                })
+
+        return priors
+
+    def configure_decay(self, half_life_days: int) -> None:
+        """Configure time-based decay for priors.
+
+        Args:
+            half_life_days: Number of days for prior weight to decay to half
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            conn.execute("""
+                INSERT OR REPLACE INTO decay_config (key, value)
+                VALUES ('half_life_days', ?)
+            """, (str(half_life_days),))
+            conn.commit()
+
+    def get_decay_config(self) -> dict[str, int] | None:
+        """Get current decay configuration.
+
+        Returns:
+            Dictionary with decay configuration or None if not configured
+        """
+        with sqlite3.connect(self.db_path) as conn:
+            cursor = conn.execute("""
+                SELECT value FROM decay_config WHERE key = 'half_life_days'
+            """)
+            row = cursor.fetchone()
+
+            if row:
+                return {"half_life_days": int(row[0])}
+            return None
+
+    def get_all_priors_with_decay(self, eco_name: str) -> list[dict[str, Any]]:
+        """Get all priors for an ECO with decay applied to weights.
+
+        Args:
+            eco_name: Name of the ECO
+
+        Returns:
+            List of dictionaries with effective_weight after decay
+        """
+        priors = self.get_all_priors_with_weights(eco_name)
+        decay_config = self.get_decay_config()
+
+        if decay_config is None:
+            # No decay configured, return priors with effective_weight = weight
+            for prior in priors:
+                prior["effective_weight"] = prior["weight"]
+            return priors
+
+        half_life_days = decay_config["half_life_days"]
+        now = datetime.now(UTC)
+
+        for prior in priors:
+            # Parse the import timestamp
+            import_time = datetime.fromisoformat(prior["provenance"]["export_timestamp"].replace("Z", "+00:00"))
+            age_days = (now - import_time).total_seconds() / 86400
+
+            # Calculate decay factor: weight * (0.5 ** (age_days / half_life_days))
+            decay_factor = 0.5 ** (age_days / half_life_days)
+            prior["effective_weight"] = prior["weight"] * decay_factor
+
+        return priors
+
+    def get_aggregated_prior(self, eco_name: str) -> ECOEffectiveness | None:
+        """Get aggregated prior for an ECO with weighted averaging.
+
+        Applies decay if configured.
+
+        Args:
+            eco_name: Name of the ECO
+
+        Returns:
+            Aggregated ECO effectiveness or None if no priors exist
+        """
+        priors = self.get_all_priors_with_decay(eco_name)
+
+        if not priors:
+            return None
+
+        # Calculate weighted averages
+        total_weight = sum(p["effective_weight"] for p in priors)
+        if total_weight == 0:
+            return None
+
+        weighted_avg_wns = sum(
+            p["effectiveness"].average_wns_improvement_ps * p["effective_weight"]
+            for p in priors
+        ) / total_weight
+
+        weighted_best_wns = max(p["effectiveness"].best_wns_improvement_ps for p in priors)
+        weighted_worst_wns = min(p["effectiveness"].worst_wns_degradation_ps for p in priors)
+
+        total_applications = sum(p["effectiveness"].total_applications for p in priors)
+        total_successful = sum(p["effectiveness"].successful_applications for p in priors)
+        total_failed = sum(p["effectiveness"].failed_applications for p in priors)
+
+        # Determine aggregated prior based on success rate
+        success_rate = total_successful / total_applications if total_applications > 0 else 0
+        if success_rate >= 0.8:
+            aggregated_prior = ECOPrior.TRUSTED
+        elif success_rate >= 0.5:
+            aggregated_prior = ECOPrior.MIXED
+        elif success_rate >= 0.3:
+            aggregated_prior = ECOPrior.SUSPICIOUS
+        else:
+            aggregated_prior = ECOPrior.BLACKLISTED
+
+        return ECOEffectiveness(
+            eco_name=eco_name,
+            total_applications=total_applications,
+            successful_applications=total_successful,
+            failed_applications=total_failed,
+            average_wns_improvement_ps=weighted_avg_wns,
+            best_wns_improvement_ps=weighted_best_wns,
+            worst_wns_degradation_ps=weighted_worst_wns,
+            prior=aggregated_prior,
+        )

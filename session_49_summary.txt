@@ -1,0 +1,1 @@
+Session 49 Summary: Fixed ECO metrics capture bug. ECOs now properly capture post-ECO WNS/TNS/hot_ratio by regenerating metrics after ECO and parsing from stdout. Committed fix. Next: resolve base case verification failure.

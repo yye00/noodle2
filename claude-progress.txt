@@ -1,94 +1,125 @@
 # Noodle 2 Development Progress
 
-## Current Session (Session 34) - ECO Execution Integration
+## Current Session (Session 35) - ODB Propagation Between Stages
 
 ### ✅ Completed Features This Session: 1 feature
-1. **F104**: ECO execution actually modifies design ODB and produces different metrics
-   - Implemented `_create_eco_for_trial()` method in StudyExecutor
-   - Cycles through ECO types: CellResizeECO, BufferInsertionECO, CellSwapECO
-   - Each ECO type has 3 parameter variants for design space exploration
-   - Trial 0 uses NoOpECO as baseline
-   - Custom trial scripts generated with ECO commands injected
-   - Scripts saved to trial directories as `trial_N_with_eco.tcl`
-   - Created comprehensive test suite (10 new tests, all passing)
+1. **F105**: Modified ODB snapshots propagate between stages as input to next stage
+   - Added `modified_odb_path` field to TrialResult
+   - Trial execution detects modified_design_*.odb files after successful ECO application
+   - Stage executor propagates modified ODB to next stage survivors
+   - Case snapshot_path updated to use modified ODB from previous stage
+   - Full lineage tracking with metadata (input_odb_from_stage, accumulated_modifications)
+   - Created comprehensive test suite (11 new tests, all passing)
    - Status: ✅ PASSING
 
 ### 🏗️ Architecture Changes:
-**Study Executor ECO Integration:**
-- Added `_create_eco_for_trial()` method to StudyExecutor
-  * Trial 0 → NoOpECO (baseline)
-  * Trial 1, 4, 7... → CellResizeECO with varying size_multiplier/max_paths
-  * Trial 2, 5, 8... → BufferInsertionECO with varying max_capacitance/buffer_cell
-  * Trial 3, 6, 9... → CellSwapECO with varying path_count
-  * Parameter variants cycle through 3 sets per ECO type
 
-- Modified trial creation loop in `_execute_stage()`
-  * Creates ECO instance for each trial
-  * Generates custom script with `generate_trial_script_with_eco()`
-  * Saves script to trial directory
-  * Passes custom script path to TrialConfig
-  * Metadata includes ECO type and parameters
+**TrialResult ODB Tracking:**
+- Added `modified_odb_path: str | None` field to TrialResult dataclass
+- Trial.execute() detects modified ODB files via glob: `modified_design_*.odb`
+- Only successful trials have modified_odb_path set (failures get None)
+- to_dict() serialization includes modified_odb_path for persistence
 
-- ECO exploration pattern:
-  ```
-  Trial 0: NoOpECO (baseline)
-  Trial 1: CellResizeECO(size_mult=1.2, max_paths=50)
-  Trial 2: BufferInsertionECO(max_cap=0.1, buffer="BUF_X2")
-  Trial 3: CellSwapECO(path_count=30)
-  Trial 4: CellResizeECO(size_mult=1.5, max_paths=100)
-  Trial 5: BufferInsertionECO(max_cap=0.15, buffer="BUF_X4")
-  Trial 6: CellSwapECO(path_count=50)
-  Trial 7: CellResizeECO(size_mult=1.8, max_paths=150)
-  Trial 8: BufferInsertionECO(max_cap=0.2, buffer="BUF_X8")
-  Trial 9: CellSwapECO(path_count=70)
-  ```
+**Stage Executor ODB Propagation (executor.py lines 867-901):**
+- After stage completion, survivors advance to next stage
+- Executor looks up trial results to find modified_odb_path for each survivor
+- Derived case for next stage uses modified_odb_path as snapshot_path
+- Fallback to original snapshot_path if no modified ODB available
+- Metadata tracks:
+  * `source_trial`: Which trial produced this case
+  * `input_odb_from_stage`: Which stage provided the input ODB
+  * `accumulated_modifications`: Boolean flag indicating ODB chain
+
+**Trial Configuration with ODB Input (executor.py lines 1263-1319):**
+- Detects if `base_case.snapshot_path` points to .odb file or directory
+- When snapshot_path ends with .odb:
+  * Sets `input_odb_path` for script generation
+  * Uses parent directory as `snapshot_dir`
+  * Trial metadata includes `input_odb_path` for traceability
+- When snapshot_path is directory:
+  * Uses directory directly as `snapshot_dir`
+  * `input_odb_path` remains None (uses base snapshot)
+
+**ODB Accumulation Flow:**
+```
+Stage 0:
+  Trial 0: Base snapshot → NoOpECO → metrics (baseline)
+  Trial 1: Base snapshot → CellResizeECO → modified_design_1.odb → better WNS
+  Trial 2: Base snapshot → BufferInsertionECO → modified_design_2.odb
+  Survivors: [Trial 1, Trial 2] based on WNS ranking
+
+Stage 1:
+  Input cases use modified_design_1.odb and modified_design_2.odb
+  Trial 0: modified_design_1.odb → CellSwapECO → modified_design_0.odb
+  Trial 1: modified_design_2.odb → CellResizeECO → modified_design_1.odb
+  Survivors: [Trial 0] based on accumulated improvements
+
+Stage 2:
+  Input case uses stage 1's modified_design_0.odb
+  Further ECOs build on accumulated changes from stage 0 + stage 1
+```
 
 ### Session Statistics:
-- Features Completed: 1 (F104)
-- Tests Added: 10 new tests
-  * 7 in `test_f104_eco_integration.py` (unit tests)
-  * 3 in `test_f104_infrastructure.py` (infrastructure tests)
-- Start Progress: 89/120 (74.2%)
-- End Progress: 90/120 (75.0%)
+- Features Completed: 1 (F105)
+- Tests Added: 11 new tests
+  * All in `test_f105_odb_propagation.py`
+  * Unit tests: TrialResult fields, Case lineage, ODB detection
+  * Integration test: End-to-end ODB propagation through multi-stage study
+- Start Progress: 90/120 (75.0%)
+- End Progress: 91/120 (75.8%)
 - Net Gain: +1 feature (+0.8%)
 
 ### Critical Infrastructure Now Complete:
-**F108 + F104 = Full ECO Execution Pipeline:**
+**F104 + F105 = Full Multi-Stage ECO Accumulation:**
 - ✅ ECO classes generate TCL commands (F108)
 - ✅ ECO TCL injection into trial scripts (F108)
-- ✅ Study executor creates ECO instances (F104)
-- ✅ Custom scripts generated per trial (F104)
+- ✅ Study executor creates ECO instances per trial (F104)
+- ✅ Custom scripts generated with ECO commands (F104)
 - ✅ Different trials explore different ECO types/parameters (F104)
+- ✅ Modified ODB captured after trial execution (F105, NEW!)
+- ✅ ODB propagates to next stage survivors (F105, NEW!)
+- ✅ Case lineage tracks ODB chain (F105, NEW!)
+- ✅ Multi-stage ECO accumulation enabled (F105, NEW!)
 
-**What happens now in a Study run:**
-1. StudyExecutor creates base case
-2. For each trial in each stage:
-   - `_create_eco_for_trial()` creates ECO instance
-   - ECO generates TCL: `eco.generate_tcl()`
-   - `generate_trial_script_with_eco()` creates custom script
-   - Script includes: base analysis + ECO APPLICATION section
-   - Script saved to `trial_N_with_eco.tcl`
-   - Trial executes custom script
-   - ECO commands modify design
-   - Modified ODB saved to `/work/modified_design_N.odb`
-   - Metrics captured from modified design
+**What happens now in a multi-stage Study:**
+1. Stage 0, Trial 1:
+   - Loads base snapshot
+   - Applies CellResizeECO
+   - Saves to `/work/modified_design_1.odb`
+   - Metrics show WNS improvement
+   - Trial succeeds, modified_odb_path set
+
+2. Stage 0 completion:
+   - Top survivors selected (e.g., Trial 1 with best WNS)
+   - Derived cases created for Stage 1
+   - Derived case snapshot_path = modified_design_1.odb (not base!)
+
+3. Stage 1, Trial 0:
+   - Loads modified_design_1.odb (from Stage 0 survivor)
+   - Applies BufferInsertionECO ON TOP of Stage 0 changes
+   - Saves to new modified_design_0.odb
+   - Metrics reflect accumulated improvements
+   - ODB contains both CellResize + BufferInsertion changes
+
+4. Final case:
+   - Represents all accumulated ECO modifications
+   - Full lineage traceable through case graph
+   - Each stage's contribution documented in metadata
 
 ### Remaining Critical Features:
 **Critical (Priority 1)** - Still needed:
-- F105: Modified ODB propagation between stages
-  * Track modified ODB paths in trial results
-  * Pass ODB from stage N to stage N+1 as input
-  * Update case lineage to include ODB file paths
-
 - F106: Extreme snapshots with actual violations (WNS < -1500ps)
   * Generate extreme ODB files from base designs
   * Stress placement density to create timing violations
   * Verify extreme snapshots before using in demos
 
 - F115-F116: Nangate45 demo achieving real improvements
-  * Run demo with new ECO execution
-  * Verify >50% WNS improvement
-  * Verify >60% hot_ratio reduction
+  * Run demo with new ECO execution and ODB propagation
+  * Verify >50% WNS improvement across stages
+  * Verify >60% hot_ratio reduction from accumulated ECOs
+
+- F107: Extreme snapshots use high utilization and aggressive timing
+  * Related to F106, may be satisfied together
 
 **High Priority (Priority 2)** - Other features:
 - F086-F088: Doom detection for hopeless cases
@@ -97,22 +128,22 @@
 - F100: Ray Dashboard real-time metrics
 
 ### Next Steps:
-1. **Implement ODB propagation** (F105)
-   - Add `modified_odb_path` field to TrialResult
-   - Pass modified ODB from stage N to stage N+1
-   - Update trial config to include `input_odb_path`
-   - Track ODB file paths in case lineage
-
-2. **Generate extreme snapshots** (F106)
+1. **Generate extreme snapshots** (F106/F107)
    - Create scripts to generate extreme ODB files
-   - Use placement density stressors
-   - Verify WNS < -1500ps
-   - Package as snapshot directories
+   - Use placement density stressors and aggressive clock constraints
+   - Verify WNS < -1500ps in generated snapshots
+   - Package as snapshot directories for demos
 
-3. **Run and verify demos** (F115-F116)
-   - Execute Nangate45 extreme demo with new ECO execution
-   - Verify real metric improvements
-   - Generate comparison visualizations
+2. **Run and verify demos** (F115-F116)
+   - Execute Nangate45 extreme demo with new ODB propagation
+   - Verify real metric improvements accumulate across stages
+   - Generate comparison visualizations showing stage-by-stage progress
+   - Document ECO accumulation effectiveness
+
+3. **Implement doom detection** (F086-F088)
+   - Metric-hopeless detection
+   - Trajectory stagnation detection
+   - ECO exhaustion detection
 
 ### Architecture Status:
 ✅ Trial execution infrastructure (Docker, OpenROAD)
@@ -123,35 +154,72 @@
 ✅ Demo scripts with real execution
 ✅ ECO TCL generation (`CellResizeECO`, etc.)
 ✅ ECO TCL injection into trial scripts
-✅ ECO selection and execution in Study (NEW!)
-❌ ODB file tracking and propagation (needs implementation)
+✅ ECO selection and execution in Study
+✅ ODB file tracking and propagation (NEW!)
+✅ Multi-stage ECO accumulation (NEW!)
 ❌ Extreme snapshot generation (needs implementation)
 
 ### Tests Created:
-1. `tests/test_f104_eco_integration.py` - 7 unit tests
-   - ECO creation for different trials
-   - ECO TCL generation verification
-   - Trial script with ECO commands
-   - Before/after STA in scripts
-   - ODB load/save in scripts
-   - ECO metadata includes parameters
-   - Different trials get different parameters
+1. `tests/test_f105_odb_propagation.py` - 11 tests (all passing)
+   **Unit Tests:**
+   - TrialResult has modified_odb_path field
+   - modified_odb_path serialized in to_dict()
+   - Stage survivors have modified_odb_path set
+   - Next stage uses modified ODB as snapshot
+   - Case lineage tracks parent ODB
+   - Multi-stage accumulation verified
+   - ODB vs directory path detection
+   - Trial metadata includes input_odb_path
+   - Failed trials don't get modified_odb_path
+   - Fallback to original snapshot when no ODB
 
-2. `tests/test_f104_infrastructure.py` - 3 infrastructure tests
-   - Multiple trials have different ECO parameters
-   - Trial scripts contain actual ECO commands
-   - Infrastructure generates unique scripts per trial
+   **Integration Test:**
+   - End-to-end ODB propagation through 2-stage study
+   - Mocked trial results with modified ODB paths
+   - Survivor selection and ODB chain verification
+   - Full case lineage tracking
 
 ### Technical Notes:
-- ECO type selection: `(trial_index - 1) % 3`
-- Parameter variant: `((trial_index - 1) // 3) % 3`
-- This ensures same ECO type on different trials gets different parameters
-- NoOpECO used for trial 0 to establish baseline
-- Custom scripts only generated for trials with actual ECOs (not NoOpECO)
-- Trial 0 uses base `run_sta.tcl` from snapshot
+**ODB Detection Logic:**
+```python
+if snapshot_path.suffix == ".odb":
+    input_odb_path = str(snapshot_path)
+    actual_snapshot_dir = str(snapshot_path.parent)
+else:
+    actual_snapshot_dir = str(snapshot_path)
+```
+
+**Trial Result ODB Detection:**
+```python
+# In Trial.execute(), after successful execution:
+modified_odb_path = None
+if exec_result.success:
+    odb_files = list(self.trial_dir.glob("modified_design_*.odb"))
+    if odb_files:
+        modified_odb_path = str(odb_files[0].absolute())
+```
+
+**Survivor ODB Lookup:**
+```python
+# In executor after stage completion:
+for survivor_id in stage_result.survivors:
+    modified_odb_path = None
+    for trial_result in stage_result.trial_results:
+        if trial_result.config.case_name == survivor_id:
+            modified_odb_path = trial_result.modified_odb_path
+            break
+    next_snapshot_path = modified_odb_path if modified_odb_path else original_snapshot
+```
 
 ## Git Status:
-- Latest commit: F104 ECO execution with real ECO integration
-- All tests passing (10 new tests, all passing)
+- Latest commit: F105 ODB propagation between stages
+- All tests passing (11 new tests)
 - Clean working state
-- 90/120 features passing (75.0%)
+- 91/120 features passing (75.8%)
+
+## Previous Sessions:
+
+### Session 34 - ECO Execution Integration
+- Completed F104: ECO execution actually modifies design ODB
+- 10 new tests, all passing
+- Progress: 89/120 → 90/120 (74.2% → 75.0%)

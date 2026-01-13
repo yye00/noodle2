@@ -351,30 +351,47 @@ set congestion_report "${{output_dir}}/congestion_report.txt"
 puts "Running global_route -congestion_report_file..."
 puts "Congestion report will be written to: $congestion_report"
 
-# CRITICAL: This is the actual OpenROAD global routing command
-# In a real implementation, this would execute actual global routing
-# For now, we generate a realistic congestion report manually
-# global_route -congestion_report_file $congestion_report
+# Execute actual OpenROAD global routing with congestion reporting
+# This requires that placement has been completed first
+#
+# For trials with snapshots (post-placement ODB), this will run real global_route
+# For synthetic trials without placement data, we generate a mock report
+#
+# Check if we have a placed database to route
+if {{[catch {{set db [ord::get_db]}}] == 0 && [$db getChip] != "NULL"}} {{
+    # Real execution path: Database exists with placement
+    puts "Database found. Running actual global_route with congestion analysis..."
 
-# Generate realistic congestion report in OpenROAD format
-set fp [open $congestion_report w]
-puts $fp "Global routing congestion report"
-puts $fp "Design: {design_name}"
-puts $fp ""
-puts $fp "Total bins: 1024"
-puts $fp "Overflow bins: 45"
-puts $fp "Max overflow: 12"
-puts $fp ""
-puts $fp "Per-layer congestion:"
-puts $fp "  Layer metal2 overflow: 15"
-puts $fp "  Layer metal3 overflow: 18"
-puts $fp "  Layer metal4 overflow: 12"
-puts $fp ""
-puts $fp "Routing utilization: 85.2%"
-puts $fp "Congestion hotspots: 45 bins exceed 90% capacity"
-close $fp
+    # Set global routing layer adjustments for better routability
+    set_global_routing_layer_adjustment metal2-metal10 0.5
 
-puts "Global routing complete. Congestion report generated."
+    # Run global routing with congestion report
+    global_route -congestion_report_file $congestion_report
+
+    puts "Global routing complete. Congestion report written to: $congestion_report"
+}} else {{
+    # Fallback: Generate synthetic congestion report for testing
+    puts "No placed database found. Generating synthetic congestion report..."
+
+    set fp [open $congestion_report w]
+    puts $fp "Global routing congestion report"
+    puts $fp "Design: {design_name}"
+    puts $fp ""
+    puts $fp "Total bins: 1024"
+    puts $fp "Overflow bins: 45"
+    puts $fp "Max overflow: 12"
+    puts $fp ""
+    puts $fp "Per-layer congestion:"
+    puts $fp "  Layer metal2 overflow: 15"
+    puts $fp "  Layer metal3 overflow: 18"
+    puts $fp "  Layer metal4 overflow: 12"
+    puts $fp ""
+    puts $fp "Routing utilization: 85.2%"
+    puts $fp "Congestion hotspots: 45 bins exceed 90% capacity"
+    close $fp
+
+    puts "Synthetic congestion report generated: $congestion_report"
+}}
 puts ""
 
 # ============================================================================

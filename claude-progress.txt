@@ -672,3 +672,81 @@ Priority features to work on:
 - All priors tests passing
 - Clean working state (debug files not committed)
 - 98/120 features passing (81.7%)
+
+## Session 39 (continued) - 2026-01-13T17:24:00Z
+
+### Additional Features Completed:
+✅ **F095: Macro location protection**
+- Implemented immutable_rules module with comprehensive rule system
+- Structural rules can protect macro locations from ECO modification
+- ImmutabilityChecker.check_macro_move() blocks macro relocation
+- Returns ImmutableViolation with CRITICAL severity
+
+✅ **F096: Net pattern protection**
+- Net rules with wildcard pattern matching using fnmatch
+- Protected patterns: clk*, reset*, vdd*, vss*
+- ImmutabilityChecker.check_net_modification() validates against patterns
+- Exact and wildcard matching supported
+
+✅ **F097: Cell pattern and instance protection**
+- Cell rules with dual protection mechanism:
+  * Pattern-based: *_macro, pad_*, clkbuf_*
+  * Instance-specific: pll_inst, specific cells
+- Protected cells cannot be modified
+- Size-locked cells cannot be resized
+- ImmutabilityChecker.check_cell_modification() with modification type
+
+### Implementation Architecture:
+- **ImmutableRules** dataclass:
+  * structural: StructuralRules (macro_locations, io_pin_positions, etc.)
+  * timing: TimingRules (clock_definitions, false_paths, multicycle_paths)
+  * nets: NetRules (protected_nets list with pattern matching)
+  * cells: CellRules (protected_cells, size_locked)
+
+- **Pattern Matching**:
+  * Uses fnmatch for wildcard patterns (* and ?)
+  * CellProtectionPattern supports both pattern and instance matching
+  * NetRules.is_net_protected() matches against patterns
+  * CellRules.is_cell_protected() checks all protection patterns
+
+- **ImmutabilityChecker**:
+  * Initialized with ImmutableRules
+  * Provides check_* methods for each protection type
+  * Returns ImmutableViolation or None
+  * Violations include rule_type, target, reason, severity
+
+- **Configuration Loading**:
+  * load_immutable_rules_from_config() parses from Study YAML
+  * ImmutableRules.from_dict() creates from nested dictionary
+  * ImmutableRules.disabled() returns permissive rules
+
+### Testing:
+- Created comprehensive test suite (tests/test_immutable_rules.py)
+- 38 tests covering:
+  * StructuralRules, TimingRules, NetRules, CellRules creation
+  * Pattern matching (wildcards, exact, instance)
+  * ImmutabilityChecker validation for all rule types
+  * End-to-end scenarios for F095, F096, F097
+  * Violation serialization
+  * Configuration loading
+- All 38 tests passing
+
+### Progress Update:
+- Total features: 120
+- Passing: 101/120 (84.2%, up from 98)
+- Failing: 19/120
+- Features completed this session: F091, F092, F095, F096, F097 (5 features)
+
+### Next Steps:
+Remaining high-priority features:
+1. **F115-F116**: Nangate45 extreme demo (blocked on extreme snapshot)
+2. **F100**: Ray Dashboard real-time metrics
+3. **F107**: Extreme snapshots with high utilization
+4. **F109**: CellSwapECO implementation
+5. **F110-F113**: Trial execution features (config generation, timing breakdown, heatmaps, congestion)
+
+### Git Status:
+- Latest commit: F095-F097 immutable design rules
+- All immutable rules tests passing (38/38)
+- Clean working state
+- 101/120 features passing (84.2%)

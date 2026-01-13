@@ -1266,8 +1266,8 @@
       "Step 4: Verify priors from study A are available in study B",
       "Step 5: Verify weight parameter is applied correctly"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T08:01:00.027892Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1327,8 +1327,8 @@
       "Step 5: Verify survivors have diverse ECO paths (min_diversity constraint met)",
       "Step 6: Verify always_keep_best preserves top performer"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T08:01:00.027892Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1479,8 +1479,8 @@
       "Step 5: Verify stage_1_complete.noodle exists",
       "Step 6: Verify latest symlink points to most recent checkpoint"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T08:01:00.027892Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

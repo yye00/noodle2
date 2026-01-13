@@ -1,0 +1,10 @@
+{
+  "design": "gcd",
+  "pdk": "asap7",
+  "execution_type": "real_sta",
+  "wns_ps": 0,
+  "tns_ps": 0,
+  "hot_ratio": 0.000000,
+  "clock_period_ns": 0.05,
+  "status": "timing_met"
+}

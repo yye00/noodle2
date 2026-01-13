@@ -6,9 +6,9 @@ current_design gcd
 set clk_name core_clock
 set clk_port_name clk
 
-# EXTREME clock: 50ps (way below achievable) to create severe timing violations
-# Normal ASAP7 GCD can meet ~300ps, so 50ps will give us ~-2500ps WNS
-set clk_period 50
+# EXTREME clock: 0.1ps (impossibly fast) to create severe timing violations
+# Normal ASAP7 GCD can meet ~300ps, so 0.1ps will give us extreme violations > -1500ps
+set clk_period 0.1
 set clk_io_pct 0.2
 
 set clk_port [get_ports $clk_port_name]

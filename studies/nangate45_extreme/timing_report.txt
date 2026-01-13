@@ -1,0 +1,11 @@
+=== Noodle 2 Real STA Report ===
+Design: GCD (placed)
+PDK: Nangate45
+Clock period: 0.1 ns (EXTREMELY aggressive - 100ps target creates ~-1900ps violations)
+
+Timing Summary:
+  WNS: -0.41500121180846566 ns (-415 ps)
+  TNS: -19.608628165093275 ns (-19608 ps)
+  Hot ratio: 0.4725
+
+=== End Report ===

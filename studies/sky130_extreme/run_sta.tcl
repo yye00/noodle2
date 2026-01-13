@@ -32,7 +32,7 @@ read_liberty $lib_file
 read_db $odb_file
 
 # Create a clock (moderate for 130nm - 100MHz target)
-create_clock -name clk -period 10.0 [get_ports clk]
+create_clock -name clk -period 0.01 [get_ports clk]
 
 # Set output delays only (avoid warning about input delay on clock port)
 set_output_delay -clock clk 0.5 [all_outputs]

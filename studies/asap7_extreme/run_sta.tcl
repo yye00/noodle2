@@ -65,7 +65,7 @@ if {[file exists $sdc_file]} {
             read_sdc $sdc_file
         } else {
             puts "WARNING: No SDC file found, creating extreme clock manually"
-            create_clock -name core_clock -period 50 [get_ports clk]
+            create_clock -name core_clock -period 0.1 [get_ports clk]
             set_output_delay -clock core_clock 10 [all_outputs]
         }
     }

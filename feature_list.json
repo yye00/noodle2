@@ -3227,8 +3227,8 @@
       "Step 4: Load extreme ODB and check WNS",
       "Step 5: Verify WNS < -1500ps for Nangate45 extreme"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T20:00:00Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

@@ -1,0 +1,10 @@
+{
+  "design": "gcd",
+  "pdk": "nangate45",
+  "execution_type": "real_sta",
+  "wns_ps": -415,
+  "tns_ps": -19608,
+  "hot_ratio": 0.472496,
+  "clock_period_ns": 0.001,
+  "status": "timing_violation"
+}

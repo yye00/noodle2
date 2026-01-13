@@ -1,0 +1,11 @@
+=== Noodle 2 Real STA Report ===
+Design: GCD (placed)
+PDK: ASAP7 (7nm FinFET)
+Clock period: 0.05 ns (20 GHz - EXTREME for guaranteed timing violations)
+
+Timing Summary:
+  WNS: 1.0000000190432691e+42 ns (0 ps)
+  TNS: 0.0 ns (0 ps)
+  Hot ratio: 0.0000
+
+=== End Report ===

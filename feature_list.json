@@ -1659,8 +1659,8 @@
       "Step 4: Verify CSV file exists",
       "Step 5: Verify CSV contains grid data (numbers, not text)"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T05:31:03.404701+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1689,8 +1689,8 @@
       "Step 4: Verify CSV file exists",
       "Step 5: Verify CSV contains congestion grid data"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T05:31:03.404701+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1719,8 +1719,8 @@
       "Step 4: Verify CSV file exists",
       "Step 5: Verify CSV contains wire density estimate data"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T05:31:03.404701+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

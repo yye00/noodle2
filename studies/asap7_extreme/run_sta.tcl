@@ -13,7 +13,7 @@ set lib_dir "$platform_dir/lib"
 set lef_dir "$platform_dir/lef"
 
 # ASAP7 has multiple lib files for different corners
-set lib_file "$lib_dir/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
+set lib_file "$lib_dir/NLDM/asap7sc7p5t_SEQ_RVT_TT_nldm_220123.lib"
 set tech_lef "$lef_dir/asap7_tech_1x_201209.lef"
 set cell_lef "$lef_dir/asap7sc7p5t_28_R_1x_220121a.lef"
 

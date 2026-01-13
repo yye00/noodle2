@@ -1629,8 +1629,8 @@
       "Step 4: Verify display is available (test with simple X command)",
       "Step 5: Verify OpenROAD GUI commands can run headlessly"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T05:04:25.885352+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

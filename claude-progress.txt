@@ -596,3 +596,79 @@ Doom detection is **safety-critical** because false positives terminate potentia
 - All doom detection tests passing (44/44)
 - Clean working state
 - 95/120 features passing (79.2%)
+
+## Session 39 - 2026-01-13T17:20:00Z
+
+### Completed Features:
+✅ **F091: Priors export CLI command**
+- Implemented `noodle2 priors export --study <name> --output priors.json`
+- Reads ECO effectiveness data from study telemetry
+- Creates JSON file with eco_priors, provenance, and metadata
+- Supports optional --snapshot-hash for provenance tracking
+- Fixed ECOPrior enum conversion (string to enum value)
+
+✅ **F092: Priors import CLI command**
+- Implemented `noodle2 priors import --input priors.json --weight 0.8`
+- Loads prior repository from JSON file
+- Supports configurable weight parameter (0.0-1.0)
+- Output formats: text (default) or JSON
+- Shows provenance information (source study, export timestamp, snapshot hash)
+
+### Implementation Details:
+- Added `priors` subcommand to CLI with `export` and `import` subcommands
+- Export command:
+  * Looks for eco_effectiveness.json in telemetry directory
+  * Converts prior strings to ECOPrior enum values
+  * Uses PriorExporter to create repository with provenance
+  * Writes JSON output with proper schema
+
+- Import command:
+  * Loads JSON file and creates PriorRepository
+  * Supports text and JSON output formats
+  * For text format: shows summary, provenance, and ECO details
+  * For JSON format: outputs repository as JSON
+
+### Testing:
+- Created comprehensive test suite (tests/test_priors_cli.py)
+- 10 new tests covering:
+  * Command availability checks
+  * Export with mock telemetry data
+  * Export with snapshot hash
+  * Import from JSON
+  * Custom weight parameter
+  * JSON output format
+  * Error handling (nonexistent files)
+  * End-to-end export then import workflow
+- All 30 prior-related tests passing (10 CLI + 20 prior_sharing)
+
+### Progress:
+- Total features: 120
+- Passing: 98/120 (81.7%, up from 96)
+- Failing: 22/120
+- Features completed this session: F091, F092
+
+### Next Steps:
+Priority features to work on:
+1. **F115-F116**: Nangate45 extreme demo achieving real improvements
+   - Still blocked on creating extreme snapshot with WNS < -1500ps
+   - Need to use ibex design or create degraded placement for GCD
+
+2. **F095-F097**: Immutable design rules
+   - Protect macro locations from ECO modification
+   - Pattern-based net protection
+   - Cell instance protection
+
+3. **F109**: CellSwapECO implementation
+   - Swap cells to faster or slower variants
+
+4. **F110-F113**: Additional trial execution features
+   - Trial config generation with varied ECO parameters
+   - Timing path breakdown (wire vs cell delay)
+   - Heatmap generation from real CSV data
+   - Congestion metrics parsing
+
+### Git Status:
+- Latest commit: F091-F092 priors export/import CLI commands
+- All priors tests passing
+- Clean working state (debug files not committed)
+- 98/120 features passing (81.7%)

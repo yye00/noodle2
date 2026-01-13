@@ -277,6 +277,9 @@ class StudyExecutor:
         self.study_checkpoint: StudyCheckpoint = initialize_checkpoint(config.name)
 
         # Track completed approval gates for dependency enforcement
+
+        # Track case metrics for before/after ECO comparison (F117)
+        self.case_metrics_map: dict[str, dict[str, Any]] = {}
         self.completed_approvals: set[str] = set()
 
         # Ray parallel execution
@@ -385,6 +388,9 @@ class StudyExecutor:
                     self.baseline_wns_ps = wns
                 if tns is not None:
                     print(f"  TNS: {tns} ps")
+
+                # Store baseline metrics for ECO comparison (F117)
+                self.case_metrics_map[self.base_case.case_name] = result.metrics
         print(f"  Return code: {result.return_code}")
 
         return True, ""
@@ -1343,8 +1349,8 @@ class StudyExecutor:
             print(f"  Executing {len(trial_configs)} trials in parallel with Ray...")
             trial_results = self.ray_executor.execute_trials_parallel(trial_configs)
 
-            # Emit events for all completed trials
-            for trial_config, result in zip(trial_configs, trial_results):
+            # Emit events and print ECO application messages for all completed trials
+            for trial_case, trial_config, result in zip(trial_cases, trial_configs, trial_results):
                 self.event_stream.emit_trial_complete(
                     study_name=self.config.name,
                     case_name=trial_config.case_name,
@@ -1354,6 +1360,14 @@ class StudyExecutor:
                     runtime_seconds=result.runtime_seconds,
                     metrics=result.metrics,
                 )
+
+                # Print ECO application message with before/after WNS (F117)
+                parent_case_id = trial_case.parent_id
+                self._print_eco_application(result, trial_config, parent_case_id)
+
+                # Update case metrics map for future comparisons
+                if result.success and result.metrics:
+                    self.case_metrics_map[trial_config.case_name] = result.metrics
         else:
             # Sequential execution
             for trial_index, (trial_case, trial_config) in enumerate(zip(trial_cases, trial_configs)):
@@ -1399,6 +1413,14 @@ class StudyExecutor:
                     runtime_seconds=result.runtime_seconds,
                     metrics=result.metrics,
                 )
+
+                # Print ECO application message with before/after WNS (F117)
+                parent_case_id = trial_case.parent_id
+                self._print_eco_application(result, trial_config, parent_case_id)
+
+                # Update case metrics map for future comparisons
+                if result.success and result.metrics:
+                    self.case_metrics_map[trial_config.case_name] = result.metrics
 
         # Track ECO effectiveness for all trials and persist to SQLite
         self._update_and_persist_eco_effectiveness(
@@ -1563,6 +1585,72 @@ class StudyExecutor:
             failure_count = eco_effectiveness.failed_applications
             prior_state = eco_effectiveness.prior.value
             print(f"  [PRIOR] {eco_name}: {success_count}S/{failure_count}F -> state={prior_state}")
+
+    def _print_eco_application(
+        self,
+        trial_result: TrialResult,
+        trial_config: TrialConfig,
+        parent_case_id: str | None,
+    ) -> None:
+        """
+        Print ECO application console output with before/after metrics (F117).
+
+        Displays:
+        - ECO name applied to case
+        - WNS before and after
+        - Improvement percentage
+
+        Args:
+            trial_result: Result from trial execution
+            trial_config: Trial configuration
+            parent_case_id: Parent case ID to look up previous metrics
+        """
+        # Extract ECO name
+        eco_name = trial_config.metadata.get("eco_type", "unknown")
+        case_name = trial_config.case_name
+
+        # Skip if no ECO applied
+        if eco_name in ("no_eco", "unknown", ""):
+            return
+
+        # Extract current metrics
+        current_metrics = trial_result.metrics or {}
+        current_wns = current_metrics.get("wns_ps")
+
+        # If no WNS in current metrics, skip
+        if current_wns is None:
+            return
+
+        # Look up parent case metrics for "before" state
+        previous_wns = None
+        if parent_case_id and parent_case_id in self.case_metrics_map:
+            parent_metrics = self.case_metrics_map[parent_case_id]
+            previous_wns = parent_metrics.get("wns_ps")
+
+        # If no parent metrics, use baseline
+        if previous_wns is None and self.baseline_wns_ps is not None:
+            previous_wns = self.baseline_wns_ps
+
+        # If we have both before and after, print improvement
+        if previous_wns is not None:
+            # Calculate improvement percentage
+            # Improvement is positive when WNS gets closer to 0 (less negative or more positive)
+            wns_delta = current_wns - previous_wns
+
+            # For negative WNS values (violations), improvement = reduction in absolute value
+            # e.g., -2000ps -> -1000ps is 50% improvement
+            if previous_wns != 0:
+                improvement_pct = (wns_delta / abs(previous_wns)) * 100
+            else:
+                improvement_pct = 0.0
+
+            # Format console output
+            print(f"  [ECO] Applied {eco_name} to {case_name}")
+            print(f"        WNS Before: {previous_wns} ps → After: {current_wns} ps ({improvement_pct:+.1f}% improvement)")
+        else:
+            # No before metrics, just show current state
+            print(f"  [ECO] Applied {eco_name} to {case_name}")
+            print(f"        WNS: {current_wns} ps")
 
     def _emit_stage_telemetry(
         self,

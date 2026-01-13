@@ -2423,8 +2423,8 @@
       "Step 4: Verify results differ from original",
       "Step 5: Verify modified parameters are logged"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:44:26.305462+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -2453,8 +2453,8 @@
       "Step 4: Verify metrics_before.json and metrics_after.json are present",
       "Step 5: Verify all_heatmaps/ directory contains full visualization set"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T11:45:41.697063+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

@@ -5,11 +5,15 @@ from pathlib import Path
 from typing import Any
 
 from .types import (
+    AbortRailConfig,
     ECOClass,
     ExecutionMode,
+    RailsConfig,
     SafetyDomain,
     StageConfig,
+    StageRailConfig,
     StudyConfig,
+    StudyRailConfig,
 )
 
 
@@ -66,6 +70,9 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
     notification_webhook_url = data.get("notification_webhook_url")
     notification_events = data.get("notification_events")
 
+    # Parse rails configuration
+    rails = _parse_rails_config(data.get("rails", {}))
+
     # Create StudyConfig
     config = StudyConfig(
         name=data["name"],
@@ -81,6 +88,7 @@ def _parse_study_config(data: dict[str, Any]) -> StudyConfig:
         custom_script_mounts=custom_script_mounts,
         notification_webhook_url=notification_webhook_url,
         notification_events=notification_events,
+        rails=rails,
     )
 
     # Validate configuration
@@ -102,6 +110,35 @@ def _parse_stage_config(data: dict[str, Any]) -> StageConfig:
         abort_threshold_wns_ps=data.get("abort_threshold_wns_ps"),
         visualization_enabled=data.get("visualization_enabled", False),
         timeout_seconds=data.get("timeout_seconds", 3600),
+    )
+
+
+def _parse_rails_config(data: dict[str, Any]) -> RailsConfig:
+    """Parse Rails configuration from dictionary."""
+    # Parse abort rail
+    abort_data = data.get("abort", {})
+    abort_rail = AbortRailConfig(
+        wns_ps=abort_data.get("wns_ps"),
+        timeout_seconds=abort_data.get("timeout_seconds"),
+    )
+
+    # Parse stage rail
+    stage_data = data.get("stage", {})
+    stage_rail = StageRailConfig(
+        failure_rate=stage_data.get("failure_rate"),
+    )
+
+    # Parse study rail
+    study_data = data.get("study", {})
+    study_rail = StudyRailConfig(
+        catastrophic_failures=study_data.get("catastrophic_failures"),
+        max_runtime_hours=study_data.get("max_runtime_hours"),
+    )
+
+    return RailsConfig(
+        abort=abort_rail,
+        stage=stage_rail,
+        study=study_rail,
     )
 
 

@@ -94,8 +94,31 @@
     {
       "session_num": 111,
       "started_at": "2026-01-12T22:59:43.104732",
-      "ended_at": null,
+      "ended_at": "2026-01-12T23:12:42.422787",
       "passing_at_start": 19,
+      "passing_at_end": 25,
+      "features_completed": [
+        "F033",
+        "F032",
+        "F021",
+        "F023",
+        "F022",
+        "F034"
+      ],
+      "features_attempted": [
+        "F033",
+        "F032",
+        "F021",
+        "F023",
+        "F022",
+        "F034"
+      ]
+    },
+    {
+      "session_num": 112,
+      "started_at": "2026-01-12T23:12:46.427658",
+      "ended_at": null,
+      "passing_at_start": 25,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
@@ -253,9 +276,57 @@
         "success": true,
         "error_msg": null
       }
+    ],
+    "F033": [
+      {
+        "timestamp": "2026-01-12T23:12:42.406378",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F032": [
+      {
+        "timestamp": "2026-01-12T23:12:42.406702",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F021": [
+      {
+        "timestamp": "2026-01-12T23:12:42.421230",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F023": [
+      {
+        "timestamp": "2026-01-12T23:12:42.421831",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F022": [
+      {
+        "timestamp": "2026-01-12T23:12:42.422122",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F034": [
+      {
+        "timestamp": "2026-01-12T23:12:42.422304",
+        "session_num": 111,
+        "success": true,
+        "error_msg": null
+      }
     ]
   },
-  "last_passing_count": 19,
+  "last_passing_count": 25,
   "sessions_without_progress": 0,
   "stuck_features": [],
   "created_at": "2026-01-12T22:01:11.229422",

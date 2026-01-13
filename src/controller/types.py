@@ -139,6 +139,60 @@ class DiagnosisConfig:
 
 
 @dataclass
+class AbortRailConfig:
+    """Abort rail configuration - stops individual trials."""
+
+    wns_ps: int | None = None  # Abort trial if WNS worse than this (e.g., -10000 = -10ns)
+    timeout_seconds: int | None = None  # Abort trial if execution exceeds this
+
+    def __post_init__(self) -> None:
+        """Validate abort rail configuration."""
+        if self.timeout_seconds is not None and self.timeout_seconds <= 0:
+            raise ValueError("timeout_seconds must be positive")
+
+
+@dataclass
+class StageRailConfig:
+    """Stage rail configuration - stops stages early."""
+
+    failure_rate: float | None = None  # Stop stage if failure rate exceeds this (0.0-1.0)
+
+    def __post_init__(self) -> None:
+        """Validate stage rail configuration."""
+        if self.failure_rate is not None:
+            if not (0.0 < self.failure_rate <= 1.0):
+                raise ValueError("failure_rate must be between 0.0 and 1.0")
+
+
+@dataclass
+class StudyRailConfig:
+    """Study rail configuration - stops entire study."""
+
+    catastrophic_failures: int | None = None  # Stop study after N catastrophic failures
+    max_runtime_hours: int | None = None  # Stop study after N hours total
+
+    def __post_init__(self) -> None:
+        """Validate study rail configuration."""
+        if self.catastrophic_failures is not None and self.catastrophic_failures <= 0:
+            raise ValueError("catastrophic_failures must be positive")
+        if self.max_runtime_hours is not None and self.max_runtime_hours <= 0:
+            raise ValueError("max_runtime_hours must be positive")
+
+
+@dataclass
+class RailsConfig:
+    """Safety rails configuration for a Study.
+
+    Rails provide safety-critical limits to prevent runaway computation,
+    pathological ECOs, or wasting resources on fundamentally broken experiments.
+    """
+
+    abort: AbortRailConfig = field(default_factory=AbortRailConfig)
+    stage: StageRailConfig = field(default_factory=StageRailConfig)
+    study: StudyRailConfig = field(default_factory=StudyRailConfig)
+
+
+@dataclass
 class StudyConfig:
     """Complete Study definition."""
 
@@ -170,6 +224,8 @@ class StudyConfig:
     pdk_override: Any = None  # PDKOverride instance for bind-mounted versioned PDK
     # Diagnosis configuration for auto-analysis
     diagnosis: DiagnosisConfig = field(default_factory=DiagnosisConfig)  # Auto-diagnosis configuration
+    # Safety rails configuration
+    rails: RailsConfig = field(default_factory=RailsConfig)  # Safety rails for abort/stage/study limits
 
     def validate(self) -> None:
         """Validate Study configuration."""

@@ -8,6 +8,7 @@ from src.controller.study import create_study_config, load_study_config
 from src.controller.types import (
     ECOClass,
     ExecutionMode,
+    RailsConfig,
     SafetyDomain,
     StageConfig,
 )
@@ -208,3 +209,152 @@ def test_multi_stage_study() -> None:
     assert config.stages[0].name == "exploration"
     assert config.stages[1].name == "refinement"
     assert config.stages[1].visualization_enabled is True
+
+
+def test_rails_configuration_parsing() -> None:
+    """
+    Feature #F007: Rails configuration can be parsed from study YAML.
+
+    Steps:
+        1. Create YAML with rails configuration
+        2. Load configuration from YAML
+        3. Verify abort rail settings are parsed correctly
+        4. Verify stage rail settings are parsed correctly
+        5. Verify study rail settings are parsed correctly
+    """
+    # Step 1: Create YAML with rails configuration
+    yaml_content = """
+name: rails_test_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+rails:
+  abort:
+    wns_ps: -10000
+    timeout_seconds: 600
+  stage:
+    failure_rate: 0.8
+  study:
+    catastrophic_failures: 5
+    max_runtime_hours: 4
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+    # Create temporary YAML file
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        yaml_path = f.name
+
+    try:
+        # Step 2: Load configuration from YAML
+        config = load_study_config(yaml_path)
+
+        # Verify basic study config
+        assert config.name == "rails_test_study"
+        assert config.safety_domain == SafetyDomain.GUARDED
+
+        # Step 3: Verify abort rail settings are parsed correctly
+        assert config.rails is not None
+        assert config.rails.abort.wns_ps == -10000
+        assert config.rails.abort.timeout_seconds == 600
+
+        # Step 4: Verify stage rail settings are parsed correctly
+        assert config.rails.stage.failure_rate == 0.8
+
+        # Step 5: Verify study rail settings are parsed correctly
+        assert config.rails.study.catastrophic_failures == 5
+        assert config.rails.study.max_runtime_hours == 4
+
+    finally:
+        # Cleanup
+        Path(yaml_path).unlink()
+
+
+def test_rails_configuration_defaults() -> None:
+    """Test that default rails configuration is created when not specified."""
+    yaml_content = """
+name: default_rails_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        yaml_path = f.name
+
+    try:
+        config = load_study_config(yaml_path)
+
+        # Verify default rails configuration exists with None values
+        assert config.rails is not None
+        assert config.rails.abort.wns_ps is None
+        assert config.rails.abort.timeout_seconds is None
+        assert config.rails.stage.failure_rate is None
+        assert config.rails.study.catastrophic_failures is None
+        assert config.rails.study.max_runtime_hours is None
+
+    finally:
+        Path(yaml_path).unlink()
+
+
+def test_rails_configuration_partial() -> None:
+    """Test that partial rails configuration works (only some rails defined)."""
+    yaml_content = """
+name: partial_rails_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+rails:
+  abort:
+    wns_ps: -5000
+  study:
+    catastrophic_failures: 3
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+        f.write(yaml_content)
+        yaml_path = f.name
+
+    try:
+        config = load_study_config(yaml_path)
+
+        # Verify specified rails are set
+        assert config.rails.abort.wns_ps == -5000
+        assert config.rails.study.catastrophic_failures == 3
+
+        # Verify unspecified rails are None
+        assert config.rails.abort.timeout_seconds is None
+        assert config.rails.stage.failure_rate is None
+        assert config.rails.study.max_runtime_hours is None
+
+    finally:
+        Path(yaml_path).unlink()

@@ -6,7 +6,14 @@ from pathlib import Path
 from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
-from src.controller.eco import ECOEffectiveness
+from src.controller.eco import (
+    BufferInsertionECO,
+    CellResizeECO,
+    CellSwapECO,
+    ECO,
+    ECOEffectiveness,
+    NoOpECO,
+)
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
 from src.controller.graceful_shutdown import GracefulShutdownHandler
 from src.controller.safety import check_study_legality, generate_legality_report
@@ -34,6 +41,7 @@ from src.controller.human_approval import (
 )
 from src.telemetry.event_stream import EventStreamEmitter
 from src.trial_runner.trial import Trial, TrialConfig, TrialResult
+from src.trial_runner.tcl_generator import generate_trial_script, generate_trial_script_with_eco
 
 
 @dataclass
@@ -1120,6 +1128,49 @@ class StudyExecutor:
                 print(f"  Reason: {decision.reason}")
             return False, f"Rejected by {decision.approver}: {decision.reason}"
 
+    def _create_eco_for_trial(self, trial_index: int, stage_index: int) -> ECO | None:
+        """
+        Create an ECO instance for a given trial.
+
+        This cycles through different ECO types and parameters to explore
+        the ECO design space. First trial (trial 0) uses NoOpECO as baseline.
+
+        Args:
+            trial_index: Trial index within stage
+            stage_index: Stage index
+
+        Returns:
+            ECO instance, or None for base case (no ECO)
+        """
+        # First trial is always no-op (baseline)
+        if trial_index == 0:
+            return NoOpECO()
+
+        # Cycle through different ECO types for exploration
+        # Use division to get parameter variation index (trials with same ECO type get different params)
+        param_variant = ((trial_index - 1) // len([1,2,3])) % 3  # Which parameter set to use
+
+        eco_types = [
+            ("cell_resize", lambda idx, var: CellResizeECO(
+                size_multiplier=1.2 + var * 0.3,  # 1.2, 1.5, 1.8
+                max_paths=50 + var * 50  # 50, 100, 150
+            )),
+            ("buffer_insertion", lambda idx, var: BufferInsertionECO(
+                max_capacitance=0.1 + var * 0.05,  # 0.1, 0.15, 0.2
+                buffer_cell=["BUF_X2", "BUF_X4", "BUF_X8"][var]
+            )),
+            ("cell_swap", lambda idx, var: CellSwapECO(
+                path_count=30 + var * 20  # 30, 50, 70
+            )),
+        ]
+
+        # Select ECO type based on trial index
+        eco_type_index = (trial_index - 1) % len(eco_types)
+        eco_name, eco_factory = eco_types[eco_type_index]
+
+        # Create ECO with varying parameters
+        return eco_factory(trial_index, param_variant)
+
     def _execute_stage(
         self,
         stage_index: int,
@@ -1160,26 +1211,65 @@ class StudyExecutor:
             # Cycle through input cases using modulo
             base_case = input_cases[trial_index % len(input_cases)]
 
-            # For framework testing: create a derived case for this trial
-            # In real execution, each trial would apply a different ECO
+            # Create an ECO instance for this trial
+            eco = self._create_eco_for_trial(trial_index, stage_index)
+            eco_name = eco.metadata.name if eco else "no_eco"
+
+            # Create derived case for this trial with actual ECO
             trial_case = base_case.derive(
-                eco_name=f"trial_eco_{trial_index}",  # Placeholder ECO name
+                eco_name=eco_name,
                 new_stage_index=stage_index,
                 derived_index=trial_index,
                 snapshot_path=self.config.snapshot_path,
-                metadata={"trial_index": trial_index},
+                metadata={
+                    "trial_index": trial_index,
+                    "eco_type": eco_name,
+                    "eco_parameters": eco.metadata.parameters if eco else {},
+                },
             )
             trial_cases.append(trial_case)
 
-            print(f"  Trial {trial_index + 1}/{trials_to_execute}: {trial_case.identifier}")
+            print(f"  Trial {trial_index + 1}/{trials_to_execute}: {trial_case.identifier} (ECO: {eco_name})")
 
-            # Determine script path based on snapshot directory
-            # Look for run_sta.tcl in the snapshot directory
+            # Generate trial script with ECO commands injected
+            # Create trial directory to save the custom script
+            trial_dir = (
+                self.artifacts_root
+                / self.config.name
+                / str(trial_case.identifier)
+                / f"stage_{stage_index}"
+                / f"trial_{trial_index}"
+            )
+            trial_dir.mkdir(parents=True, exist_ok=True)
+
+            # Determine script path
             snapshot_path = Path(self.config.snapshot_path)
-            script_path = snapshot_path / "run_sta.tcl"
-            if not script_path.exists():
-                # Fallback: use the snapshot path directly (for backward compatibility)
-                script_path = snapshot_path
+
+            # Generate custom trial script with ECO
+            if eco and not isinstance(eco, NoOpECO):
+                # Generate ECO TCL commands
+                eco_tcl = eco.generate_tcl()
+
+                # Generate trial script with ECO commands injected
+                script_content = generate_trial_script_with_eco(
+                    execution_mode=stage_config.execution_mode,
+                    design_name=self.config.base_case_name,
+                    eco_tcl=eco_tcl,
+                    input_odb_path=None,  # Will be populated in future for ODB propagation
+                    output_odb_path=f"/work/modified_design_{trial_index}.odb",
+                    clock_period_ns=10.0,  # Default, should come from config
+                    pdk=self.config.pdk,
+                )
+
+                # Save custom script to trial directory
+                custom_script_path = trial_dir / f"trial_{trial_index}_with_eco.tcl"
+                custom_script_path.write_text(script_content)
+                script_path = custom_script_path
+            else:
+                # Use base script for no-op trials
+                script_path = snapshot_path / "run_sta.tcl"
+                if not script_path.exists():
+                    script_path = snapshot_path
 
             # Create trial configuration
             trial_config = TrialConfig(
@@ -1195,6 +1285,8 @@ class StudyExecutor:
                     "stage_name": stage_config.name,
                     "execution_mode": stage_config.execution_mode.value,
                     "pdk": self.config.pdk,
+                    "eco_type": eco_name,
+                    "eco_parameters": eco.metadata.parameters if eco else {},
                 },
             )
             trial_configs.append(trial_config)

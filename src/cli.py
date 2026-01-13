@@ -540,6 +540,91 @@ data will be used to guide ECO selection.
         help="Show details for a specific ECO only",
     )
 
+    # === PRIORS command (with export/import subcommands) ===
+    priors_parser = subparsers.add_parser(
+        "priors",
+        help="Manage ECO prior repository (export/import)",
+        description="""
+Manage ECO priors for cross-study sharing.
+
+Subcommands:
+  export    Export priors from a completed study to JSON
+  import    Import priors from JSON into repository
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+
+    priors_subparsers = priors_parser.add_subparsers(
+        dest="priors_command",
+        help="Priors management commands",
+        metavar="<subcommand>",
+    )
+
+    # === PRIORS EXPORT subcommand ===
+    priors_export_parser = priors_subparsers.add_parser(
+        "export",
+        help="Export priors from a completed study",
+        description="""
+Export ECO effectiveness data from a completed study to JSON file.
+
+The exported file contains:
+  • eco_priors: All ECO effectiveness statistics
+  • provenance: Source study metadata
+  • export_timestamp: When the export occurred
+
+This file can be imported into other studies for warm-start execution.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    priors_export_parser.add_argument(
+        "--study",
+        type=str,
+        required=True,
+        help="Study name or path to completed study",
+    )
+    priors_export_parser.add_argument(
+        "--output",
+        type=Path,
+        required=True,
+        help="Output JSON file path (e.g., priors.json)",
+    )
+    priors_export_parser.add_argument(
+        "--snapshot-hash",
+        type=str,
+        help="Optional snapshot hash for provenance tracking",
+    )
+
+    # === PRIORS IMPORT subcommand ===
+    priors_import_parser = priors_subparsers.add_parser(
+        "import",
+        help="Import priors from JSON file",
+        description="""
+Import ECO priors from an exported JSON file.
+
+The priors will be loaded and can be used for warm-start execution
+by configuring the study to use the imported priors.
+        """,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    priors_import_parser.add_argument(
+        "--input",
+        type=Path,
+        required=True,
+        help="Input JSON file path",
+    )
+    priors_import_parser.add_argument(
+        "--weight",
+        type=float,
+        default=1.0,
+        help="Prior weight (0.0-1.0, default: 1.0)",
+    )
+    priors_import_parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        default="text",
+        help="Output format (default: text)",
+    )
+
     return parser
 
 
@@ -1178,6 +1263,191 @@ def cmd_show_priors(args: argparse.Namespace) -> int:
         return 1
 
 
+def cmd_priors_export(args: argparse.Namespace) -> int:
+    """Execute priors export command."""
+    import json
+    from datetime import datetime, timezone
+    from pathlib import Path
+
+    from src.controller.prior_sharing import PriorExporter
+    from src.controller.eco import ECOEffectiveness
+
+    print(f"📤 Exporting priors from Study: {args.study}")
+    print()
+
+    try:
+        # Load study telemetry to extract ECO effectiveness data
+        study_path = Path(args.study)
+
+        # If study is just a name, look for telemetry directory
+        if not study_path.exists():
+            study_path = Path("telemetry") / args.study
+
+        if not study_path.exists():
+            print(f"❌ Error: Study not found: {args.study}")
+            print()
+            print("Tip: Provide study name or path to study telemetry directory")
+            print("Example: noodle2 priors export --study nangate45_baseline --output priors.json")
+            return 1
+
+        # Look for ECO effectiveness data in telemetry
+        # Expected location: telemetry/<study_name>/eco_effectiveness.json
+        effectiveness_file = study_path / "eco_effectiveness.json"
+
+        if not effectiveness_file.exists():
+            print(f"❌ Error: ECO effectiveness data not found: {effectiveness_file}")
+            print()
+            print("Tip: Ensure the study has completed and generated telemetry")
+            return 1
+
+        # Load ECO effectiveness data
+        with open(effectiveness_file) as f:
+            effectiveness_data = json.load(f)
+
+        # Convert to ECOEffectiveness objects
+        eco_map = {}
+        for eco_name, data in effectiveness_data.items():
+            # Convert prior string to ECOPrior enum
+            from src.controller.eco import ECOPrior
+
+            prior_str = data.get("prior", "unknown")
+            if isinstance(prior_str, str):
+                prior = ECOPrior(prior_str)
+            else:
+                prior = prior_str
+
+            eco_map[eco_name] = ECOEffectiveness(
+                eco_name=eco_name,
+                total_applications=data.get("total_applications", 0),
+                successful_applications=data.get("successful_applications", 0),
+                failed_applications=data.get("failed_applications", 0),
+                average_wns_improvement_ps=data.get("average_wns_improvement_ps", 0.0),
+                best_wns_improvement_ps=data.get("best_wns_improvement_ps", 0.0),
+                worst_wns_degradation_ps=data.get("worst_wns_degradation_ps", 0.0),
+                prior=prior,
+            )
+
+        # Export priors
+        exporter = PriorExporter()
+        study_id = study_path.name if study_path.is_dir() else args.study
+
+        repository = exporter.export_priors(
+            study_id=study_id,
+            eco_effectiveness_map=eco_map,
+            output_path=args.output,
+            snapshot_hash=args.snapshot_hash,
+            metadata={"export_time": datetime.now(timezone.utc).isoformat()},
+        )
+
+        print(f"✅ Successfully exported {len(eco_map)} ECO priors")
+        print(f"   Output: {args.output}")
+        print(f"   Source study: {study_id}")
+        if args.snapshot_hash:
+            print(f"   Snapshot hash: {args.snapshot_hash}")
+        print()
+
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: File not found: {e}")
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: Invalid JSON format: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error during export: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def cmd_priors_import(args: argparse.Namespace) -> int:
+    """Execute priors import command."""
+    import json
+    import sys
+
+    from src.controller.prior_sharing import PriorRepository
+
+    # Only print header for text format
+    if args.format != "json":
+        print(f"📥 Importing priors from: {args.input}")
+        print(f"   Weight: {args.weight}")
+        print()
+
+    try:
+        # Load the prior repository from JSON file
+        with open(args.input) as f:
+            data = json.load(f)
+
+        repository = PriorRepository.from_dict(data)
+
+        # Display results
+        if args.format == "json":
+            # Output as JSON
+            json.dump(repository.to_dict(), sys.stdout, indent=2)
+            print()
+        else:
+            # Text format
+            print(f"✅ Successfully imported {len(repository.eco_priors)} ECO priors")
+            print()
+
+            if repository.provenance:
+                print("📋 Provenance:")
+                print(f"   Source Study: {repository.provenance.source_study_id}")
+                print(f"   Export Time: {repository.provenance.export_timestamp}")
+                if repository.provenance.source_study_snapshot_hash:
+                    print(f"   Snapshot Hash: {repository.provenance.source_study_snapshot_hash}")
+                print()
+
+            print("📊 Imported ECO Priors:")
+            for eco_name, effectiveness in sorted(repository.eco_priors.items()):
+                print(f"\n  {eco_name}:")
+                print(f"    Prior: {effectiveness.prior}")
+                print(f"    Applications: {effectiveness.total_applications}")
+
+                if effectiveness.total_applications > 0:
+                    success_rate = (
+                        effectiveness.successful_applications
+                        / effectiveness.total_applications
+                        * 100
+                    )
+                    print(f"    Success Rate: {success_rate:.1f}%")
+
+                print(f"    Avg WNS Improvement: {effectiveness.average_wns_improvement_ps:.2f} ps")
+            print()
+
+        return 0
+
+    except FileNotFoundError as e:
+        print(f"❌ Error: File not found: {e}")
+        return 1
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: Invalid JSON format: {e}")
+        return 1
+    except Exception as e:
+        print(f"❌ Error during import: {e}")
+        import traceback
+        traceback.print_exc()
+        return 1
+
+
+def cmd_priors(args: argparse.Namespace) -> int:
+    """Execute priors command (dispatch to subcommands)."""
+    if args.priors_command == "export":
+        return cmd_priors_export(args)
+    elif args.priors_command == "import":
+        return cmd_priors_import(args)
+    else:
+        print("❌ Error: No subcommand specified")
+        print()
+        print("Usage: noodle2 priors <export|import> [options]")
+        print()
+        print("Examples:")
+        print("  noodle2 priors export --study nangate45_baseline --output priors.json")
+        print("  noodle2 priors import --input priors.json --weight 0.8")
+        return 1
+
+
 def main() -> int:
     """Main CLI entry point."""
     parser = create_parser()
@@ -1203,6 +1473,7 @@ def main() -> int:
         "debug": cmd_debug,
         "compare": cmd_compare,
         "show-priors": cmd_show_priors,
+        "priors": cmd_priors,
     }
 
     handler = command_map.get(args.command)

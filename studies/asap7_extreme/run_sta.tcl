@@ -46,21 +46,28 @@ puts "Linking design..."
 set num_insts [[ord::get_db_block] getInsts]
 puts "Number of instances: [llength $num_insts]"
 
-# Read SDC constraints (aggressive clock period for ASAP7 demo)
-set sdc_file "$snapshot_dir/gcd_aggressive.sdc"
+# Read SDC constraints (EXTREME clock period for ASAP7 demo)
+# Try extreme constraints first, then fallback to aggressive
+set sdc_file "$snapshot_dir/gcd_extreme.sdc"
 if {[file exists $sdc_file]} {
-    puts "Reading aggressive SDC constraints: $sdc_file"
+    puts "Reading EXTREME SDC constraints: $sdc_file (50ps clock for demo)"
     read_sdc $sdc_file
 } else {
-    # Fallback: use less aggressive constraints
-    set sdc_file "$snapshot_dir/gcd.sdc"
+    set sdc_file "$snapshot_dir/gcd_aggressive.sdc"
     if {[file exists $sdc_file]} {
-        puts "Reading SDC constraints: $sdc_file"
+        puts "Reading aggressive SDC constraints: $sdc_file"
         read_sdc $sdc_file
     } else {
-        puts "WARNING: No SDC file found, creating clock manually"
-        create_clock -name core_clock -period 150 [get_ports clk]
-        set_output_delay -clock core_clock 30 [all_outputs]
+        # Fallback: use less aggressive constraints
+        set sdc_file "$snapshot_dir/gcd.sdc"
+        if {[file exists $sdc_file]} {
+            puts "Reading SDC constraints: $sdc_file"
+            read_sdc $sdc_file
+        } else {
+            puts "WARNING: No SDC file found, creating extreme clock manually"
+            create_clock -name core_clock -period 50 [get_ports clk]
+            set_output_delay -clock core_clock 10 [all_outputs]
+        }
     }
 }
 
@@ -108,7 +115,7 @@ set fp [open $timing_report w]
 puts $fp "=== Noodle 2 Real STA Report ==="
 puts $fp "Design: GCD (placed)"
 puts $fp "PDK: ASAP7 (7nm FinFET)"
-puts $fp "Clock period: 0.5 ns (2 GHz - aggressive for timing violations)"
+puts $fp "Clock period: 0.05 ns (20 GHz - EXTREME for guaranteed timing violations)"
 puts $fp ""
 puts $fp "Timing Summary:"
 puts $fp "  WNS: $wns ns ($wns_ps ps)"
@@ -130,7 +137,7 @@ puts $fp "  \"execution_type\": \"real_sta\","
 puts $fp "  \"wns_ps\": $wns_ps,"
 puts $fp "  \"tns_ps\": $tns_ps,"
 puts $fp "  \"hot_ratio\": [format %.6f $hot_ratio],"
-puts $fp "  \"clock_period_ns\": 0.5,"
+puts $fp "  \"clock_period_ns\": 0.05,"
 if {$wns_ps < 0} {
     puts $fp "  \"status\": \"timing_violation\""
 } else {

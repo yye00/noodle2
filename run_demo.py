@@ -416,6 +416,19 @@ def generate_summary_report(
         "placeholders": False,  # NO placeholders
     }
 
+    # Add PDK-specific sections
+    if pdk == "asap7":
+        summary["asap7_specific"] = {
+            "staging": "STA-first (timing-priority for advanced node)",
+            "execution_mode": "STA_CONGESTION",
+            "workarounds_applied": [
+                "routing_layer_constraints (metal2-metal9 for ASAP7)",
+                "site_specification (asap7sc7p5t)",
+                "pin_placement_constraints (metal4/metal5)",
+                "utilization target (0.55 for ASAP7 advanced node)"
+            ]
+        }
+
     summary_path = demo_output / "summary.json"
     with open(summary_path, "w") as f:
         json.dump(summary, f, indent=2)

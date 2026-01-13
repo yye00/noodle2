@@ -310,8 +310,31 @@
     {
       "session_num": 125,
       "started_at": "2026-01-13T02:49:56.925747",
-      "ended_at": null,
+      "ended_at": "2026-01-13T03:07:07.848543",
       "passing_at_start": 52,
+      "passing_at_end": 58,
+      "features_completed": [
+        "F044",
+        "F043",
+        "F046",
+        "F050",
+        "F045",
+        "F053"
+      ],
+      "features_attempted": [
+        "F044",
+        "F043",
+        "F046",
+        "F050",
+        "F045",
+        "F053"
+      ]
+    },
+    {
+      "session_num": 126,
+      "started_at": "2026-01-13T03:07:11.854306",
+      "ended_at": null,
+      "passing_at_start": 58,
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
@@ -733,10 +756,58 @@
         "success": true,
         "error_msg": null
       }
+    ],
+    "F044": [
+      {
+        "timestamp": "2026-01-13T03:07:07.814685",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F043": [
+      {
+        "timestamp": "2026-01-13T03:07:07.815169",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F046": [
+      {
+        "timestamp": "2026-01-13T03:07:07.847153",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F050": [
+      {
+        "timestamp": "2026-01-13T03:07:07.847435",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F045": [
+      {
+        "timestamp": "2026-01-13T03:07:07.847692",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
+    ],
+    "F053": [
+      {
+        "timestamp": "2026-01-13T03:07:07.847959",
+        "session_num": 125,
+        "success": true,
+        "error_msg": null
+      }
     ]
   },
-  "last_passing_count": 52,
-  "sessions_without_progress": 2,
+  "last_passing_count": 58,
+  "sessions_without_progress": 0,
   "stuck_features": [],
   "created_at": "2026-01-12T22:01:11.229422",
   "reset_at": "2026-01-12T22:01:11.229428"

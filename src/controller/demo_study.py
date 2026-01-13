@@ -357,9 +357,9 @@ def create_nangate45_extreme_demo_study(
         >>> # Execute to demonstrate fixing extremely broken design
     """
     if snapshot_path is None:
-        # Default to studies/nangate45_extreme relative to project root
-        # (uses extreme snapshot with timing violations and high congestion)
-        snapshot_path = str(Path("studies") / "nangate45_extreme")
+        # Default to studies/nangate45_extreme_ibex relative to project root
+        # (uses ibex extreme snapshot with WNS < -1500ps and hot_ratio > 0.3)
+        snapshot_path = str(Path("studies") / "nangate45_extreme_ibex")
 
     # Stage 0: Aggressive exploration to find any improvements
     # Start with topology-neutral ECOs which are safest
@@ -428,18 +428,18 @@ def create_nangate45_extreme_demo_study(
     study = StudyConfig(
         name="nangate45_extreme_demo",
         safety_domain=safety_domain,
-        base_case_name="nangate45_extreme",
+        base_case_name="nangate45_extreme_ibex",
         pdk="Nangate45",
         stages=[stage_0, stage_1, stage_2, stage_3],  # Added stage_3
         snapshot_path=snapshot_path,
         metadata={
             "purpose": "Demonstrate fixing extremely broken Nangate45 design",
-            "design": "AES or similar complex design with severe timing/congestion issues",
+            "design": "Ibex RISC-V core with extreme timing violations",
             "expected_behavior": "Improve WNS by >50%, reduce hot_ratio from >0.3 to <0.12",
-            "version": "1.0.0",
+            "version": "2.0.0",
             "initial_state": {
-                "wns_ps_range": [-3000, -2000],
-                "hot_ratio_range": [0.30, 0.45],
+                "wns_ps": -1848,
+                "hot_ratio": 0.5692,
             },
             "target_improvements": {
                 "wns_improvement_percent": 50,
@@ -448,10 +448,10 @@ def create_nangate45_extreme_demo_study(
         },
         author="Noodle2 Team",
         description=(
-            "Extreme broken design demo Study for Nangate45. Showcases Noodle 2's "
-            "ability to systematically fix a design with severe timing violations "
-            "(WNS ~ -2000ps) and congestion issues (hot_ratio > 0.3) through "
-            "multi-stage ECO application, auto-diagnosis, and comprehensive "
+            "Extreme broken design demo Study for Nangate45 using Ibex RISC-V core. "
+            "Showcases Noodle 2's ability to systematically fix a design with severe "
+            "timing violations (WNS = -1848ps) and congestion issues (hot_ratio = 0.57) "
+            "through multi-stage ECO application, auto-diagnosis, and comprehensive "
             "before/after visualizations."
         ),
         tags=["demo", "nangate45", "extreme", "before-after", "visualization"],

@@ -1599,8 +1599,8 @@
       "Step 4: Verify eco_applied and eco_parameters are logged",
       "Step 5: Verify metrics and metrics_delta are present"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T09:23:52.960943+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1906,8 +1906,8 @@
       "Step 5: Mark dominated points differently (e.g., X markers)",
       "Step 6: Save as PNG and verify frontier is visible"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T09:24:41.500123+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1967,8 +1967,8 @@
       "Step 5: Save as PNG",
       "Step 6: Verify trajectory shows improvement trend"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T09:24:13.018647+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -1997,8 +1997,8 @@
       "Step 4: Save as PNG",
       "Step 5: Verify all stages are represented with key metrics"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T09:24:13.018656+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

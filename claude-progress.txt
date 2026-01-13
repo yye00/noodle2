@@ -807,3 +807,31 @@ All PDKs now working end-to-end with real OpenROAD execution.
 END OF SESSION 4
 ================================================================================
 
+
+Addendum to Session 4: Verified F017 and F018
+
+After completing ASAP7 and Sky130 base case verification, continued with
+ECO definition features:
+
+✓ F017 - NoOpECO TCL generation (high priority)
+     - Verified NoOpECO class exists in src/controller/eco.py
+     - Verified generate_tcl() returns comment-only script
+     - Verified no netlist modifications (baseline testing ECO)
+     - All tests passing in test_eco_framework.py
+
+✓ F018 - BufferInsertionECO with parameters (high priority)
+     - Verified BufferInsertionECO class exists
+     - Verified constructor accepts parameters (max_capacitance, buffer_cell)
+     - Verified parameters stored in ECO metadata
+     - Verified generate_tcl() uses parameters correctly
+     - Verified TCL contains buffer insertion commands
+     - All 5 BufferInsertionECO tests passing
+
+Final Session 4 progress: 16/85 features (18.8%) passing
+- Started: 12/85 (14%)
+- Added: F011, F012, F017, F018
+- Ended: 16/85 (18.8%)
+
+Features still needing implementation: F019 (CellResizeECO), F020 (CellSwapECO)
+- These ECO classes do not exist yet and need to be implemented
+

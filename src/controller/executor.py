@@ -1277,15 +1277,29 @@ class StudyExecutor:
                 # Generate ECO TCL commands
                 eco_tcl = eco.generate_tcl()
 
-                # Generate trial script with ECO commands injected
-                script_content = generate_trial_script_with_eco(
-                    execution_mode=stage_config.execution_mode,
-                    design_name=self.config.base_case_name,
+                # Read the snapshot's base STA script to use as foundation
+                # This ensures we load the real design properly
+                base_script_path = snapshot_path / "run_sta.tcl"
+                if base_script_path.exists():
+                    # Use snapshot's script as base (has proper ODB loading)
+                    base_script = base_script_path.read_text()
+                else:
+                    # Fallback: generate mock script (testing scenarios)
+                    from src.trial_runner.tcl_generator import generate_trial_script
+                    base_script = generate_trial_script(
+                        execution_mode=stage_config.execution_mode,
+                        design_name=self.config.base_case_name,
+                        clock_period_ns=10.0,
+                        pdk=self.config.pdk,
+                    )
+
+                # Inject ECO commands into base script
+                from src.trial_runner.tcl_generator import inject_eco_commands
+                script_content = inject_eco_commands(
+                    base_script=base_script,
                     eco_tcl=eco_tcl,
                     input_odb_path=input_odb_path,  # Use modified ODB from previous stage if available
                     output_odb_path=f"/work/modified_design_{trial_index}.odb",
-                    clock_period_ns=10.0,  # Default, should come from config
-                    pdk=self.config.pdk,
                 )
 
                 # Save custom script to trial directory

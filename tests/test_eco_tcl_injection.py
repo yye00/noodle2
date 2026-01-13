@@ -85,7 +85,7 @@ exit 0
         # Check that we have both base script and ECO commands
         assert "# Noodle 2 - STA-Only Execution" in result  # Base script header
         assert "# ECO APPLICATION" in result  # ECO section
-        assert "repair_design" in result  # ECO command from CellResizeECO
+        assert "repair_timing" in result  # ECO command from CellResizeECO
         assert "write_db" in result  # ODB save
         assert "exit 0" in result  # Exit
 
@@ -106,7 +106,7 @@ exit 0
         # Check that we have STA+Congestion base plus ECO
         assert "# Noodle 2 - STA+Congestion Execution" in result
         assert "# ECO APPLICATION" in result
-        assert "repair_design" in result
+        assert "repair_timing" in result
 
         print("✓ ECO injection works with STA_CONGESTION mode")
 
@@ -200,8 +200,8 @@ class TestECOIntegrationWithTrialScripts:
         assert "gcd" in script  # Design name
         assert "/snapshot/nangate45_extreme.odb" in script  # Input ODB
         assert "/work/gcd_modified.odb" in script  # Output ODB
-        assert "repair_design" in script  # ECO command
-        assert "100" in script  # max_paths parameter
+        assert "repair_timing" in script  # ECO command for cell resizing
+        assert "setup" in script  # Setup timing repair
 
         print("✓ CellResizeECO fully integrated into trial script")
         print(f"  Total script length: {len(script)} characters")

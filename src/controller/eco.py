@@ -585,7 +585,7 @@ puts "Placement density ECO complete"
 class CellResizeECO(ECO):
     """ECO that resizes cells on critical paths to improve timing.
 
-    This ECO uses OpenROAD's repair_design command to upsize cells
+    This ECO uses OpenROAD's repair_timing command to upsize cells
     on timing-critical paths, trading area for timing improvement.
     """
 
@@ -619,9 +619,9 @@ class CellResizeECO(ECO):
 # Size multiplier: {size_mult}x
 # Max paths to repair: {max_paths}
 
-# Use OpenROAD's repair_design to resize cells
-# This will upsize cells on critical paths
-repair_design -max_passes {max_paths}
+# Use OpenROAD's repair_timing to resize cells
+# This will upsize cells on critical paths to fix setup violations
+repair_timing -setup -setup_margin 0.0
 
 # Alternative: Manual cell resizing for specific paths
 # Get worst slack paths

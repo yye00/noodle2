@@ -3068,8 +3068,8 @@
       "Step 4: Verify study pauses and displays approval request with summary",
       "Step 5: Verify subsequent stage only runs after approval received"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T21:21:26.233668+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

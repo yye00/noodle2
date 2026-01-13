@@ -1569,8 +1569,8 @@
       "Step 5: Verify logs/ directory contains openroad.log",
       "Step 6: Verify all paths in artifact_index.json are valid"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T08:06:20.342786Z",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

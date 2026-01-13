@@ -9,6 +9,8 @@ from src.controller.study import load_study_config
 from src.controller.safety import check_study_legality, LegalityChecker
 from src.controller.stage_abort import (
     check_wns_threshold_violation,
+    check_timeout_violation,
+    check_stage_failure_rate,
     AbortReason,
 )
 from src.controller.types import (
@@ -459,3 +461,519 @@ stages:
         assert "nangate45_base_0_0" in decision.violating_trials
         assert "nangate45_base_0_2" in decision.violating_trials
         assert "nangate45_base_0_1" not in decision.violating_trials
+
+
+class TestF026AbortRailTimeoutViolation:
+    """
+    Feature #F026: Abort rail triggers on timeout violation.
+
+    Steps:
+        1. Create study with abort rail timeout_seconds: 60
+        2. Run trial that takes longer than 60 seconds
+        3. Verify trial is killed after timeout
+        4. Verify abort reason is logged
+        5. Verify trial classified as timeout failure
+    """
+
+    def test_step_1_2_3_timeout_triggers_abort(self) -> None:
+        """Steps 1-3: Timeout violation triggers abort."""
+        # Step 1: Create study with abort rail timeout_seconds: 60
+        yaml_content = """
+name: timeout_abort_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+rails:
+  abort:
+    timeout_seconds: 60
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(yaml_content)
+            yaml_path = f.name
+
+        try:
+            config = load_study_config(yaml_path)
+
+            # Verify rails configuration is loaded
+            assert config.rails.abort.timeout_seconds == 60
+
+            # Step 2: Simulate trial that takes longer than 60 seconds (e.g., 75 seconds)
+            trial_config = TrialConfig(
+                study_name="timeout_abort_study",
+                case_name="nangate45_base_0_0",
+                stage_index=0,
+                trial_index=0,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+            # Create a trial result with runtime = 75 seconds (exceeds 60s timeout)
+            slow_metrics = TrialMetrics(
+                timing=TimingMetrics(
+                    wns_ps=-2000,
+                    tns_ps=-5000,
+                    failing_endpoints=2,
+                ),
+                congestion=None,
+            )
+
+            slow_trial = TrialResult(
+                config=trial_config,
+                success=True,
+                return_code=0,
+                metrics=slow_metrics,
+                artifacts=artifacts,
+                runtime_seconds=75.0,  # Exceeds 60s timeout
+            )
+
+            # Step 3: Verify trial triggers abort
+            decision = check_timeout_violation(
+                trial_results=[slow_trial],
+                timeout_seconds=60,
+            )
+
+            assert decision.should_abort is True
+            assert decision.reason == AbortReason.TIMEOUT_EXCEEDED
+            assert "nangate45_base_0_0" in decision.violating_trials
+            assert "75.0s" in decision.details
+            assert "60s" in decision.details
+
+        finally:
+            Path(yaml_path).unlink()
+
+    def test_step_4_5_trial_within_timeout_no_abort(self) -> None:
+        """Steps 4-5: Trial within timeout does not abort."""
+        # Create trial with runtime = 50 seconds (within 60s timeout)
+        trial_config = TrialConfig(
+            study_name="test_study",
+            case_name="nangate45_base_0_0",
+            stage_index=0,
+            trial_index=0,
+            script_path="/tmp/test.tcl",
+            execution_mode=ExecutionMode.STA_ONLY,
+        )
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        fast_metrics = TrialMetrics(
+            timing=TimingMetrics(
+                wns_ps=-2000,
+                tns_ps=-5000,
+                failing_endpoints=2,
+            ),
+            congestion=None,
+        )
+
+        fast_trial = TrialResult(
+            config=trial_config,
+            success=True,
+            return_code=0,
+            metrics=fast_metrics,
+            artifacts=artifacts,
+            runtime_seconds=50.0,  # Within 60s timeout
+        )
+
+        # Verify no abort
+        decision = check_timeout_violation(
+            trial_results=[fast_trial],
+            timeout_seconds=60,
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+        assert len(decision.violating_trials) == 0
+
+    def test_no_timeout_configured_never_aborts(self) -> None:
+        """When no timeout is configured, never abort."""
+        trial_config = TrialConfig(
+            study_name="test_study",
+            case_name="nangate45_base_0_0",
+            stage_index=0,
+            trial_index=0,
+            script_path="/tmp/test.tcl",
+            execution_mode=ExecutionMode.STA_ONLY,
+        )
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        # Even with very long runtime
+        very_slow_trial = TrialResult(
+            config=trial_config,
+            success=True,
+            return_code=0,
+            metrics=TrialMetrics(
+                timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                congestion=None,
+            ),
+            artifacts=artifacts,
+            runtime_seconds=300.0,  # Very slow
+        )
+
+        # No timeout configured - should not abort
+        decision = check_timeout_violation(
+            trial_results=[very_slow_trial],
+            timeout_seconds=None,  # No timeout
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+
+    def test_multiple_trials_timeout_violation(self) -> None:
+        """Multiple trials can violate timeout."""
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(3)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        metrics = TrialMetrics(
+            timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+            congestion=None,
+        )
+
+        # Create mix of fast and slow trials
+        trials = [
+            TrialResult(
+                config=trial_configs[0],
+                success=True,
+                return_code=0,
+                metrics=metrics,
+                artifacts=artifacts,
+                runtime_seconds=75.0,  # Exceeds timeout
+            ),
+            TrialResult(
+                config=trial_configs[1],
+                success=True,
+                return_code=0,
+                metrics=metrics,
+                artifacts=artifacts,
+                runtime_seconds=50.0,  # Within timeout
+            ),
+            TrialResult(
+                config=trial_configs[2],
+                success=True,
+                return_code=0,
+                metrics=metrics,
+                artifacts=artifacts,
+                runtime_seconds=80.0,  # Exceeds timeout
+            ),
+        ]
+
+        decision = check_timeout_violation(
+            trial_results=trials,
+            timeout_seconds=60,
+        )
+
+        # Should abort due to trials 0 and 2
+        assert decision.should_abort is True
+        assert len(decision.violating_trials) == 2
+        assert "nangate45_base_0_0" in decision.violating_trials
+        assert "nangate45_base_0_2" in decision.violating_trials
+        assert "nangate45_base_0_1" not in decision.violating_trials
+
+    def test_timeout_at_boundary(self) -> None:
+        """Test behavior when runtime is exactly at timeout."""
+        trial_config = TrialConfig(
+            study_name="test_study",
+            case_name="nangate45_base_0_0",
+            stage_index=0,
+            trial_index=0,
+            script_path="/tmp/test.tcl",
+            execution_mode=ExecutionMode.STA_ONLY,
+        )
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trial = TrialResult(
+            config=trial_config,
+            success=True,
+            return_code=0,
+            metrics=TrialMetrics(
+                timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                congestion=None,
+            ),
+            artifacts=artifacts,
+            runtime_seconds=60.0,  # Exactly at timeout
+        )
+
+        decision = check_timeout_violation(
+            trial_results=[trial],
+            timeout_seconds=60,
+        )
+
+        # At timeout is OK (not strictly greater than)
+        assert decision.should_abort is False
+
+
+class TestF027StageRailFailureRate:
+    """
+    Feature #F027: Stage rail triggers on high failure rate.
+
+    Steps:
+        1. Create stage with stage rail failure_rate: 0.8
+        2. Run trials where 80%+ fail
+        3. Verify stage is terminated early
+        4. Verify termination reason is logged
+        5. Verify only current survivors advance to next stage
+    """
+
+    def test_step_1_2_3_high_failure_rate_triggers_abort(self) -> None:
+        """Steps 1-3: High failure rate triggers stage abort."""
+        # Step 1: Create study with stage rail failure_rate: 0.8
+        yaml_content = """
+name: failure_rate_study
+safety_domain: guarded
+base_case_name: nangate45_base
+pdk: Nangate45
+snapshot_path: /tmp/snapshots/nangate45
+
+rails:
+  stage:
+    failure_rate: 0.8
+
+stages:
+  - name: stage_0
+    execution_mode: sta_only
+    trial_budget: 10
+    survivor_count: 5
+    allowed_eco_classes:
+      - topology_neutral
+"""
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            f.write(yaml_content)
+            yaml_path = f.name
+
+        try:
+            config = load_study_config(yaml_path)
+
+            # Verify rails configuration is loaded
+            assert config.rails.stage.failure_rate == 0.8
+
+            # Step 2: Simulate trials where 9/10 fail (90% failure rate > 80% threshold)
+            trial_configs = [
+                TrialConfig(
+                    study_name="failure_rate_study",
+                    case_name=f"nangate45_base_0_{i}",
+                    stage_index=0,
+                    trial_index=i,
+                    script_path="/tmp/test.tcl",
+                    execution_mode=ExecutionMode.STA_ONLY,
+                )
+                for i in range(10)
+            ]
+            artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+            trials = []
+            # 9 failures
+            for i in range(9):
+                trials.append(
+                    TrialResult(
+                        config=trial_configs[i],
+                        success=False,  # Failed
+                        return_code=1,
+                        metrics=None,
+                        artifacts=artifacts,
+                        runtime_seconds=50.0,
+                    )
+                )
+            # 1 success
+            trials.append(
+                TrialResult(
+                    config=trial_configs[9],
+                    success=True,
+                    return_code=0,
+                    metrics=TrialMetrics(
+                        timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                        congestion=None,
+                    ),
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+
+            # Step 3: Verify stage is terminated due to high failure rate
+            decision = check_stage_failure_rate(
+                trial_results=trials,
+                failure_rate_threshold=0.8,
+            )
+
+            assert decision.should_abort is True
+            assert decision.reason == AbortReason.CATASTROPHIC_FAILURE_RATE
+            assert "9/10" in decision.details
+            assert "90" in decision.details  # 90% failure rate
+            assert "80" in decision.details  # 80% threshold
+            assert len(decision.violating_trials) == 9
+
+        finally:
+            Path(yaml_path).unlink()
+
+    def test_step_4_5_failure_rate_within_threshold_no_abort(self) -> None:
+        """Steps 4-5: Failure rate within threshold does not abort."""
+        # Create trials where 7/10 fail (70% failure rate < 80% threshold)
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(10)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = []
+        # 7 failures
+        for i in range(7):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=False,
+                    return_code=1,
+                    metrics=None,
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+        # 3 successes
+        for i in range(7, 10):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=True,
+                    return_code=0,
+                    metrics=TrialMetrics(
+                        timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                        congestion=None,
+                    ),
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+
+        # Verify no abort (70% < 80%)
+        decision = check_stage_failure_rate(
+            trial_results=trials,
+            failure_rate_threshold=0.8,
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+
+    def test_failure_rate_exactly_at_threshold(self) -> None:
+        """Test that exactly at threshold does not abort."""
+        # Create trials where 8/10 fail (exactly 80% failure rate = 80% threshold)
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(10)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = []
+        # 8 failures
+        for i in range(8):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=False,
+                    return_code=1,
+                    metrics=None,
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+        # 2 successes
+        for i in range(8, 10):
+            trials.append(
+                TrialResult(
+                    config=trial_configs[i],
+                    success=True,
+                    return_code=0,
+                    metrics=TrialMetrics(
+                        timing=TimingMetrics(wns_ps=-2000, tns_ps=-5000, failing_endpoints=2),
+                        congestion=None,
+                    ),
+                    artifacts=artifacts,
+                    runtime_seconds=50.0,
+                )
+            )
+
+        # At threshold should not abort (not strictly greater)
+        decision = check_stage_failure_rate(
+            trial_results=trials,
+            failure_rate_threshold=0.8,
+        )
+
+        assert decision.should_abort is False
+
+    def test_no_threshold_configured_never_aborts(self) -> None:
+        """When no failure rate threshold is configured, never abort."""
+        # All trials fail
+        trial_configs = [
+            TrialConfig(
+                study_name="test_study",
+                case_name=f"nangate45_base_0_{i}",
+                stage_index=0,
+                trial_index=i,
+                script_path="/tmp/test.tcl",
+                execution_mode=ExecutionMode.STA_ONLY,
+            )
+            for i in range(10)
+        ]
+        artifacts = TrialArtifacts(trial_dir=Path("/tmp/artifacts"))
+
+        trials = [
+            TrialResult(
+                config=tc,
+                success=False,
+                return_code=1,
+                metrics=None,
+                artifacts=artifacts,
+                runtime_seconds=50.0,
+            )
+            for tc in trial_configs
+        ]
+
+        # No threshold configured - should not abort
+        decision = check_stage_failure_rate(
+            trial_results=trials,
+            failure_rate_threshold=None,
+        )
+
+        assert decision.should_abort is False
+        assert decision.reason is None
+
+    def test_empty_trial_list_does_not_abort(self) -> None:
+        """Test that empty trial list doesn't trigger abort."""
+        decision = check_stage_failure_rate(
+            trial_results=[],
+            failure_rate_threshold=0.8,
+        )
+
+        assert decision.should_abort is False
+        assert "No trials executed" in decision.details

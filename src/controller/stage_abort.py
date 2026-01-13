@@ -217,6 +217,153 @@ def check_catastrophic_failure_rate(
     )
 
 
+def check_timeout_violation(
+    trial_results: list[TrialResult],
+    timeout_seconds: int | None,
+) -> StageAbortDecision:
+    """
+    Check if any trials exceeded the timeout threshold.
+
+    The timeout is specified in seconds. If ANY trial's runtime exceeds this
+    threshold, it is classified as a timeout violation.
+
+    This is a critical safety mechanism to prevent runaway trials from consuming
+    excessive compute resources.
+
+    Args:
+        trial_results: All trials executed in this stage
+        timeout_seconds: Maximum allowed runtime in seconds
+
+    Returns:
+        StageAbortDecision indicating whether to abort and why
+
+    Example:
+        timeout_seconds = 60  # Abort if runtime > 60 seconds
+        trial_runtime = 75    # Trial took 75 seconds
+        # Result: ABORT (trial exceeded timeout)
+    """
+    if timeout_seconds is None:
+        # No timeout configured - never abort based on timeout
+        return StageAbortDecision(
+            should_abort=False,
+            reason=None,
+            details="No timeout configured",
+        )
+
+    # Find trials that violated the timeout
+    violating_trials: list[str] = []
+    longest_runtime: float = 0.0
+
+    for trial in trial_results:
+        # Check runtime
+        runtime = trial.runtime_seconds
+
+        if runtime > timeout_seconds:
+            violating_trials.append(trial.config.case_name)
+            if runtime > longest_runtime:
+                longest_runtime = runtime
+
+    if violating_trials:
+        # At least one trial violated the timeout - abort stage
+        details = (
+            f"Timeout violated: {len(violating_trials)} trial(s) "
+            f"exceeded {timeout_seconds}s limit. Longest runtime: {longest_runtime:.1f}s. "
+            f"Violating trials: {', '.join(violating_trials[:5])}"
+        )
+        if len(violating_trials) > 5:
+            details += f" and {len(violating_trials) - 5} more"
+
+        return StageAbortDecision(
+            should_abort=True,
+            reason=AbortReason.TIMEOUT_EXCEEDED,
+            details=details,
+            violating_trials=violating_trials,
+        )
+
+    # No violations - do not abort
+    return StageAbortDecision(
+        should_abort=False,
+        reason=None,
+        details=f"All trials completed within {timeout_seconds}s timeout",
+    )
+
+
+def check_stage_failure_rate(
+    trial_results: list[TrialResult],
+    failure_rate_threshold: float | None,
+) -> StageAbortDecision:
+    """
+    Check if the stage failure rate exceeds the configured threshold.
+
+    If too many trials fail (regardless of failure type), the stage should abort
+    to avoid wasting compute on an ineffective ECO strategy.
+
+    This is distinct from catastrophic_failure_rate which only counts critical
+    failures like segfaults. This counts ALL failures.
+
+    Args:
+        trial_results: All trials executed in this stage
+        failure_rate_threshold: Maximum acceptable failure rate (0.0-1.0)
+
+    Returns:
+        StageAbortDecision indicating whether to abort
+
+    Example:
+        failure_rate_threshold = 0.8  # Abort if >80% fail
+        8 out of 10 trials failed     # 80% failure rate
+        # Result: NO ABORT (exactly at threshold)
+        9 out of 10 trials failed     # 90% failure rate
+        # Result: ABORT (exceeds threshold)
+    """
+    if failure_rate_threshold is None:
+        # No threshold configured - never abort based on failure rate
+        return StageAbortDecision(
+            should_abort=False,
+            reason=None,
+            details="No failure rate threshold configured",
+        )
+
+    if not trial_results:
+        return StageAbortDecision(
+            should_abort=False,
+            reason=None,
+            details="No trials executed",
+        )
+
+    # Count failures
+    failure_count = 0
+    failed_trials: list[str] = []
+
+    for trial in trial_results:
+        if not trial.success:
+            failure_count += 1
+            failed_trials.append(trial.config.case_name)
+
+    failure_rate = failure_count / len(trial_results)
+
+    if failure_rate > failure_rate_threshold:
+        details = (
+            f"Failure rate too high: {failure_count}/{len(trial_results)} "
+            f"({failure_rate:.1%}) exceeds threshold ({failure_rate_threshold:.1%}). "
+            f"Failed trials: {', '.join(failed_trials[:5])}"
+        )
+        if len(failed_trials) > 5:
+            details += f" and {len(failed_trials) - 5} more"
+
+        return StageAbortDecision(
+            should_abort=True,
+            reason=AbortReason.CATASTROPHIC_FAILURE_RATE,
+            details=details,
+            violating_trials=failed_trials,
+        )
+
+    return StageAbortDecision(
+        should_abort=False,
+        reason=None,
+        details=f"Failure rate acceptable: {failure_rate:.1%}",
+    )
+
+
 def check_no_survivors(
     survivor_count: int,
     required_survivors: int = 1,
@@ -254,6 +401,8 @@ def evaluate_stage_abort(
     trial_results: list[TrialResult],
     survivors: list[str],
     baseline_wns_ps: int | None = None,
+    abort_timeout_seconds: int | None = None,
+    stage_failure_rate_threshold: float | None = None,
 ) -> StageAbortDecision:
     """
     Evaluate all abort conditions and make a deterministic decision.
@@ -262,14 +411,18 @@ def evaluate_stage_abort(
     configured abort conditions in priority order:
 
     1. WNS threshold violations (configured per-stage)
-    2. Catastrophic failure rate (safety limit)
-    3. No survivors (cannot continue)
+    2. Timeout violations (configured in abort rail)
+    3. Stage failure rate (configured in stage rail)
+    4. Catastrophic failure rate (safety limit)
+    5. No survivors (cannot continue)
 
     Args:
         stage_config: Stage configuration with abort thresholds
         trial_results: All trial results from this stage
         survivors: List of survivor case IDs
         baseline_wns_ps: Optional baseline WNS for context
+        abort_timeout_seconds: Optional timeout threshold from abort rail
+        stage_failure_rate_threshold: Optional failure rate threshold from stage rail
 
     Returns:
         StageAbortDecision with the highest-priority abort reason, or no abort
@@ -286,12 +439,28 @@ def evaluate_stage_abort(
     if wns_decision.should_abort:
         return wns_decision
 
-    # 2. Check catastrophic failure rate
+    # 2. Check timeout violations
+    timeout_decision = check_timeout_violation(
+        trial_results=trial_results,
+        timeout_seconds=abort_timeout_seconds,
+    )
+    if timeout_decision.should_abort:
+        return timeout_decision
+
+    # 3. Check stage failure rate
+    stage_failure_decision = check_stage_failure_rate(
+        trial_results=trial_results,
+        failure_rate_threshold=stage_failure_rate_threshold,
+    )
+    if stage_failure_decision.should_abort:
+        return stage_failure_decision
+
+    # 4. Check catastrophic failure rate
     catastrophic_decision = check_catastrophic_failure_rate(trial_results)
     if catastrophic_decision.should_abort:
         return catastrophic_decision
 
-    # 3. Check survivor count
+    # 5. Check survivor count
     survivor_decision = check_no_survivors(len(survivors))
     if survivor_decision.should_abort:
         return survivor_decision

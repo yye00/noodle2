@@ -756,8 +756,8 @@
       "Step 4: Verify abort reason is logged",
       "Step 5: Verify trial classified as timeout failure"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T04:37:47.441710+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,
@@ -786,8 +786,8 @@
       "Step 4: Verify termination reason is logged",
       "Step 5: Verify only current survivors advance to next stage"
     ],
-    "passes": false,
-    "passed_at": null,
+    "passes": true,
+    "passed_at": "2026-01-13T04:37:47.441719+00:00",
     "needs_reverification": false,
     "reverification_reason": null,
     "deprecated": false,

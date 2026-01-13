@@ -3575,3 +3575,116 @@ Session Statistics:
 - Clean commit with proper documentation
 
 ================================================================================
+
+================================================================================
+SESSION 29 - 2026-01-13
+================================================================================
+
+FEATURE COMPLETED: F070
+-----------------------
+✓ Run legality report is generated before study execution
+
+Implementation Details:
+- Enhanced RunLegalityReport in src/controller/safety.py
+  * Added rails: Optional[RailsConfig] field to include abort criteria
+  * Updated __str__() method to display rails information:
+    - Abort Rail (trial-level): WNS threshold, timeout
+    - Stage Rail (stage-level): failure rate
+    - Study Rail (study-level): catastrophic failures, max runtime
+  * Updated to_dict() method to serialize rails with all sub-configurations
+  * Modified generate_legality_report() to pass study.rails
+
+- Report now includes all required information per F070 requirements:
+  * Safety domain ✓
+  * Proposed ECO classes (allowed_eco_classes) ✓
+  * Applicable rails ✓
+  * Abort criteria ✓
+  * Violations with reasons ✓
+
+Testing:
+- Created tests/test_f070_run_legality_report.py
+- 12 comprehensive tests covering all 4 feature steps:
+  * Step 1: Create study config
+  * Step 2: Request legality check
+  * Step 3: Verify report includes all required fields
+  * Step 4: Verify illegal configurations are flagged
+- Additional test coverage:
+  * Dictionary serialization with/without rails
+  * Human-readable string format
+  * Different safety domains (SANDBOX, GUARDED, LOCKED)
+  * Loading from YAML and generating report
+  * End-to-end workflow validation
+- All 12 new tests passing
+- No regressions (201 related tests passing)
+
+Technical Notes:
+- Rails are optional in the report (None if not configured)
+- Human-readable format clearly labels abort criteria sections
+- Dictionary format preserves all rail configuration values
+- Compatible with existing validation.py dry_run_validation()
+
+PROGRESS SUMMARY:
+-----------------
+Features Complete: 76/85 (89.4%)
+Features Remaining: 9
+- F071: Illegal run rejection (depends on F070) - NOW UNBLOCKED
+- F072: Compound ECO (low priority)
+- F073: Compound ECO rollback modes (depends on F072)
+- F074: ECO preconditions (low priority)
+- F075: ECO postconditions (low priority)
+- F079: Study comparison (low priority)
+- F080: Trial replay (low priority)
+- F081: Trial replay with modified parameters (depends on F080)
+- F082: Trial replay preserves environment (depends on F080)
+
+Next Steps:
+- F071 is now unblocked (depends on F070 which just passed)
+- F071: Illegal run rejection - validates that studies with illegal 
+  configurations are rejected before execution
+- All remaining features are low priority
+- 9 features remaining, all dependencies satisfied for F071, F072, F074, F075, F079, F080
+
+Session Statistics:
+- 1 feature completed (F070)
+- 12 new tests added
+- 2 files modified, 1 file created
+- All tests passing (4911 total tests = 4899 existing + 12 new)
+- Clean commit with proper documentation
+- No regressions
+
+================================================================================
+
+FEATURE COMPLETED: F071
+-----------------------
+✓ Illegal run is rejected before consuming compute
+
+Implementation Details:
+- Verified existing implementation in src/controller/executor.py
+  * StudyExecutor.execute() includes SAFETY GATE 1 for legality checking
+  * Calls check_study_legality() which raises ValueError if illegal
+  * Immediately returns StudyResult with aborted=True if illegal
+  * No trials are executed when study is rejected
+  * Generates safety_trace.json and study_summary.json on rejection
+  * Rejection happens in < 1 second (before any compute consumed)
+
+Testing:
+- Created tests/test_f071_illegal_run_rejection.py
+- 12 comprehensive tests covering all 5 feature steps
+- Additional test coverage for legal configs, different domains, artifacts
+- All 12 new tests passing
+- No regressions
+
+PROGRESS SUMMARY:
+-----------------
+Features Complete: 77/85 (90.6%)
+Features Remaining: 8 (all low priority)
+
+Session Statistics (so far):
+- 2 features completed (F070, F071)
+- 24 new tests added
+- 3 files modified, 2 files created
+- All tests passing
+- 2 clean commits
+- No regressions
+
+================================================================================

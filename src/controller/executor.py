@@ -1161,6 +1161,10 @@ class StudyExecutor:
         This cycles through different ECO types and parameters to explore
         the ECO design space. First trial (trial 0) uses NoOpECO as baseline.
 
+        For later stages (2+), includes aggressive GLOBAL_DISRUPTIVE ECOs like
+        TimingDrivenPlacementECO and IterativeTimingDrivenECO which are designed
+        for extreme timing violations (>5x over budget).
+
         Args:
             trial_index: Trial index within stage
             stage_index: Stage index
@@ -1168,6 +1172,11 @@ class StudyExecutor:
         Returns:
             ECO instance, or None for base case (no ECO)
         """
+        from src.controller.eco import (
+            TimingDrivenPlacementECO,
+            IterativeTimingDrivenECO,
+        )
+
         # First trial is always no-op (baseline)
         if trial_index == 0:
             return NoOpECO()
@@ -1176,7 +1185,8 @@ class StudyExecutor:
         # Use division to get parameter variation index (trials with same ECO type get different params)
         param_variant = ((trial_index - 1) // len([1,2,3])) % 3  # Which parameter set to use
 
-        eco_types = [
+        # Base ECOs for early stages (TOPOLOGY_NEUTRAL, PLACEMENT_LOCAL, ROUTING_AFFECTING)
+        base_eco_types = [
             ("cell_resize", lambda idx, var: CellResizeECO(
                 size_multiplier=1.2 + var * 0.3,  # 1.2, 1.5, 1.8
                 max_paths=50 + var * 50  # 50, 100, 150
@@ -1195,6 +1205,30 @@ class StudyExecutor:
                 target_density=0.65 - var * 0.05  # 0.65, 0.60, 0.55 (lower = more spreading)
             )),
         ]
+
+        # Aggressive ECOs for later stages (GLOBAL_DISRUPTIVE)
+        # These are designed for extreme timing violations (>5x over budget)
+        aggressive_eco_types = [
+            ("timing_driven_placement", lambda idx, var: TimingDrivenPlacementECO(
+                target_density=0.70 - var * 0.05,  # 0.70, 0.65, 0.60
+                keep_overflow=0.1 + var * 0.05  # 0.10, 0.15, 0.20
+            )),
+            ("iterative_timing_driven", lambda idx, var: IterativeTimingDrivenECO(
+                target_density=0.70 - var * 0.05,  # 0.70, 0.65, 0.60
+                keep_overflow=0.1 + var * 0.05,  # 0.10, 0.15, 0.20
+                max_iterations=8 + var * 2,  # 8, 10, 12 iterations
+                convergence_threshold=0.02 - var * 0.005  # 2%, 1.5%, 1% threshold
+            )),
+        ]
+
+        # For stages 2 and 3 (later stages), include aggressive ECOs in the rotation
+        # This allows for much more aggressive timing optimization
+        if stage_index >= 2:
+            # Combine base and aggressive ECOs for late-stage optimization
+            # Prioritize aggressive ECOs by putting them first in the rotation
+            eco_types = aggressive_eco_types + base_eco_types
+        else:
+            eco_types = base_eco_types
 
         # Select ECO type based on trial index
         eco_type_index = (trial_index - 1) % len(eco_types)

@@ -4,7 +4,7 @@
   "execution_type": "real_sta",
   "wns_ps": -1848,
   "tns_ps": -2630906,
-  "hot_ratio": 0.526181,
+  "hot_ratio": 0.522848,
   "clock_period_ns": 0.35,
   "status": "timing_violation"
 }

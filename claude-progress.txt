@@ -2190,3 +2190,71 @@ Registered in ECO_REGISTRY. Tests pass (202/205). No regressions.
 Framework remains at 118/120 features passing (98.3%).
 
 Session 62: 2026-01-14
+
+## Session 63 - Discovery of Missing GateCloningECO Integration
+
+### Critical Discovery
+GateCloningECO was implemented but NOT integrated into trial execution!
+
+Investigation revealed:
+1. GateCloningECO properly implemented in src/controller/eco.py (Session 62)
+2. Registered in ECO_REGISTRY as "gate_cloning"  
+3. Has proper metadata, TCL generation, parameter validation
+4. BUT: NOT included in StudyExecutor._create_eco_for_trial() function
+
+The executor was only cycling through 3 ECO types:
+- cell_resize, buffer_insertion, cell_swap
+Missing: gate_cloning (and placement_density)
+
+### Changes Made
+1. Added GateCloningECO to imports in executor.py
+2. Added gate_cloning to eco_types list with parameter variations:
+   - max_fanout: 12, 16, 20 (lower = more aggressive cloning)
+3. Committed changes (git commit d70268c)
+
+### Impact  
+Demo runs can now use GateCloningECO to address high-fanout timing issues.
+This may help achieve F115/F116 targets (>50% WNS improvement, >60% hot_ratio reduction).
+
+### Status
+- Code change: Complete and committed
+- Tests: Smoke tests passing
+- Next: Need to run demo to evaluate impact on F115/F116
+
+Session 63: 2026-01-14
+
+### Additional Integration
+Also added PlacementDensityECO to trial generation:
+- Registered as "placement_density" in ECO_REGISTRY
+- Parameters: target_density 0.65, 0.60, 0.55 (lower = more spreading)
+- Targets congestion reduction (hot_ratio) - directly addresses F116
+- Committed changes (git commit 732bb7a)
+
+### Summary of Changes
+Now executor cycles through 5 ECO types instead of 3:
+1. cell_resize (existing)
+2. buffer_insertion (existing)
+3. cell_swap (existing)
+4. gate_cloning (NEW - addresses high-fanout timing, F115)
+5. placement_density (NEW - addresses congestion, F116)
+
+### Impact Analysis
+With 5 ECO types and trial budgets of 20+15+12+10=57 trials:
+- Each ECO type gets ~11-12 trials across all stages
+- 3 parameter variations per ECO = good exploration
+- gate_cloning specifically targets fanout issues contributing to timing
+- placement_density specifically targets congestion/hot_ratio
+
+### Next Steps Required
+1. Run demo_nangate45_extreme.sh to evaluate impact
+2. Check if F115 (>50% WNS improvement) is achieved
+3. Check if F116 (>60% hot_ratio reduction) is achieved
+4. Update feature_list.json based on results
+
+### Status
+- Code changes: Complete and committed (2 commits)
+- Tests: ECO-related tests passing (35/35)
+- Demo run: Required to verify F115/F116 impact
+- No regressions detected
+
+Session 63: 2026-01-14 (Code integration complete)

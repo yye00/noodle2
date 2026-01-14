@@ -528,6 +528,114 @@
     {
       "session_num": 185,
       "started_at": "2026-01-14T00:30:47.236174",
+      "ended_at": "2026-01-14T00:44:47.765834",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 186,
+      "started_at": "2026-01-14T00:44:51.771937",
+      "ended_at": "2026-01-14T00:46:13.202252",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 187,
+      "started_at": "2026-01-14T00:46:17.208565",
+      "ended_at": "2026-01-14T01:20:34.132915",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 188,
+      "started_at": "2026-01-14T01:20:38.139510",
+      "ended_at": "2026-01-14T01:21:26.782699",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 189,
+      "started_at": "2026-01-14T01:21:30.788834",
+      "ended_at": "2026-01-14T01:37:04.703086",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 190,
+      "started_at": "2026-01-14T01:37:08.707000",
+      "ended_at": "2026-01-14T01:37:56.165409",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 191,
+      "started_at": "2026-01-14T01:38:00.172286",
+      "ended_at": "2026-01-14T01:55:47.648334",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 192,
+      "started_at": "2026-01-14T01:55:51.654158",
+      "ended_at": "2026-01-14T01:56:34.293459",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 193,
+      "started_at": "2026-01-14T01:56:38.299938",
+      "ended_at": "2026-01-14T02:07:02.842469",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 194,
+      "started_at": "2026-01-14T02:07:06.848799",
+      "ended_at": "2026-01-14T02:08:07.705983",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 195,
+      "started_at": "2026-01-14T02:08:11.712310",
+      "ended_at": "2026-01-14T02:24:11.499707",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 196,
+      "started_at": "2026-01-14T02:24:15.504924",
+      "ended_at": "2026-01-14T02:25:00.407888",
+      "passing_at_start": 118,
+      "passing_at_end": 118,
+      "features_completed": [],
+      "features_attempted": []
+    },
+    {
+      "session_num": 197,
+      "started_at": "2026-01-14T02:25:04.411214",
       "ended_at": null,
       "passing_at_start": 118,
       "passing_at_end": null,
@@ -802,7 +910,7 @@
     ]
   },
   "last_passing_count": 118,
-  "sessions_without_progress": 24,
+  "sessions_without_progress": 36,
   "stuck_features": [],
   "created_at": "2026-01-13T09:37:52.741691",
   "reset_at": "2026-01-13T09:37:52.741692"

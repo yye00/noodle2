@@ -2,16 +2,15 @@
   "feature_id": "unknown",
   "failure_category": "BAD_ASSUMPTIONS",
   "confidence": 1.0,
-  "reasoning": "Feature ID 'unknown' does not exist in the system. This is a template placeholder or erroneous parameter that was not replaced with an actual feature ID. The escalation_state.json contains no 'unknown' entry, and the feature_list.json has no feature with id='unknown'. Valid feature IDs follow the pattern F001-F120. The root cause analysis was invoked with an invalid feature identifier.",
+  "reasoning": "Feature ID 'unknown' does not exist in the system. This is a template placeholder or erroneous parameter that was not replaced with an actual feature ID. The escalation_state.json contains no 'unknown' entry, and feature_list.json has no feature with id='unknown'. Valid feature IDs follow the pattern F001-F120. The root cause analysis was invoked with an invalid feature identifier.",
   "evidence": [
     "jq '.[] | select(.id == \"unknown\")' feature_list.json returns empty output",
     "escalation_state.json has no 'unknown' key in .features object - returns null",
     "All valid feature IDs in the system match pattern F[0-9]{3} (e.g., F001, F116)",
     "The 'unknown' string appears to be a template placeholder that was never substituted",
-    "No error history exists for feature 'unknown' - it was never tracked in the escalation system",
-    "Current tracked features with failures: F116 (12 attempts), F101 (3 attempts), F113 (2 attempts)"
+    "No error history exists for feature 'unknown' - it was never tracked in the escalation system"
   ],
   "research_queries": [],
-  "recommended_action": "FIX INVOCATION: The root cause analysis prompt was invoked with 'unknown' instead of a valid feature ID. Check the calling code/script to ensure it substitutes actual feature IDs (like F116, F101, F113) into the template. Currently tracked features with active failures requiring diagnosis: F116 (12 total attempts, 9 with Opus, BAD_ASSUMPTIONS likely), F101 (3 attempts), F113 (2 attempts). Re-run diagnosis with a valid feature ID from escalation_state.json.",
-  "diagnosed_at": "2026-01-14T00:00:00Z"
+  "recommended_action": "FIX INVOCATION: The root cause analysis prompt was invoked with 'unknown' instead of a valid feature ID. Check the calling code/script to ensure it substitutes actual feature IDs into the template. Currently tracked features with active failures requiring attention: F116 (20 total attempts - 3 Sonnet, 17 Opus - ALREADY DIAGNOSED as BAD_ASSUMPTIONS in diagnosis_F116.json), F101 (3 attempts), F113 (2 attempts). If you intended to diagnose F116, note that diagnosis_F116.json already exists and recommends RESTRUCTURE due to algorithmic research limitations - the feature requires advanced EDA optimization beyond standard OpenROAD commands.",
+  "diagnosed_at": "2026-01-14T02:24:00Z"
 }

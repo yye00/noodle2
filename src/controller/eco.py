@@ -498,33 +498,40 @@ class BufferInsertionECO(ECO):
         buffer_cell = self.metadata.parameters["buffer_cell"]
 
         tcl_script = f"""# Buffer Insertion ECO
-# Insert buffers on nets to improve timing through repair_design and repair_timing
-# Strategy optimized for extreme timing violations
+# TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
+# For extreme violations, repair_design's DRV fixes often make timing worse
+# This approach prioritizes timing recovery over DRV compliance
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
+set_wire_rc -clock -layer metal5
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# For extremely broken designs, use gentle constraints
-# Allow long wires and moderate utilization to give tool room to work
-# Single well-tuned pass is more effective than multiple aggressive passes
+# AGGRESSIVE TIMING REPAIR (without repair_design)
+# Multiple passes with progressively tighter margins
+# This compounds improvements while avoiding DRV-driven buffer insertion
 
-# Primary repair pass with generous constraints
-repair_design -max_wire_length 120 -max_utilization 0.80
-repair_timing -setup -setup_margin 0.1
-
-# Re-estimate parasitics after changes
+# Pass 1: Aggressive margin to catch worst violators
+repair_timing -setup -setup_margin 0.3
 estimate_parasitics -placement
 
-# Second pass to consolidate improvements
+# Pass 2: Moderate margin for secondary paths
+repair_timing -setup -setup_margin 0.15
+estimate_parasitics -placement
+
+# Pass 3: Fine-tuning pass
+repair_timing -setup -setup_margin 0.05
+estimate_parasitics -placement
+
+# Pass 4: Final cleanup
 repair_timing -setup -setup_margin 0.0
 
 # Note: max_capacitance parameter ({max_cap} pF) is stored but not used
-# in commands (OpenROAD repair_design does not support -max_cap flag)
+# in commands (OpenROAD repair_timing does not support -max_cap flag)
 
-puts "Buffer insertion ECO complete"
+puts "Buffer insertion ECO complete (timing-focused, no repair_design)"
 """
         return tcl_script
 
@@ -627,33 +634,38 @@ class CellResizeECO(ECO):
         max_paths = self.metadata.parameters["max_paths"]
 
         tcl_script = f"""# Cell Resize ECO
-# Resize cells on critical paths to improve timing using repair_design
+# TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
 # Size multiplier: {size_mult}x
 # Max paths to repair: {max_paths}
 # Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
+set_wire_rc -clock -layer metal5
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# For extremely broken designs, use a single well-tuned pass
-# Multiple passes can compound errors and make things worse
-# Give OpenROAD maximum freedom with generous constraints
+# AGGRESSIVE TIMING REPAIR (without repair_design)
+# Multiple passes to compound improvements
+# This avoids DRV-driven buffer insertion that worsens timing
 
-# Single repair pass with generous constraints for extreme cases
-# Allow long wires and moderate utilization to give tool room to work
-repair_design -max_wire_length 100 -max_utilization 0.85
-repair_timing -setup -setup_margin 0.1
-
-# Re-estimate parasitics after changes
+# Pass 1: Aggressive margin for worst paths
+repair_timing -setup -setup_margin 0.35
 estimate_parasitics -placement
 
-# Second pass to consolidate improvements
+# Pass 2: Moderate margin for secondary paths
+repair_timing -setup -setup_margin 0.2
+estimate_parasitics -placement
+
+# Pass 3: Fine-tuning pass
+repair_timing -setup -setup_margin 0.1
+estimate_parasitics -placement
+
+# Pass 4: Final cleanup
 repair_timing -setup -setup_margin 0.0
 
-puts "Cell resize ECO complete"
+puts "Cell resize ECO complete (timing-focused, no repair_design)"
 """
         return tcl_script
 
@@ -704,30 +716,36 @@ class CellSwapECO(ECO):
         path_count = self.metadata.parameters["path_count"]
 
         tcl_script = f"""# Cell Swap ECO
-# Swap cells to faster variants on critical paths using repair_design
+# TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
 # Number of paths to analyze: {path_count}
 # Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
+set_wire_rc -clock -layer metal5
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# For extremely broken designs, use gentle constraints
-# Single well-tuned pass with generous constraints
+# AGGRESSIVE TIMING REPAIR (without repair_design)
+# Multiple passes to compound improvements
 
-# Primary repair pass - allow tool maximum freedom
-repair_design -max_wire_length 150 -max_utilization 0.75
-repair_timing -setup -setup_margin 0.1
-
-# Re-estimate parasitics after changes
+# Pass 1: Very aggressive margin for worst paths
+repair_timing -setup -setup_margin 0.4
 estimate_parasitics -placement
 
-# Second pass to consolidate improvements
+# Pass 2: Moderate margin for secondary paths
+repair_timing -setup -setup_margin 0.2
+estimate_parasitics -placement
+
+# Pass 3: Fine-tuning pass
+repair_timing -setup -setup_margin 0.1
+estimate_parasitics -placement
+
+# Pass 4: Final cleanup
 repair_timing -setup -setup_margin 0.0
 
-puts "Cell swap ECO complete"
+puts "Cell swap ECO complete (timing-focused, no repair_design)"
 """
         return tcl_script
 
@@ -775,12 +793,13 @@ class GateCloningECO(ECO):
         max_fanout = self.metadata.parameters["max_fanout"]
 
         tcl_script = f"""# Gate Cloning ECO
-# Clone high-fanout gates to reduce load and improve timing
+# TIMING-FOCUSED strategy: Clone high-fanout gates and repair timing
 # Max fanout threshold: {max_fanout}
 # Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
+set_wire_rc -clock -layer metal5
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
@@ -788,17 +807,23 @@ estimate_parasitics -placement
 # Clone high-fanout gates using repair_timing
 # The -max_fanout parameter identifies gates to clone
 repair_timing -setup -max_fanout {max_fanout}
-
-# After cloning, run placement optimization with gentle constraints
-repair_design -max_wire_length 100 -max_utilization 0.85
-
-# Re-estimate parasitics after placement changes
 estimate_parasitics -placement
 
-# Final timing repair to consolidate improvements
+# AGGRESSIVE TIMING REPAIR (without repair_design)
+# Multiple passes to compound improvements from cloning
+
+# Pass 1: Aggressive margin
+repair_timing -setup -setup_margin 0.3
+estimate_parasitics -placement
+
+# Pass 2: Moderate margin
+repair_timing -setup -setup_margin 0.15
+estimate_parasitics -placement
+
+# Pass 3: Final cleanup
 repair_timing -setup -setup_margin 0.0
 
-puts "Gate cloning ECO complete - cloned gates with fanout > {max_fanout}"
+puts "Gate cloning ECO complete (timing-focused, no repair_design)"
 """
         return tcl_script
 

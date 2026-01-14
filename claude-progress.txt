@@ -1,157 +1,156 @@
-## Session 78 Progress - 2026-01-14
+## Session 79 Progress - 2026-01-14
 
-### Session Start Summary
+### Starting Status
 - **Total Features**: 120
 - **Passing**: 118 (98.3%)
 - **Failing**: 2 (1.7%) - F115, F116
 - **Needs Reverification**: 0
-- **Deprecated**: 0
 
-### Current State Assessment
+### Session Objectives
+1. Review current state and understand F115/F116 limitations
+2. Explore possible solutions based on research findings
+3. Implement any feasible improvements
 
-Reviewed the complete project state:
+### Session Summary
 
-1. **Excellent Overall Health**: 98.3% passing rate (118/120 features)
-2. **Remaining Features**: F115 and F116 are both related to Nangate45 extreme demo targets
-3. **Thoroughly Documented**: KNOWN_LIMITATIONS.md contains comprehensive 22-attempt investigation history
-4. **Fundamental Limitation**: Features require >50% WNS improvement on a design 5.3x over timing budget
+#### 1. Comprehensive Review Completed
 
-### F115/F116 Analysis
+Reviewed complete project state:
+- All 118 passing tests verified working
+- F115/F116 investigation history reviewed (22 attempts over 11 sessions)
+- Current best result: 10.1% WNS improvement (vs 50% target)
+- KNOWN_LIMITATIONS.md comprehensively documents the architectural limitation
+- Research document (harness_logs/research_F115_F116.md) contains detailed findings
 
-**Feature Requirements:**
-- F115: Achieve >50% WNS improvement from initial < -1500ps
-- F116: Reduce hot_ratio by >60% from initial > 0.3
+#### 2. Research Analysis
 
-**Current Results (Session 77, Jan 14 2026):**
-- Initial WNS: -1848ps
-- Final WNS: -1661ps
-- Improvement: 10.1% (vs target >50%) ❌
-- Initial hot_ratio: 0.526
-- Final hot_ratio: 0.4893
-- Reduction: 7.0% (vs target >60%) ❌
+Research findings suggest three strategies:
+- ✓ Timing-driven placement re-optimization (DONE - TimingDrivenPlacementECO)
+- ✓ Iterative ECO flow with 10+ passes (NEW - IterativeTimingDrivenECO)
+- ✗ Less extreme snapshot (would change the test requirements)
 
-**Investigation Summary:**
-- 22 attempts across 11 sessions (Sessions 67-77)
-- ~12 hours of investigation time
-- All major strategies attempted including:
-  - Standard repair_design + repair_timing
-  - Skip repair_design, repair_timing only
-  - Multi-pass aggressive repair_timing
-  - Timing-driven global placement re-optimization (GLOBAL_DISRUPTIVE)
-  - Buffer insertion with various parameters
-  - Cell resizing and swapping
-  - Iterative multi-stage approach
+Research indicates iterative ECO flows can provide **20-40% additional improvement** beyond single-pass timing-driven placement.
 
-**Root Cause:**
-Design is **5.3x over timing budget** (WNS -1848ps on 350ps clock). This is an **architectural problem**:
-- Critical paths physically too long
-- Local ECOs cannot reduce path length by 5x
-- Would require global changes (re-synthesis, re-floorplanning, constraint relaxation)
+#### 3. New ECO Implementation: IterativeTimingDrivenECO
 
-**Why This is Accepted:**
-1. Framework works correctly (98.3% passing)
-2. Extensive investigation (22 attempts, 12 hours)
-3. All state-of-the-art strategies tried
-4. Scientifically valid limitation (physics prevents 5x improvement with local changes)
-5. Research-aligned (spec explicitly mentions documenting architectural limitations)
-6. Real execution verified (all ECOs execute correctly on real OpenROAD)
-7. Industry realistic (production ECO flows face same constraints)
+**Created ultra-aggressive iterative ECO** based on research recommendations:
 
-### Verification Test Status
+**Features:**
+- Combines timing-driven placement re-optimization
+- Iterative repair_timing with up to 10 passes
+- Convergence checking (stops if improvement < 2%)
+- Adaptive margin scheduling (starts at 30%, ends at 0%)
+- ECOClass: GLOBAL_DISRUPTIVE
+- Registered as "iterative_timing_driven" in ECO_REGISTRY
 
-Running full test suite (5422 tests)...
+**Implementation Details:**
+- Location: `src/controller/eco.py` (lines 954-1096)
+- Exported from `src/controller/__init__.py`
+- Comprehensive test suite: `tests/test_iterative_timing_driven_eco.py`
+- 8 tests covering:
+  - Initialization and defaults
+  - TCL generation with iterative loop
+  - Parameter validation
+  - Convergence logic
+  - Margin scheduling
+  - Factory creation
 
-### Next Steps
+**All Tests Passing:**
+```
+tests/test_iterative_timing_driven_eco.py ........  [100%]
+8 passed in 0.28s
+```
 
-Since F115/F116 represent a fundamental architectural limitation that has been:
-1. Thoroughly investigated (22 attempts)
-2. Comprehensively documented (KNOWN_LIMITATIONS.md)
-3. Validated with real execution
-4. Aligned with research guidance in the spec
+**Expected Results:**
+Based on research:
+- Current best (TimingDrivenPlacementECO): 10.1% improvement
+- Additional iterative improvement: +20-40%
+- Potential total: 30-50% improvement
+- Target requirement: >50% improvement
 
-The recommended approach is to:
-1. Verify all other tests are still passing
-2. Ensure documentation is complete
-3. Consider if any improvements to the framework are still possible
-4. Update progress notes
+**Status:** Optimistically, this approach *might* achieve the 50% target, but it's at the very edge of what's physically possible for a design 5.3x over timing budget.
 
-### Test Suite Verification
+#### 4. Next Steps
 
-Ran comprehensive test verification:
+**To complete F115/F116 evaluation:**
 
-**Core Framework Tests** (All Passing):
-- `test_eco_framework.py`: 34/34 tests PASSED
-- `test_safety.py`: 22/22 tests PASSED
-- `test_safety_rails.py`: 28/28 tests PASSED
-- `test_safety_domain_enforcement.py`: 22/22 tests PASSED
-- `test_timing_driven_placement_eco.py`: 14/14 tests PASSED
+**Option A: Test the new ECO** (recommended next)
+```bash
+# Modify demo_study.py to use IterativeTimingDrivenECO in stage 2-3
+# Run the demo
+./demo_nangate45_extreme.sh
+# Duration: ~78-90 minutes
+# Check if improvement >= 50%
+```
 
-**Total Test Suite**: 5,422 tests
-**Status**: All tests passing except F115/F116 demo targets (as expected)
+**Option B: If still failing** (backup plan)
+- Document as architectural limitation (already comprehensively done)
+- Research outcome: "Local ECOs cannot fix 5.3x timing violations"
+- Align with spec guidance: "Document as architectural limitation"
 
-### TimingDrivenPlacementECO Implementation Status
+**Option C: Create less extreme snapshot** (alternative)
+- Use 1.0-1.5ns clock instead of 0.35ns
+- Makes violations 2-3x instead of 5.3x
+- More realistic ECO scenario
+- Would likely achieve 50%+ improvement
 
-✅ **Fully Implemented and Tested** (Session 76-77):
-- Class implemented in `src/controller/eco.py`
-- Comprehensive test suite in `tests/test_timing_driven_placement_eco.py`
-- Integrated into nangate45_extreme_demo
-- Real execution validated (Session 77)
-- Result: 10.1% WNS improvement (best achieved)
+### Files Modified This Session
 
-### Documentation Created
+**Code Changes:**
+- `src/controller/eco.py`: Added IterativeTimingDrivenECO class
+- `src/controller/__init__.py`: Exported new ECO class
+- `tests/test_iterative_timing_driven_eco.py`: Comprehensive test suite (new)
+- `harness_logs/research_F115_F116.md`: Updated with implementation status
 
-**PROJECT_STATUS.md** - Comprehensive project status report including:
-- Executive summary with 98.3% completion rate
-- Detailed feature breakdown
-- Complete investigation history (22 attempts)
-- Root cause analysis of architectural limitation
-- Latest demo results with timestamps
-- Quality metrics and recommendations
-- Professional assessment of project state
+**Git Commit:**
+```
+b168650 - Implement IterativeTimingDrivenECO for extreme timing violations
+```
 
-### Key Findings
+### Current Project State
 
-1. **Framework is Production-Ready**: 118/120 features (98.3%) working correctly
-2. **All ECO Types Implemented**: Including state-of-the-art TimingDrivenPlacementECO
-3. **Real Execution Verified**: All demos run on actual OpenROAD in Docker
-4. **Thorough Investigation**: 22 attempts over 12 hours to achieve F115/F116 targets
-5. **Fundamental Limitation Identified**: 5.3x timing violations require architectural changes, not ECOs
-6. **Spec-Aligned Approach**: Research strategies explicitly mention "document as architectural limitation"
+**Strengths:**
+- 98.3% test coverage (118/120 features passing)
+- Real execution infrastructure working perfectly
+- All ECO types implemented including state-of-the-art approaches
+- Comprehensive documentation of limitations
+- Thorough investigation (now 23rd attempt with new ECO)
 
-### Recommendations
+**Remaining Work:**
+- F115: Achieve >50% WNS improvement (currently 10.1%)
+- F116: Achieve >60% hot_ratio reduction (currently 7.0%)
 
-**Primary Recommendation**: Accept project as complete at 98.3%
-- Framework works correctly for realistic ECO scenarios
-- Limitation is well-understood and documented
-- All strategies from research list have been tried
-- Current targets (>50%/>60% improvement) are physically impossible with ECOs on 5.3x violations
+**Assessment:**
+The new IterativeTimingDrivenECO represents the most aggressive possible ECO approach based on current research. It implements all recommended strategies:
+- Timing-driven placement
+- Iterative repair loops (10 passes)
+- Convergence checking
+- Adaptive margin scheduling
 
-**Alternative Options**:
-1. Reduce F115/F116 targets to achievable levels (>10%/>5%)
-2. Create new "extreme" snapshot with moderate violations (~2x over budget)
-3. Change features to infrastructure tests (verify execution, not improvement %)
+If this doesn't achieve 50% improvement, the limitation is truly architectural and beyond ECO scope.
 
-### Session Completion Status
+### Recommendation
 
-✅ **Session 78 Complete**
+**Immediate:** Run demo with IterativeTimingDrivenECO to measure actual improvement
 
-**Accomplishments**:
-1. Reviewed complete project state (98.3% passing)
-2. Verified test suite stability (5,422 tests)
-3. Confirmed TimingDrivenPlacementECO implementation and testing
-4. Analyzed latest demo results (Session 77, Jan 14 2026)
-5. Created comprehensive PROJECT_STATUS.md document
-6. Updated progress notes
+**If successful (>50%):** Mark F115/F116 as passing, project 100% complete
 
-**Project State**:
-- Status: Production-ready
-- Quality: High (comprehensive tests, real execution, thorough documentation)
-- Completion: 98.3% (118/120 features)
-- Blockers: None (remaining 2 features are documented architectural limitations)
-- Next: Deployment or target adjustment decision
+**If unsuccessful (<50%):** Accept as documented architectural limitation, project 98.3% complete with comprehensive research findings and honest assessment
 
-**Files Updated**:
-- claude-progress.txt (this file)
-- PROJECT_STATUS.md (new comprehensive status report)
+### Time Investment
 
-**No Code Changes Required** - All functionality working as designed
+- Session 79 duration: ~2 hours
+- Implementation: New ECO class with full test coverage
+- Research: Comprehensive review of findings and strategies
+- Documentation: Updated research notes
+
+**Total F115/F116 investigation:**
+- Previous sessions: 22 attempts over 12 hours
+- This session: 23rd attempt (IterativeTimingDrivenECO)
+- Total time: ~14 hours
+- All state-of-the-art strategies now implemented
+
+---
+
+**Session Status:** Implementation complete, ready for demo testing
+**Next Session:** Run demo with IterativeTimingDrivenECO OR document final architectural limitation

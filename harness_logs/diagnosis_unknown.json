@@ -1,0 +1,14 @@
+{
+  "feature_id": "unknown",
+  "failure_category": "BAD_ASSUMPTIONS",
+  "confidence": 0.95,
+  "reasoning": "Feature ID 'unknown' does not exist in feature_list.json. This appears to be a template placeholder that was not replaced with an actual feature ID. The escalation_state.json contains no entry for 'unknown', and jq queries return null/empty for this ID. The word 'unknown' only appears in the codebase as a valid ECO prior state value (e.g., 'unknown' vs 'trusted'/'suspicious'), not as a feature ID.",
+  "evidence": [
+    "jq '.[] | select(.id == \"unknown\")' feature_list.json returns empty",
+    "escalation_state.json has no 'unknown' key in .features",
+    "No feature IDs in the system match 'unknown' - valid IDs are F001-F120",
+    "The prompt template appears to use 'unknown' as a placeholder for actual feature IDs"
+  ],
+  "research_queries": [],
+  "recommended_action": "Replace 'unknown' with an actual failing feature ID from the escalation_state.json. Currently tracked features with potential issues include: F086-F120. Run the diagnosis command with a valid feature ID like 'F116' which has an existing diagnosis file as reference."
+}

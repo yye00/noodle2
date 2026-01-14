@@ -763,6 +763,80 @@ puts "Cell swap ECO complete"
         return True
 
 
+class GateCloningECO(ECO):
+    """ECO that clones high-fanout gates to reduce load.
+
+    This ECO identifies high-fanout gates and clones them to distribute
+    the load across multiple instances, reducing transition times and
+    improving timing on heavily loaded nets.
+    """
+
+    def __init__(self, max_fanout: int = 16) -> None:
+        """Initialize gate cloning ECO.
+
+        Args:
+            max_fanout: Maximum fanout threshold - gates with higher fanout are cloned
+        """
+        metadata = ECOMetadata(
+            name="gate_cloning",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Clone high-fanout gates to reduce load",
+            parameters={
+                "max_fanout": max_fanout,
+            },
+            version="1.0",
+            tags=["timing_optimization", "fanout_reduction", "gate_cloning"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script for gate cloning."""
+        max_fanout = self.metadata.parameters["max_fanout"]
+
+        tcl_script = f"""# Gate Cloning ECO
+# Clone high-fanout gates to reduce load and improve timing
+# Max fanout threshold: {max_fanout}
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer metal3
+
+# Estimate parasitics based on current placement
+estimate_parasitics -placement
+
+# Clone high-fanout gates using repair_timing
+# The -max_fanout parameter identifies gates to clone
+repair_timing -setup -max_fanout {max_fanout}
+
+# After cloning, run placement optimization to legalize
+repair_design -max_wire_length 80
+
+# Re-estimate parasitics after placement changes
+estimate_parasitics -placement
+
+# Final timing repair to optimize the cloned structure
+repair_timing -setup -setup_margin 0.0
+
+puts "Gate cloning ECO complete - cloned gates with fanout > {max_fanout}"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate gate cloning parameters."""
+        max_fanout = self.metadata.parameters.get("max_fanout")
+        if max_fanout is None or max_fanout < 4:
+            return False
+
+        # Fanout should be reasonable (4-100)
+        if max_fanout > 100:
+            return False
+
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
+        return True
+
+
 class TimingDegradationECO(ECO):
     """ECO that intentionally degrades timing for Gate 2 testing.
 
@@ -1230,6 +1304,7 @@ ECO_REGISTRY: dict[str, type[ECO]] = {
     "placement_density": PlacementDensityECO,
     "cell_resize": CellResizeECO,
     "cell_swap": CellSwapECO,
+    "gate_cloning": GateCloningECO,
     "timing_degradation_test": TimingDegradationECO,
     "congestion_stressor_test": CongestionStressorECO,
     "tool_error_test": ToolErrorECO,

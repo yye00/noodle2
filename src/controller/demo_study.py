@@ -401,10 +401,11 @@ def create_nangate45_extreme_demo_study(
             ECOClass.TOPOLOGY_NEUTRAL,
             ECOClass.PLACEMENT_LOCAL,
             ECOClass.ROUTING_AFFECTING,
+            ECOClass.GLOBAL_DISRUPTIVE,  # Allow timing-driven placement re-optimization
         ],
         abort_threshold_wns_ps=None,  # No abort in final stage
         visualization_enabled=True,
-        timeout_seconds=1200,  # 20 minutes per trial
+        timeout_seconds=1800,  # 30 minutes per trial (increased for re-placement)
     )
 
     # Stage 3: Ultra-aggressive final push (NEW!)
@@ -418,10 +419,11 @@ def create_nangate45_extreme_demo_study(
             ECOClass.TOPOLOGY_NEUTRAL,
             ECOClass.PLACEMENT_LOCAL,
             ECOClass.ROUTING_AFFECTING,
+            ECOClass.GLOBAL_DISRUPTIVE,  # Allow timing-driven placement re-optimization
         ],
         abort_threshold_wns_ps=None,  # No abort
         visualization_enabled=True,
-        timeout_seconds=1200,  # 20 minutes per trial
+        timeout_seconds=1800,  # 30 minutes per trial (increased for re-placement)
     )
 
     # Create the complete Study configuration

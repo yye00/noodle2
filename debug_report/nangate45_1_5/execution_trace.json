@@ -2,8 +2,8 @@
   "trial_execution_trace": {
     "case_name": "nangate45_1_5",
     "trial_index": 0,
-    "start_time": "2026-01-14T07:28:33.959548+00:00",
-    "end_time": "2026-01-14T07:28:33.959551+00:00",
+    "start_time": "2026-01-14T07:54:24.261557+00:00",
+    "end_time": "2026-01-14T07:54:24.261560+00:00",
     "runtime_seconds": 10.5,
     "return_code": 0,
     "success": true
@@ -60,7 +60,7 @@
     }
   ],
   "metadata": {
-    "generated_at": "2026-01-14T07:28:33.959557+00:00",
+    "generated_at": "2026-01-14T07:54:24.261566+00:00",
     "generator": "noodle2_debug_report"
   }
 }

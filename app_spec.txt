@@ -4756,3 +4756,75 @@ To recreate this system from this app_spec.txt:
 ACTUALLY MODIFIES the design and produces DIFFERENT metrics.
 
 ---
+
+## RESEARCH-FIRST APPROACH FOR COMPLEX FEATURES
+
+### Using Perplexity for Research
+
+When a feature has `research_required: true` in the feature list, you MUST use Perplexity to research before attempting implementation.
+
+**Available Perplexity Tools:**
+- `mcp__plugin_perplexity_perplexity__perplexity_research` - Deep research on complex topics
+- `mcp__plugin_perplexity_perplexity__perplexity_ask` - Quick questions
+- `mcp__plugin_perplexity_perplexity__perplexity_search` - Web search for specific information
+
+**Research Workflow:**
+1. Check if feature has `research_required: true`
+2. Read the `research_queries` field for suggested queries
+3. Use Perplexity to research BEFORE writing any code
+4. Document findings in `harness_logs/research_<feature_id>.md`
+5. Try strategies from research, not just default approaches
+6. Learn from `prior_attempts_summary` to avoid repeating failed approaches
+
+### F115/F116 Specific Guidance (Extreme Timing Optimization)
+
+**Problem Context:**
+- Design has WNS of -1848ps on 350ps clock (5.3x over budget)
+- Standard `repair_timing` and `repair_design` make timing WORSE
+- After 21 attempts across Sonnet and Opus, no solution found with default ECOs
+
+**Research-Backed Strategies to Try:**
+
+1. **Timing-Driven Placement Re-optimization**
+   - Can achieve 40-50% TNS improvement
+   - Use `global_placement -timing_driven -overflow 0.1`
+   
+2. **MLBuf-RePlAce Approach**
+   - Buffer-aware placement achieving 56% TNS improvement
+   - Reserve buffer space during placement
+   
+3. **Iterative ECO Flow (Not Single-Pass)**
+   ```
+   Loop until convergence:
+     1. Analyze post-route timing
+     2. Insert buffers on worst paths only
+     3. Incremental placement + routing
+     4. Re-analyze timing
+   ```
+
+4. **Skip repair_design**
+   - `repair_design` adds buffers that increase delay
+   - Try using only `repair_timing`
+
+5. **Pipelining for Extreme Cases**
+   - Insert register stages on critical paths
+   - Trades latency for timing closure
+
+6. **Constraint Relaxation**
+   - If 50%+ improvement impossible with local ECOs
+   - Consider relaxing clock to 600-700ps
+   - Document as architectural limitation
+
+**Key Insight from Research:**
+For designs 5.3x over timing budget, realistic expectations are:
+- 40-60% improvement from combined placement + ECO strategies
+- PLUS either constraint relaxation OR pipeline insertion
+- Single-strategy approaches are insufficient
+
+**Before Giving Up on F115/F116:**
+1. ☐ Use Perplexity to research additional strategies
+2. ☐ Try timing-driven re-placement
+3. ☐ Implement iterative (not single-pass) ECO flow
+4. ☐ Try creating less extreme snapshot (2-3x over budget instead of 5.3x)
+5. ☐ Document exactly what was tried and why it failed
+

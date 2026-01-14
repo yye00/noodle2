@@ -13,6 +13,7 @@ from src.controller.eco import (
     ECOResult,
     NoOpECO,
     PlacementDensityECO,
+    TimingDrivenPlacementECO,
     create_eco,
 )
 from src.controller.eco_containment import (

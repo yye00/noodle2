@@ -844,6 +844,114 @@ puts "Gate cloning ECO complete (timing-focused, no repair_design)"
         return True
 
 
+class TimingDrivenPlacementECO(ECO):
+    """ECO that re-runs placement with timing awareness.
+
+    This ECO removes existing buffers and re-runs global placement
+    with the -timing_driven flag, allowing OpenROAD to optimize
+    placement for timing rather than just wirelength.
+
+    This is a more aggressive approach than local ECOs and is intended
+    for designs with extreme timing violations where local fixes are
+    insufficient.
+    """
+
+    def __init__(
+        self,
+        target_density: float = 0.70,
+        keep_overflow: float = 0.1,
+    ) -> None:
+        """Initialize timing-driven placement ECO.
+
+        Args:
+            target_density: Target placement density (0.0 to 1.0)
+            keep_overflow: Maximum overflow to keep when resizing cells during placement
+        """
+        metadata = ECOMetadata(
+            name="timing_driven_placement",
+            eco_class=ECOClass.GLOBAL_DISRUPTIVE,
+            description="Re-run placement with timing awareness to reduce critical path delay",
+            parameters={
+                "target_density": target_density,
+                "keep_overflow": keep_overflow,
+            },
+            version="1.0",
+            tags=["timing_optimization", "placement", "timing_driven", "aggressive"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate Tcl script for timing-driven placement."""
+        density = self.metadata.parameters["target_density"]
+        keep_overflow = self.metadata.parameters["keep_overflow"]
+
+        tcl_script = f"""# Timing-Driven Placement ECO
+# Re-optimize placement with timing awareness
+# This is an aggressive ECO that re-runs global placement
+# Intended for extreme timing violations (>3x over budget)
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer metal3
+set_wire_rc -clock -layer metal5
+
+# Remove existing buffers to allow fresh placement optimization
+remove_buffers
+
+# Run timing-driven global placement
+# -timing_driven: Optimize for timing instead of just wirelength
+# -density: Control how tightly cells are packed
+# -keep_resize_below_overflow: Keep cell resizing when overflow is below threshold
+global_placement -timing_driven -density {density} \\
+    -keep_resize_below_overflow {keep_overflow}
+
+# Legalize placement to ensure cells don't overlap
+detailed_placement
+
+# Re-estimate parasitics with new placement
+estimate_parasitics -placement
+
+# Multiple passes of timing repair to fix remaining violations
+# Without repair_design to avoid buffer-induced delays
+
+# Pass 1: Aggressive margin (30-40%)
+repair_timing -setup -setup_margin 0.3
+estimate_parasitics -placement
+
+# Pass 2: Moderate margin (15-20%)
+repair_timing -setup -setup_margin 0.15
+estimate_parasitics -placement
+
+# Pass 3: Fine-tuning (5-10%)
+repair_timing -setup -setup_margin 0.05
+estimate_parasitics -placement
+
+# Pass 4: Final cleanup (0%)
+repair_timing -setup -setup_margin 0.0
+
+puts "Timing-driven placement ECO complete"
+puts "  Density: {density}"
+puts "  Keep overflow: {keep_overflow}"
+puts "  Strategy: Re-placement + multi-pass repair_timing (no repair_design)"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate timing-driven placement parameters."""
+        density = self.metadata.parameters.get("target_density")
+        if density is None or density <= 0 or density > 1.0:
+            return False
+
+        keep_overflow = self.metadata.parameters.get("keep_overflow")
+        if keep_overflow is None or keep_overflow < 0 or keep_overflow > 1.0:
+            return False
+
+        # Validate parameter ranges (F261)
+        if not self.validate_parameter_ranges():
+            return False
+
+        return True
+
+
 class TimingDegradationECO(ECO):
     """ECO that intentionally degrades timing for Gate 2 testing.
 
@@ -1312,6 +1420,7 @@ ECO_REGISTRY: dict[str, type[ECO]] = {
     "cell_resize": CellResizeECO,
     "cell_swap": CellSwapECO,
     "gate_cloning": GateCloningECO,
+    "timing_driven_placement": TimingDrivenPlacementECO,
     "timing_degradation_test": TimingDegradationECO,
     "congestion_stressor_test": CongestionStressorECO,
     "tool_error_test": ToolErrorECO,

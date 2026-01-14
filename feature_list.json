@@ -3516,8 +3516,43 @@
         "timestamp": "2026-01-13T14:48:46.369696+00:00",
         "action": "created",
         "description": "New requirement from spec v2"
+      },
+      {
+        "version": 2,
+        "timestamp": "2026-01-14T07:47:52.432144+00:00",
+        "action": "updated",
+        "description": "Added research_required=True with Perplexity research queries and prior attempt analysis"
       }
-    ]
+    ],
+    "research_required": true,
+    "research_queries": [
+      "OpenROAD advanced timing optimization beyond repair_timing commands",
+      "Physical design ECO algorithms for >50% WNS improvement",
+      "Buffer insertion algorithms that avoid routing congestion",
+      "Multi-pass timing optimization strategies for extreme violations",
+      "Timing-driven placement re-optimization in OpenROAD"
+    ],
+    "research_strategies": [
+      "Use Perplexity to research advanced ECO techniques BEFORE attempting implementation",
+      "Try timing-driven global_placement with -timing_driven flag",
+      "Implement iterative ECO flow (not single-pass)",
+      "Consider MLBuf-RePlAce buffer-aware placement approach",
+      "Skip repair_design and use only repair_timing to avoid buffer delay",
+      "If 50%+ improvement impossible, document as architectural limitation requiring pipelining or constraint relaxation"
+    ],
+    "prior_attempts_summary": {
+      "total_attempts": 21,
+      "models_tried": [
+        "sonnet",
+        "opus"
+      ],
+      "approaches_failed": [
+        "Standard repair_design + repair_timing (made timing WORSE)",
+        "Skip repair_design, only repair_timing (modest improvement)",
+        "Single-pass ECO flow (not cumulative)"
+      ],
+      "key_insight": "Design is 5.3x over timing budget. Local ECOs cannot fix architectural timing problems. Need re-placement, iterative ECO, or constraint relaxation."
+    }
   },
   {
     "id": "F116",
@@ -3546,8 +3581,43 @@
         "timestamp": "2026-01-13T14:48:46.369696+00:00",
         "action": "created",
         "description": "New requirement from spec v2"
+      },
+      {
+        "version": 2,
+        "timestamp": "2026-01-14T07:47:52.432151+00:00",
+        "action": "updated",
+        "description": "Added research_required=True with Perplexity research queries and prior attempt analysis"
       }
-    ]
+    ],
+    "research_required": true,
+    "research_queries": [
+      "OpenROAD advanced timing optimization beyond repair_timing commands",
+      "Physical design ECO algorithms for >50% WNS improvement",
+      "Buffer insertion algorithms that avoid routing congestion",
+      "Multi-pass timing optimization strategies for extreme violations",
+      "Timing-driven placement re-optimization in OpenROAD"
+    ],
+    "research_strategies": [
+      "Use Perplexity to research advanced ECO techniques BEFORE attempting implementation",
+      "Try timing-driven global_placement with -timing_driven flag",
+      "Implement iterative ECO flow (not single-pass)",
+      "Consider MLBuf-RePlAce buffer-aware placement approach",
+      "Skip repair_design and use only repair_timing to avoid buffer delay",
+      "If 50%+ improvement impossible, document as architectural limitation requiring pipelining or constraint relaxation"
+    ],
+    "prior_attempts_summary": {
+      "total_attempts": 21,
+      "models_tried": [
+        "sonnet",
+        "opus"
+      ],
+      "approaches_failed": [
+        "Standard repair_design + repair_timing (made timing WORSE)",
+        "Skip repair_design, only repair_timing (modest improvement)",
+        "Single-pass ECO flow (not cumulative)"
+      ],
+      "key_insight": "Design is 5.3x over timing budget. Local ECOs cannot fix architectural timing problems. Need re-placement, iterative ECO, or constraint relaxation."
+    }
   },
   {
     "id": "F117",

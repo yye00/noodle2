@@ -12,6 +12,7 @@ from src.controller.eco import (
     CellSwapECO,
     ECO,
     ECOEffectiveness,
+    GateCloningECO,
     NoOpECO,
 )
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
@@ -1185,6 +1186,9 @@ class StudyExecutor:
             )),
             ("cell_swap", lambda idx, var: CellSwapECO(
                 path_count=30 + var * 20  # 30, 50, 70
+            )),
+            ("gate_cloning", lambda idx, var: GateCloningECO(
+                max_fanout=12 + var * 4  # 12, 16, 20 (lower = more aggressive cloning)
             )),
         ]
 

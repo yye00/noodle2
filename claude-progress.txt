@@ -2450,3 +2450,36 @@ All code fixes complete and tested.
 Next Session: Run demo_nangate45_extreme.sh (3-4 hours)
 
 Session 67 Complete: 2026-01-14
+
+## Session 68 - F115/F116 Verification Run
+
+### Objective
+Run demo_nangate45_extreme.sh to verify that Session 67's ECO fixes (gentle constraints) 
+achieve the required improvements:
+- F115: >50% WNS improvement from initial < -1500ps
+- F116: >60% hot_ratio reduction from initial > 0.3
+
+### Status (01:00 AM EST, 2026-01-14)
+
+Demo launched at 00:53, currently running (7 mins elapsed).
+
+**Current Metrics (18 trials completed):**
+- Best WNS: -1848ps (no improvement from initial)
+- Best hot_ratio: 0.526 (no improvement from initial)
+- WNS range: -3887 to -1848ps
+- Hot ratio range: 0.526 to 0.660
+
+**Observations:**
+- Some ECO trials are making WNS WORSE (-3887ps vs -1848ps initial)
+- Some ECO trials are making hot_ratio worse (0.660 vs 0.526 initial)
+- No trial has improved beyond initial state yet
+- Still very early in the run (only stage 0, trial 7)
+
+**Expected completion:** ~2-3 hours (based on previous 7888 second run time)
+
+**Next steps:**
+1. Monitor demo progress periodically
+2. Check final summary.json when complete
+3. Verify F115/F116 criteria
+4. Update feature_list.json based on results
+

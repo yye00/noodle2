@@ -232,15 +232,16 @@ class TestNangate45ExtremeDemo:
         # Verify basic attributes
         assert demo.name == "nangate45_extreme_demo"
         assert demo.pdk == "Nangate45"
-        assert demo.base_case_name == "nangate45_extreme"
+        assert demo.base_case_name == "nangate45_extreme_ibex"
 
-        # Verify it has 3 stages
-        assert len(demo.stages) == 3
+        # Verify it has 4 stages (updated from 3)
+        assert len(demo.stages) == 4
 
         # Verify stage names
         assert demo.stages[0].name == "aggressive_exploration"
         assert demo.stages[1].name == "placement_refinement"
         assert demo.stages[2].name == "aggressive_closure"
+        assert demo.stages[3].name == "ultra_aggressive_closure"
 
     def test_extreme_demo_study_has_visualization_enabled(self) -> None:
         """Verify all stages have visualization enabled for demo purposes."""

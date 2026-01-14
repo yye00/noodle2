@@ -830,6 +830,40 @@ def inject_eco_commands(
     Returns:
         Modified TCL script with ECO commands injected
     """
+    import re
+
+    # Extract design name and clock period from base script
+    design_name = "unknown"
+    clock_period_ns = 0.001  # fallback value
+    pdk_name = "nangate45"  # fallback value
+
+    # Extract design name from read_db command (e.g., "ibex_placed.odb" -> "ibex")
+    for line in base_script.splitlines():
+        # Look for read_db with .odb file
+        match = re.search(r'read_db\s+.*?/(\w+?)(?:_placed|_routed)?\.odb', line)
+        if match:
+            design_name = match.group(1)
+            break
+
+    # Extract clock period from create_clock command
+    for line in base_script.splitlines():
+        match = re.search(r'create_clock\s+.*?-period\s+([\d.]+)', line)
+        if match:
+            clock_period_ns = float(match.group(1))
+            break
+
+    # Extract PDK from library paths if possible
+    for line in base_script.splitlines():
+        if 'nangate45' in line.lower():
+            pdk_name = "nangate45"
+            break
+        elif 'asap7' in line.lower():
+            pdk_name = "asap7"
+            break
+        elif 'sky130' in line.lower():
+            pdk_name = "sky130"
+            break
+
     # Split the base script to find where to inject
     # We want to inject ECO commands before the final "exit 0"
     lines = base_script.splitlines()
@@ -837,16 +871,30 @@ def inject_eco_commands(
     # If input_odb_path is provided, replace the read_db line in the base script
     # This ensures we start from the modified design from the previous stage
     if input_odb_path:
-        import re
         modified_lines = []
+        found_read_db = False
         for line in lines:
             # Look for read_db command and replace the path
             if re.match(r'^\s*read_db\s+', line):
                 # Replace with the input ODB path from previous stage
                 modified_lines.append(f'read_db "{input_odb_path}"')
-                modified_lines.append(f'puts "Loaded modified ODB from previous stage: {input_odb_path}"')
+                modified_lines.append(f'puts "Loading input ODB from previous stage: {input_odb_path}"')
+                found_read_db = True
             else:
                 modified_lines.append(line)
+
+        # If no read_db found, insert it at the beginning (after comments/puts)
+        if not found_read_db:
+            # Find first non-comment, non-puts line to insert before
+            insert_index = 0
+            for i, line in enumerate(modified_lines):
+                stripped = line.strip()
+                if stripped and not stripped.startswith('#') and not stripped.startswith('puts'):
+                    insert_index = i
+                    break
+            modified_lines.insert(insert_index, f'read_db "{input_odb_path}"')
+            modified_lines.insert(insert_index + 1, f'puts "Loading input ODB: {input_odb_path}"')
+
         lines = modified_lines
 
     # Find the exit command
@@ -925,13 +973,13 @@ def inject_eco_commands(
     eco_section.append("set metrics_file \"/work/metrics.json\"")
     eco_section.append("set fp [open $metrics_file w]")
     eco_section.append("puts $fp \"{\"")
-    eco_section.append("puts $fp \"  \\\"design\\\": \\\"gcd\\\",\"")
-    eco_section.append("puts $fp \"  \\\"pdk\\\": \\\"nangate45\\\",\"")
+    eco_section.append(f"puts $fp \"  \\\"design\\\": \\\"{design_name}\\\",\"")
+    eco_section.append(f"puts $fp \"  \\\"pdk\\\": \\\"{pdk_name}\\\",\"")
     eco_section.append("puts $fp \"  \\\"execution_type\\\": \\\"real_sta_with_eco\\\",\"")
     eco_section.append("puts $fp \"  \\\"wns_ps\\\": $wns_ps,\"")
     eco_section.append("puts $fp \"  \\\"tns_ps\\\": $tns_ps,\"")
     eco_section.append("puts $fp \"  \\\"hot_ratio\\\": [format %.6f $hot_ratio],\"")
-    eco_section.append("puts $fp \"  \\\"clock_period_ns\\\": 0.001,\"")
+    eco_section.append(f"puts $fp \"  \\\"clock_period_ns\\\": {clock_period_ns},\"")
     eco_section.append("if {$wns_ps < 0} {")
     eco_section.append("    puts $fp \"  \\\"status\\\": \\\"timing_violation\\\"\"")
     eco_section.append("} else {")

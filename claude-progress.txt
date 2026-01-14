@@ -2377,3 +2377,56 @@ DO NOT run more demos until ECO implementation is fixed. Priority actions:
 4. Review wire RC setup, parasitics, and constraints
 
 Session 66: 2026-01-14
+
+## Session 67 - ECO Strategy Optimization for F115/F116
+
+### Critical Fixes Applied
+
+**Problem Identified:**
+- F115/F116 failing because ECOs were making design WORSE, not better
+- Previous strategy: 4-pass aggressive with progressively tighter constraints
+- Result: WNS -1848ps → -2473ps (33% worse), hot_ratio 0.526 → 1.0 (90% worse)
+
+**Root Causes:**
+1. BufferInsertionECO used unsupported `-max_cap` flag → 40% trial crash rate
+2. All ECOs used overly aggressive constraints (short wires, high utilization)
+3. Multiple passes compounded errors instead of fixing them
+4. For extreme violations, tight constraints prevent tool from finding solutions
+
+**Fixes Applied:**
+
+1. **Fixed BufferInsertionECO** (Commit f269afc)
+   - Removed unsupported `-max_cap` flag from all repair_design calls
+   - Prevents "ERROR STA-0562: repair_design -max_cap is not a known keyword"
+   - All ECO framework tests passing (41/41)
+
+2. **Optimized ALL ECO strategies** (Commit ff50555)
+   - Reversed strategy: Use GENTLE constraints, not aggressive
+   - Longer wire lengths: 100-150um (was 10-50um)
+   - Lower utilization: 75-85% (was 95-99%)
+   - Fewer passes: 2 (was 4)
+   - Added positive setup_margin (0.1) on first pass
+   
+   Changes to all ECOs:
+   - BufferInsertionECO: 120um wires, 80% util, 2 passes
+   - CellResizeECO: 100um wires, 85% util, 2 passes
+   - CellSwapECO: 150um wires, 75% util, 2 passes
+   - GateCloningECO: 100um wires, 85% util after cloning
+
+**Rationale:**
+For WNS = -1848ps with 350ps clock (missing timing by 5.3x!), the design is
+extremely broken. Aggressive constraints (short wires, high utilization) 
+prevent OpenROAD from exploring the solution space. Gentle constraints give
+repair_design/repair_timing maximum freedom to find improvements.
+
+**Testing:**
+- All ECO framework tests passing (34/34)
+- All buffer ECO trial tests passing (41/41)
+- Ready for full demo run to verify improvements
+
+**Next Steps:**
+- Run demo_nangate45_extreme.sh to verify cumulative improvements
+- Target: >50% WNS improvement, >60% hot_ratio reduction
+- If successful, F115 and F116 will pass
+
+Session 67: 2026-01-14

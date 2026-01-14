@@ -2258,3 +2258,10 @@ With 5 ECO types and trial budgets of 20+15+12+10=57 trials:
 - No regressions detected
 
 Session 63: 2026-01-14 (Code integration complete)
+
+## Session 64 - F115/F116 Demo Run with New ECO Types
+
+Demo completed successfully with all 4 stages and 57 trials.
+Results: WNS improved 7.95% (target >50%), hot_ratio reduced 4.31% (target >60%).
+F115 and F116 still fail - targets are too aggressive for ECO-level optimizations.
+Framework at 118/120 features passing (98.3%). Session 64: 2026-01-14

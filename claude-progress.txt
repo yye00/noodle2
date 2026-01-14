@@ -2878,3 +2878,77 @@ Session 69 Complete: 2026-01-14 01:45 AM EST
 - No code changes (stable state preserved)
 - Conclusion: Framework is production-ready with 98.3% feature coverage
 
+
+---
+
+## Session 73 - F115/F116 Investigation and ECO Optimization - 2026-01-14 02:30 AM EST
+
+**Objective**: Investigate F115/F116 failures and attempt to improve extreme violation handling
+
+**Status Check**:
+- Total: 120 features
+- Passing: 118 (98.3%)
+- Failing: 2 (F115, F116 - Nangate45 extreme demo performance targets)
+- Reverification needed: 0
+
+**Current Results** (from latest demo run):
+- Initial WNS: -1848ps → Final WNS: -1677ps (**9.25% improvement**, need >50%)
+- Initial hot_ratio: 0.526 → Final hot_ratio: 0.523 (**0.53% reduction**, need >60%)
+
+**Root Cause Analysis**:
+Previous sessions (67-72) spent 2.5+ hours investigating and concluded that local
+ECOs using `repair_design` + `repair_timing` make things worse for extreme violations:
+- `repair_design` adds buffers to fix DRV, which increases delay
+- For designs 5.3x over timing budget, this is counterproductive
+- Documented in KNOWN_LIMITATIONS.md
+
+**New Approach Implemented** (Session 73):
+Implemented KNOWN_LIMITATIONS Option B: "Skip repair_design"
+
+Modified 4 ECO classes to use timing-focused strategy:
+1. **BufferInsertionECO**: Skip repair_design, use 4 repair_timing passes (0.3, 0.15, 0.05, 0.0 margins)
+2. **CellResizeECO**: Skip repair_design, use 4 repair_timing passes (0.35, 0.2, 0.1, 0.0 margins)  
+3. **CellSwapECO**: Skip repair_design, use 4 repair_timing passes (0.4, 0.2, 0.1, 0.0 margins)
+4. **GateCloningECO**: Use repair_timing with max_fanout + 3 passes (0.3, 0.15, 0.0 margins)
+
+**Rationale**:
+- Multiple aggressive repair_timing passes can compound improvements
+- Avoids DRV-driven buffer insertion that worsens timing
+- Prioritizes timing recovery over DRV compliance
+- Progressively tighter margins allow refinement across passes
+
+**Implementation Details**:
+- All ECO templates updated in src/controller/eco.py
+- Added clock layer wire RC (metal5) for better parasitic estimation
+- Each pass includes estimate_parasitics to re-evaluate after changes
+- Aggressive initial margins (0.3-0.4) to catch worst violators
+- Progressive tightening to refine improvements
+
+**Testing**:
+- ✓ All ECO classes instantiate correctly
+- ✓ TCL generation works without errors
+- ✓ No repair_design commands in generated TCL (only in comments)
+- ✓ Multiple repair_timing passes present (4-5 per ECO)
+- ✓ Existing ECO tests still passing
+
+**Files Modified**:
+- src/controller/eco.py: Updated 4 ECO class generate_tcl() methods
+
+**Commit**: 6302a43 "Experimental: Skip repair_design in ECOs for extreme violations"
+
+**Next Steps**:
+1. Run demo_nangate45_extreme.sh to test new ECO approach (~50 min execution)
+2. Compare results:
+   - If WNS improvement > 50% → Mark F115 as passing
+   - If hot_ratio reduction > 60% → Mark F116 as passing
+3. If still insufficient, consider:
+   - Even more aggressive margins (0.5-0.6 initial)
+   - Additional passes (5-6 instead of 4)
+   - Combination with other OpenROAD commands
+   - Accept 98.3% as production-quality result
+
+**Session 73 Status**: ECO modifications complete, ready for demo testing
+- Time spent: ~1.5 hours (analysis + implementation)
+- Code status: Clean, committed, tested
+- Decision needed: Run 50-min demo now or in next session?
+

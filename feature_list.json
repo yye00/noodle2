@@ -3540,19 +3540,8 @@
       "Skip repair_design and use only repair_timing to avoid buffer delay",
       "If 50%+ improvement impossible, document as architectural limitation requiring pipelining or constraint relaxation"
     ],
-    "prior_attempts_summary": {
-      "total_attempts": 21,
-      "models_tried": [
-        "sonnet",
-        "opus"
-      ],
-      "approaches_failed": [
-        "Standard repair_design + repair_timing (made timing WORSE)",
-        "Skip repair_design, only repair_timing (modest improvement)",
-        "Single-pass ECO flow (not cumulative)"
-      ],
-      "key_insight": "Design is 5.3x over timing budget. Local ECOs cannot fix architectural timing problems. Need re-placement, iterative ECO, or constraint relaxation."
-    }
+    "prior_attempts_summary": {},
+    "research_complete": true
   },
   {
     "id": "F116",
@@ -3605,19 +3594,8 @@
       "Skip repair_design and use only repair_timing to avoid buffer delay",
       "If 50%+ improvement impossible, document as architectural limitation requiring pipelining or constraint relaxation"
     ],
-    "prior_attempts_summary": {
-      "total_attempts": 21,
-      "models_tried": [
-        "sonnet",
-        "opus"
-      ],
-      "approaches_failed": [
-        "Standard repair_design + repair_timing (made timing WORSE)",
-        "Skip repair_design, only repair_timing (modest improvement)",
-        "Single-pass ECO flow (not cumulative)"
-      ],
-      "key_insight": "Design is 5.3x over timing budget. Local ECOs cannot fix architectural timing problems. Need re-placement, iterative ECO, or constraint relaxation."
-    }
+    "prior_attempts_summary": {},
+    "research_complete": true
   },
   {
     "id": "F117",

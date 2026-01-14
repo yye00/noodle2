@@ -2,7 +2,7 @@
   "heatmap_type": "routing_congestion",
   "case_name": "nangate45_1_5",
   "trial_index": 0,
-  "generated_at": "2026-01-14T08:24:29.325467+00:00",
+  "generated_at": "2026-01-14T13:25:02.947834+00:00",
   "description": "Heatmap visualization for routing_congestion",
   "format": "png",
   "dimensions": {

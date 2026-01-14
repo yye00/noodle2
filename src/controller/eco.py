@@ -499,7 +499,7 @@ class BufferInsertionECO(ECO):
 
         tcl_script = f"""# Buffer Insertion ECO
 # Insert buffers on nets to improve timing through repair_design and repair_timing
-# Ultra-aggressive multi-pass strategy for extreme timing recovery
+# Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -507,33 +507,22 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Pass 1: Initial aggressive buffering and cell resizing
-# Use moderate wire length to establish baseline improvements
-repair_design -max_wire_length 50 -max_utilization 0.95
+# For extremely broken designs, use gentle constraints
+# Allow long wires and moderate utilization to give tool room to work
+# Single well-tuned pass is more effective than multiple aggressive passes
+
+# Primary repair pass with generous constraints
+repair_design -max_wire_length 120 -max_utilization 0.80
+repair_timing -setup -setup_margin 0.1
+
+# Re-estimate parasitics after changes
+estimate_parasitics -placement
+
+# Second pass to consolidate improvements
 repair_timing -setup -setup_margin 0.0
 
-# Pass 2: More aggressive with shorter wires
-# Force more buffer insertion by reducing max wire length
-repair_design -max_wire_length 25 -max_utilization 0.98
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 3: Ultra-aggressive push
-# Extremely short wires and maximum utilization for stubborn violations
-repair_design -max_wire_length 15 -max_utilization 0.99
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 4: Final attempt with minimal constraints
-# Let OpenROAD do whatever it takes to fix timing
-repair_design -max_wire_length 10
-repair_timing -setup -setup_margin 0.0
-
-# Note: The 4-pass approach provides:
-# - Progressive reduction in wire length (50->25->15->10um)
-# - Increasing utilization allowance (95->98->99->unconstrained)
-# - Maximum buffer insertion and cell resizing opportunities
-# - Each pass builds on improvements from previous passes
-# - max_capacitance parameter ({max_cap} pF) is stored but not used in commands
-#   (OpenROAD repair_design does not support -max_cap flag in current version)
+# Note: max_capacitance parameter ({max_cap} pF) is stored but not used
+# in commands (OpenROAD repair_design does not support -max_cap flag)
 
 puts "Buffer insertion ECO complete"
 """
@@ -641,7 +630,7 @@ class CellResizeECO(ECO):
 # Resize cells on critical paths to improve timing using repair_design
 # Size multiplier: {size_mult}x
 # Max paths to repair: {max_paths}
-# Ultra-aggressive multi-pass strategy for extreme timing recovery
+# Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -649,24 +638,20 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Pass 1: Initial aggressive resizing and buffering
-repair_design -max_wire_length 60 -max_utilization 0.95
+# For extremely broken designs, use a single well-tuned pass
+# Multiple passes can compound errors and make things worse
+# Give OpenROAD maximum freedom with generous constraints
+
+# Single repair pass with generous constraints for extreme cases
+# Allow long wires and moderate utilization to give tool room to work
+repair_design -max_wire_length 100 -max_utilization 0.85
+repair_timing -setup -setup_margin 0.1
+
+# Re-estimate parasitics after changes
+estimate_parasitics -placement
+
+# Second pass to consolidate improvements
 repair_timing -setup -setup_margin 0.0
-
-# Pass 2: More aggressive with shorter wires
-repair_design -max_wire_length 35 -max_utilization 0.98
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 3: Ultra-aggressive push
-repair_design -max_wire_length 20 -max_utilization 0.99
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 4: Final attempt with minimal constraints
-repair_design -max_wire_length 12
-repair_timing -setup -setup_margin 0.0
-
-# Note: The 4-pass approach with progressively tighter constraints
-# enables maximum cell resizing and buffering for extreme cases
 
 puts "Cell resize ECO complete"
 """
@@ -721,7 +706,7 @@ class CellSwapECO(ECO):
         tcl_script = f"""# Cell Swap ECO
 # Swap cells to faster variants on critical paths using repair_design
 # Number of paths to analyze: {path_count}
-# Ultra-aggressive multi-pass strategy for extreme timing recovery
+# Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -729,24 +714,18 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Pass 1: Initial cell swapping with moderate constraints
-repair_design -max_wire_length 80 -max_utilization 0.95
+# For extremely broken designs, use gentle constraints
+# Single well-tuned pass with generous constraints
+
+# Primary repair pass - allow tool maximum freedom
+repair_design -max_wire_length 150 -max_utilization 0.75
+repair_timing -setup -setup_margin 0.1
+
+# Re-estimate parasitics after changes
+estimate_parasitics -placement
+
+# Second pass to consolidate improvements
 repair_timing -setup -setup_margin 0.0
-
-# Pass 2: More aggressive cell swapping
-repair_design -max_wire_length 45 -max_utilization 0.98
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 3: Ultra-aggressive final push
-repair_design -max_wire_length 25 -max_utilization 0.99
-repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
-
-# Pass 4: Absolute final attempt with minimal constraints
-repair_design -max_wire_length 15
-repair_timing -setup -setup_margin 0.0
-
-# Note: The 4-pass approach enables maximum VT swapping,
-# cell upsizing, and buffer insertion for extreme cases
 
 puts "Cell swap ECO complete"
 """
@@ -798,6 +777,7 @@ class GateCloningECO(ECO):
         tcl_script = f"""# Gate Cloning ECO
 # Clone high-fanout gates to reduce load and improve timing
 # Max fanout threshold: {max_fanout}
+# Strategy optimized for extreme timing violations
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -809,13 +789,13 @@ estimate_parasitics -placement
 # The -max_fanout parameter identifies gates to clone
 repair_timing -setup -max_fanout {max_fanout}
 
-# After cloning, run placement optimization to legalize
-repair_design -max_wire_length 80
+# After cloning, run placement optimization with gentle constraints
+repair_design -max_wire_length 100 -max_utilization 0.85
 
 # Re-estimate parasitics after placement changes
 estimate_parasitics -placement
 
-# Final timing repair to optimize the cloned structure
+# Final timing repair to consolidate improvements
 repair_timing -setup -setup_margin 0.0
 
 puts "Gate cloning ECO complete - cloned gates with fanout > {max_fanout}"

@@ -2483,3 +2483,35 @@ Demo launched at 00:53, currently running (7 mins elapsed).
 3. Verify F115/F116 criteria
 4. Update feature_list.json based on results
 
+
+
+### Session 68 Update - Critical Finding (01:20 AM)
+
+**Demo Status**: Running for 25 minutes, 60+ trials completed
+
+**Results**: ZERO improvement observed
+- Best WNS: -1848ps (same as initial, 0% improvement)
+- Best hot_ratio: 0.526 (same as initial, 0% improvement)
+- Some trials WORSE (WNS to -3887ps, hot_ratio to 1.0)
+
+**Root Cause Identified**:
+Analyzed trial 7 logs - ECO sequence makes timing WORSE:
+1. Initial: WNS -1848ps
+2. After repair_design: WNS -2288ps (440ps WORSE!)
+3. After repair_timing (2 passes): WNS -1927ps 
+4. Final: -1926ps (78ps worse than initial)
+
+**The Problem**: 
+- repair_design fixes DRV by adding buffers → increases delay
+- repair_timing tries to recover but can't fully fix the damage
+- Net result: no improvement or slight degradation
+
+**Conclusion**:
+Session 67's "gentle constraints" prevent crashes but don't produce improvements.
+For EXTREME violations (5.3x over budget), local ECOs fundamentally cannot fix 
+the design. Need global changes (floorplan, synthesis) not local repairs.
+
+**F115/F116 Status**: Will FAIL with current approach
+
+**Next Steps**: Document findings, propose alternatives (see SESSION_68_ANALYSIS.md)
+

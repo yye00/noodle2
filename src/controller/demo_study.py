@@ -324,7 +324,7 @@ def create_asap7_demo_study(
 
 def create_nangate45_extreme_demo_study(
     snapshot_path: str | None = None,
-    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+    safety_domain: SafetyDomain = SafetyDomain.SANDBOX,
 ) -> StudyConfig:
     """Create an 'extreme' broken design demo Study for Nangate45.
 
@@ -346,7 +346,7 @@ def create_nangate45_extreme_demo_study(
     Args:
         snapshot_path: Path to Nangate45 extreme design snapshot.
                       If None, uses default 'studies/nangate45_extreme'
-        safety_domain: Safety domain for the Study (default: GUARDED)
+        safety_domain: Safety domain for the Study (default: SANDBOX for aggressive techniques)
 
     Returns:
         StudyConfig: Extreme demo Study configuration

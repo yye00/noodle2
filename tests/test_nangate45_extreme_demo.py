@@ -273,3 +273,13 @@ class TestNangate45ExtremeDemo:
 
         # Should not raise any exceptions
         demo.validate()
+
+    def test_extreme_demo_study_uses_sandbox_safety_domain(self) -> None:
+        """Verify extreme demo uses SANDBOX domain to allow aggressive ECOs."""
+        from src.controller.demo_study import create_nangate45_extreme_demo_study
+        from src.controller.types import SafetyDomain
+
+        demo = create_nangate45_extreme_demo_study()
+
+        # Extreme demo should use SANDBOX to allow GLOBAL_DISRUPTIVE ECOs
+        assert demo.safety_domain == SafetyDomain.SANDBOX

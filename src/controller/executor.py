@@ -14,6 +14,7 @@ from src.controller.eco import (
     ECOEffectiveness,
     GateCloningECO,
     NoOpECO,
+    PlacementDensityECO,
 )
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
 from src.controller.graceful_shutdown import GracefulShutdownHandler
@@ -1189,6 +1190,9 @@ class StudyExecutor:
             )),
             ("gate_cloning", lambda idx, var: GateCloningECO(
                 max_fanout=12 + var * 4  # 12, 16, 20 (lower = more aggressive cloning)
+            )),
+            ("placement_density", lambda idx, var: PlacementDensityECO(
+                target_density=0.65 - var * 0.05  # 0.65, 0.60, 0.55 (lower = more spreading)
             )),
         ]
 

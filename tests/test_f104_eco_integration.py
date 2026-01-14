@@ -11,7 +11,14 @@ from pathlib import Path
 
 import pytest
 
-from src.controller.eco import BufferInsertionECO, CellResizeECO, CellSwapECO, NoOpECO
+from src.controller.eco import (
+    BufferInsertionECO,
+    CellResizeECO,
+    CellSwapECO,
+    GateCloningECO,
+    NoOpECO,
+    PlacementDensityECO,
+)
 from src.controller.executor import StudyExecutor
 from src.controller.types import ExecutionMode
 
@@ -54,7 +61,7 @@ class TestF104ECOIntegration:
             eco_0 = executor._create_eco_for_trial(trial_index=0, stage_index=0)
             assert isinstance(eco_0, NoOpECO), "Trial 0 should use NoOpECO"
 
-            # Test subsequent trials get different ECO types
+            # Test subsequent trials get different ECO types (5-ECO cycle)
             eco_1 = executor._create_eco_for_trial(trial_index=1, stage_index=0)
             assert isinstance(eco_1, CellResizeECO), "Trial 1 should use CellResizeECO"
 
@@ -64,15 +71,27 @@ class TestF104ECOIntegration:
             eco_3 = executor._create_eco_for_trial(trial_index=3, stage_index=0)
             assert isinstance(eco_3, CellSwapECO), "Trial 3 should use CellSwapECO"
 
-            # Test that parameters vary
             eco_4 = executor._create_eco_for_trial(trial_index=4, stage_index=0)
-            assert isinstance(eco_4, CellResizeECO), "Trial 4 should cycle back to CellResizeECO"
+            assert isinstance(eco_4, GateCloningECO), "Trial 4 should use GateCloningECO"
 
-            # Check that parameters differ between trial 1 and trial 4
-            if isinstance(eco_1, CellResizeECO) and isinstance(eco_4, CellResizeECO):
+            eco_5 = executor._create_eco_for_trial(trial_index=5, stage_index=0)
+            assert isinstance(
+                eco_5, PlacementDensityECO
+            ), "Trial 5 should use PlacementDensityECO"
+
+            # Test that cycle repeats and parameters vary
+            eco_6 = executor._create_eco_for_trial(trial_index=6, stage_index=0)
+            assert isinstance(
+                eco_6, CellResizeECO
+            ), "Trial 6 should cycle back to CellResizeECO"
+
+            # Check that parameters differ between trial 1 and trial 6
+            if isinstance(eco_1, CellResizeECO) and isinstance(eco_6, CellResizeECO):
                 params_1 = eco_1.metadata.parameters
-                params_4 = eco_4.metadata.parameters
-                assert params_1 != params_4, "Different trials should have different parameters"
+                params_6 = eco_6.metadata.parameters
+                assert (
+                    params_1 != params_6
+                ), "Different trials should have different parameters"
 
     def test_eco_generates_valid_tcl(self) -> None:
         """Test that ECOs generate valid TCL scripts."""
@@ -143,8 +162,9 @@ class TestF104ECOIntegration:
         eco = CellResizeECO(size_multiplier=1.5, max_paths=100)
         eco_tcl = eco.generate_tcl()
 
+        # Use STA_CONGESTION mode which supports ODB files
         script = generate_trial_script_with_eco(
-            execution_mode=ExecutionMode.STA_ONLY,
+            execution_mode=ExecutionMode.STA_CONGESTION,
             design_name="test_design",
             eco_tcl=eco_tcl,
             input_odb_path="/work/input_design.odb",
@@ -198,21 +218,21 @@ class TestF104ECOIntegration:
                 skip_base_case_verification=True,
             )
 
-            # Get three CellResizeECO instances (trials 1, 4, 7)
+            # Get three CellResizeECO instances (trials 1, 6, 11 with 5-ECO cycle)
             eco_1 = executor._create_eco_for_trial(trial_index=1, stage_index=0)
-            eco_4 = executor._create_eco_for_trial(trial_index=4, stage_index=0)
-            eco_7 = executor._create_eco_for_trial(trial_index=7, stage_index=0)
+            eco_6 = executor._create_eco_for_trial(trial_index=6, stage_index=0)
+            eco_11 = executor._create_eco_for_trial(trial_index=11, stage_index=0)
 
             # All should be CellResizeECO but with different parameters
             assert isinstance(eco_1, CellResizeECO)
-            assert isinstance(eco_4, CellResizeECO)
-            assert isinstance(eco_7, CellResizeECO)
+            assert isinstance(eco_6, CellResizeECO)
+            assert isinstance(eco_11, CellResizeECO)
 
             params_1 = eco_1.metadata.parameters
-            params_4 = eco_4.metadata.parameters
-            params_7 = eco_7.metadata.parameters
+            params_6 = eco_6.metadata.parameters
+            params_11 = eco_11.metadata.parameters
 
             # At least one parameter should differ
             assert (
-                params_1 != params_4 or params_1 != params_7 or params_4 != params_7
+                params_1 != params_6 or params_1 != params_11 or params_6 != params_11
             ), "Different trials should explore different parameters"

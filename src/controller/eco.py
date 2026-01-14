@@ -500,13 +500,29 @@ class BufferInsertionECO(ECO):
         tcl_script = f"""# Buffer Insertion ECO
 # Insert buffers on nets to fix capacitance violations and improve timing
 
-# Use OpenROAD's repair_design to fix capacitance violations
-# This automatically identifies high-capacitance nets and inserts buffers
-repair_design -max_cap {max_cap}
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer metal3
 
-# Additionally use repair_timing to optimize timing-critical paths
-# This may insert additional buffers on critical paths
+# Estimate parasitics based on current placement
+estimate_parasitics -placement
+
+# Use OpenROAD's repair_design with aggressive parameters for extreme cases
+# Allow significant area expansion and short wire segments for buffering
+repair_design -max_cap {max_cap} -max_wire_length 50 -max_utilization 0.95
+
+# Run timing repair for setup violations
 repair_timing -setup -setup_margin 0.0
+
+# Second pass with even more aggressive buffering
+# This iterative approach helps with extreme timing violations
+repair_design -max_cap {max_cap} -max_wire_length 30 -max_utilization 0.98
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Note: The multi-pass approach provides:
+# - Initial capacitance and wire length fixes
+# - Timing-driven optimization
+# - Aggressive second pass for stubborn violations
+# - Area expansion up to 98% utilization
 
 puts "Buffer insertion ECO complete"
 """
@@ -611,16 +627,30 @@ class CellResizeECO(ECO):
         max_paths = self.metadata.parameters["max_paths"]
 
         tcl_script = f"""# Cell Resize ECO
-# Resize cells on critical paths to improve timing
+# Resize cells on critical paths to improve timing using repair_design
 # Size multiplier: {size_mult}x
 # Max paths to repair: {max_paths}
 
-# Use OpenROAD's repair_timing to resize cells
-# This will upsize cells on critical paths to fix setup violations
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer metal3
+
+# Estimate parasitics based on current placement
+estimate_parasitics -placement
+
+# Use repair_design for comprehensive timing optimization
+# Aggressive parameters for extreme timing recovery:
+# - Short wire lengths (75um) force more buffering
+# - High utilization (0.95) allows significant area expansion
+# - Enables aggressive resizing and buffering
+repair_design -max_wire_length 75 -max_utilization 0.95
+
+# Run targeted timing repair for setup violations
 repair_timing -setup -setup_margin 0.0
 
-# Note: repair_timing automatically identifies and resizes cells on critical paths
-# Manual path analysis is not needed - repair_timing handles it internally
+# For extreme cases, run a second pass with even tighter constraints
+# This iterative approach can achieve better results
+repair_design -max_wire_length 50 -max_utilization 0.98
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
 
 puts "Cell resize ECO complete"
 """
@@ -673,20 +703,35 @@ class CellSwapECO(ECO):
         path_count = self.metadata.parameters["path_count"]
 
         tcl_script = f"""# Cell Swap ECO
-# Swap cells to faster variants on critical paths
+# Swap cells to faster variants on critical paths using repair_design
 # Number of paths to analyze: {path_count}
 
-# Use OpenROAD's repair_timing for automatic cell swapping
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer metal3
+
+# Estimate parasitics based on current placement
+estimate_parasitics -placement
+
+# Use repair_design for comprehensive optimization
+# Aggressive parameters for cell swapping and optimization:
+# - Moderate wire length (100um) balances buffering vs congestion
+# - High utilization (0.95) enables aggressive transformations
+repair_design -max_wire_length 100 -max_utilization 0.95
+
+# Use repair_timing for targeted cell swapping
 # This considers both upsizing and VT swapping on critical paths
-# The -setup flag focuses on fixing setup violations (WNS improvement)
-# The -setup_margin allows some slack margin (0.0 = fix violations only)
 repair_timing -setup -setup_margin 0.0
 
-# Note: repair_timing internally:
-# - Identifies critical paths automatically
-# - Swaps cells to faster variants (higher drive, lower Vt)
-# - Inserts buffers as needed
-# - Considers area/timing tradeoffs
+# Second pass with tighter constraints for extreme cases
+# This iterative approach enables more aggressive optimization
+repair_design -max_wire_length 60 -max_utilization 0.98
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Note: The multi-pass combination provides:
+# - Initial buffer insertion and gate resizing (repair_design pass 1)
+# - Cell swapping to faster variants (repair_timing pass 1)
+# - Aggressive second pass for stubborn violations (passes 2)
+# - Area expansion up to 98% utilization
 
 puts "Cell swap ECO complete"
 """

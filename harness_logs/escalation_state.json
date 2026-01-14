@@ -488,8 +488,8 @@
     "F116": {
       "feature_id": "F116",
       "current_model": "claude-opus-4-5-20251101",
-      "attempts_at_current_model": 6,
-      "total_attempts": 9,
+      "attempts_at_current_model": 11,
+      "total_attempts": 14,
       "failure_type": null,
       "diagnosis_done": false,
       "research_queries": [],
@@ -556,13 +556,48 @@
           "error_msg": "Session 173 made no progress",
           "error_type": null,
           "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-13T23:28:10.902041",
+          "model": "claude-opus-4-5-20251101",
+          "error_msg": "Session 175 made no progress",
+          "error_type": null,
+          "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-13T23:42:47.195175",
+          "model": "claude-opus-4-5-20251101",
+          "error_msg": "Session 177 made no progress",
+          "error_type": null,
+          "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-14T00:00:24.388610",
+          "model": "claude-opus-4-5-20251101",
+          "error_msg": "Session 179 made no progress",
+          "error_type": null,
+          "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-14T00:16:00.469853",
+          "model": "claude-opus-4-5-20251101",
+          "error_msg": "Session 181 made no progress",
+          "error_type": null,
+          "deps_met": true
+        },
+        {
+          "timestamp": "2026-01-14T00:29:23.885940",
+          "model": "claude-opus-4-5-20251101",
+          "error_msg": "Session 183 made no progress",
+          "error_type": null,
+          "deps_met": true
         }
       ],
       "decomposed": false,
       "sub_features": [],
       "created_at": "2026-01-13T17:22:44.921490",
-      "updated_at": "2026-01-13T23:03:11.358337"
+      "updated_at": "2026-01-14T00:29:23.885938"
     }
   },
-  "updated_at": "2026-01-13T23:03:11.358384"
+  "updated_at": "2026-01-14T00:29:23.885978"
 }

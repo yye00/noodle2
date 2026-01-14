@@ -1,14 +1,17 @@
 {
   "feature_id": "unknown",
   "failure_category": "BAD_ASSUMPTIONS",
-  "confidence": 0.95,
-  "reasoning": "Feature ID 'unknown' does not exist in feature_list.json. This appears to be a template placeholder that was not replaced with an actual feature ID. The escalation_state.json contains no entry for 'unknown', and jq queries return null/empty for this ID. The word 'unknown' only appears in the codebase as a valid ECO prior state value (e.g., 'unknown' vs 'trusted'/'suspicious'), not as a feature ID.",
+  "confidence": 1.0,
+  "reasoning": "Feature ID 'unknown' does not exist in the system. This is a template placeholder or erroneous parameter that was not replaced with an actual feature ID. The escalation_state.json contains no 'unknown' entry, and the feature_list.json has no feature with id='unknown'. Valid feature IDs follow the pattern F001-F120. The root cause analysis was invoked with an invalid feature identifier.",
   "evidence": [
-    "jq '.[] | select(.id == \"unknown\")' feature_list.json returns empty",
-    "escalation_state.json has no 'unknown' key in .features",
-    "No feature IDs in the system match 'unknown' - valid IDs are F001-F120",
-    "The prompt template appears to use 'unknown' as a placeholder for actual feature IDs"
+    "jq '.[] | select(.id == \"unknown\")' feature_list.json returns empty output",
+    "escalation_state.json has no 'unknown' key in .features object - returns null",
+    "All valid feature IDs in the system match pattern F[0-9]{3} (e.g., F001, F116)",
+    "The 'unknown' string appears to be a template placeholder that was never substituted",
+    "No error history exists for feature 'unknown' - it was never tracked in the escalation system",
+    "Current tracked features with failures: F116 (12 attempts), F101 (3 attempts), F113 (2 attempts)"
   ],
   "research_queries": [],
-  "recommended_action": "Replace 'unknown' with an actual failing feature ID from the escalation_state.json. Currently tracked features with potential issues include: F086-F120. Run the diagnosis command with a valid feature ID like 'F116' which has an existing diagnosis file as reference."
+  "recommended_action": "FIX INVOCATION: The root cause analysis prompt was invoked with 'unknown' instead of a valid feature ID. Check the calling code/script to ensure it substitutes actual feature IDs (like F116, F101, F113) into the template. Currently tracked features with active failures requiring diagnosis: F116 (12 total attempts, 9 with Opus, BAD_ASSUMPTIONS likely), F101 (3 attempts), F113 (2 attempts). Re-run diagnosis with a valid feature ID from escalation_state.json.",
+  "diagnosed_at": "2026-01-14T00:00:00Z"
 }

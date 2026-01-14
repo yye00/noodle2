@@ -498,7 +498,7 @@ class BufferInsertionECO(ECO):
         buffer_cell = self.metadata.parameters["buffer_cell"]
 
         tcl_script = f"""# Buffer Insertion ECO
-# Insert buffers on nets to fix capacitance violations and improve timing
+# Insert buffers on nets to improve timing through repair_design and repair_timing
 # Ultra-aggressive multi-pass strategy for extreme timing recovery
 
 # Set wire RC for accurate parasitic estimation
@@ -507,24 +507,24 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Pass 1: Initial aggressive buffering
-# Use moderate wire length to establish baseline buffering
-repair_design -max_cap {max_cap} -max_wire_length 50 -max_utilization 0.95
+# Pass 1: Initial aggressive buffering and cell resizing
+# Use moderate wire length to establish baseline improvements
+repair_design -max_wire_length 50 -max_utilization 0.95
 repair_timing -setup -setup_margin 0.0
 
-# Pass 2: More aggressive buffering with shorter wires
+# Pass 2: More aggressive with shorter wires
 # Force more buffer insertion by reducing max wire length
-repair_design -max_cap {max_cap} -max_wire_length 25 -max_utilization 0.98
+repair_design -max_wire_length 25 -max_utilization 0.98
 repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
 
-# Pass 3: Ultra-aggressive final push
+# Pass 3: Ultra-aggressive push
 # Extremely short wires and maximum utilization for stubborn violations
-repair_design -max_cap {max_cap} -max_wire_length 15 -max_utilization 0.99
+repair_design -max_wire_length 15 -max_utilization 0.99
 repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
 
-# Pass 4: Absolute final attempt with no constraints
+# Pass 4: Final attempt with minimal constraints
 # Let OpenROAD do whatever it takes to fix timing
-repair_design -max_cap {max_cap} -max_wire_length 10
+repair_design -max_wire_length 10
 repair_timing -setup -setup_margin 0.0
 
 # Note: The 4-pass approach provides:
@@ -532,6 +532,8 @@ repair_timing -setup -setup_margin 0.0
 # - Increasing utilization allowance (95->98->99->unconstrained)
 # - Maximum buffer insertion and cell resizing opportunities
 # - Each pass builds on improvements from previous passes
+# - max_capacitance parameter ({max_cap} pF) is stored but not used in commands
+#   (OpenROAD repair_design does not support -max_cap flag in current version)
 
 puts "Buffer insertion ECO complete"
 """

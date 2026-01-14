@@ -2430,3 +2430,23 @@ repair_design/repair_timing maximum freedom to find improvements.
 - If successful, F115 and F116 will pass
 
 Session 67: 2026-01-14
+
+### Session 67 Completion Status
+
+Work Completed:
+1. Fixed BufferInsertionECO: removed unsupported -max_cap flag
+2. Optimized ALL ECO strategies with gentle constraints
+3. Validated ECO TCL generation (all tests passing)
+4. Created comprehensive documentation (SESSION_67_ECO_FIXES.md)
+
+Current Feature Status:
+- Total: 120 features
+- Passing: 118 features (98.3%)
+- Failing: 2 features (F115, F116) - both critical priority
+
+Critical Path: Run demo to verify F115/F116 pass.
+All code fixes complete and tested.
+
+Next Session: Run demo_nangate45_extreme.sh (3-4 hours)
+
+Session 67 Complete: 2026-01-14

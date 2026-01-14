@@ -2265,3 +2265,39 @@ Demo completed successfully with all 4 stages and 57 trials.
 Results: WNS improved 7.95% (target >50%), hot_ratio reduced 4.31% (target >60%).
 F115 and F116 still fail - targets are too aggressive for ECO-level optimizations.
 Framework at 118/120 features passing (98.3%). Session 64: 2026-01-14
+
+## Session 65 - Critical Bug Fix: Incorrect Metrics in ECO Trials
+
+### Major Discovery
+Found and fixed CRITICAL BUG in inject_eco_commands() causing all trial metrics to be wrong!
+
+#### The Bug
+In src/trial_runner/tcl_generator.py, inject_eco_commands() was hardcoding:
+- design name as "gcd" (line 928)
+- clock_period_ns as 0.001 (line 934)
+
+This meant EVERY trial metrics.json had wrong metadata, regardless of actual design.
+
+#### Impact
+For nangate45_extreme_demo (ibex design with 0.35ns clock):
+- Metrics reported design="gcd" instead of "ibex"
+- Metrics reported clock_period_ns=0.001 instead of 0.35
+- Made WNS/TNS/hot_ratio comparisons meaningless
+- F115/F116 failures were likely due to this bug
+
+#### The Fix
+Modified inject_eco_commands() to extract actual values from base script:
+1. Extract design name from read_db (ibex_placed.odb -> ibex)
+2. Extract clock period from create_clock (period 0.35 -> 0.35)
+3. Extract PDK from library paths
+4. Use extracted values in generated metrics.json
+
+#### Verification
+- All test_eco_tcl_injection.py tests pass (11/11)
+- Manual test confirms correct extraction
+
+#### Next Steps
+- Re-run demo_nangate45_extreme.sh with fixed metrics
+- Verify F115/F116 with accurate metric tracking
+
+Session 65: 2026-01-14

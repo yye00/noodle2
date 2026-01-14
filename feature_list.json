@@ -3609,7 +3609,7 @@
     "steps": [
       "Step 1: Run demo and capture console output",
       "Step 2: Verify output contains [ECO] Applied <eco_name> to <case>",
-      "Step 3: Verify output shows WNS Before: X ps \u2192 After: Y ps (Z% improvement)",
+      "Step 3: Verify output shows WNS Before: X ps → After: Y ps (Z% improvement)",
       "Step 4: Verify multiple ECO applications are logged",
       "Step 5: Verify improvement percentages are calculated correctly"
     ],

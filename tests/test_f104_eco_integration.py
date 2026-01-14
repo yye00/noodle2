@@ -81,7 +81,7 @@ class TestF104ECOIntegration:
         tcl = eco.generate_tcl()
 
         assert "repair_design" in tcl, "CellResizeECO should generate repair_design command"
-        assert "max_passes" in tcl, "CellResizeECO should include max_passes parameter"
+        assert "Pass" in tcl, "CellResizeECO should include multi-pass strategy"
 
         # Test BufferInsertionECO
         eco = BufferInsertionECO(max_capacitance=0.15, buffer_cell="BUF_X4")

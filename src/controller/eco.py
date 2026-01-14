@@ -499,6 +499,7 @@ class BufferInsertionECO(ECO):
 
         tcl_script = f"""# Buffer Insertion ECO
 # Insert buffers on nets to fix capacitance violations and improve timing
+# Ultra-aggressive multi-pass strategy for extreme timing recovery
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -506,23 +507,31 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Use OpenROAD's repair_design with aggressive parameters for extreme cases
-# Allow significant area expansion and short wire segments for buffering
+# Pass 1: Initial aggressive buffering
+# Use moderate wire length to establish baseline buffering
 repair_design -max_cap {max_cap} -max_wire_length 50 -max_utilization 0.95
-
-# Run timing repair for setup violations
 repair_timing -setup -setup_margin 0.0
 
-# Second pass with even more aggressive buffering
-# This iterative approach helps with extreme timing violations
-repair_design -max_cap {max_cap} -max_wire_length 30 -max_utilization 0.98
+# Pass 2: More aggressive buffering with shorter wires
+# Force more buffer insertion by reducing max wire length
+repair_design -max_cap {max_cap} -max_wire_length 25 -max_utilization 0.98
 repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
 
-# Note: The multi-pass approach provides:
-# - Initial capacitance and wire length fixes
-# - Timing-driven optimization
-# - Aggressive second pass for stubborn violations
-# - Area expansion up to 98% utilization
+# Pass 3: Ultra-aggressive final push
+# Extremely short wires and maximum utilization for stubborn violations
+repair_design -max_cap {max_cap} -max_wire_length 15 -max_utilization 0.99
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Pass 4: Absolute final attempt with no constraints
+# Let OpenROAD do whatever it takes to fix timing
+repair_design -max_cap {max_cap} -max_wire_length 10
+repair_timing -setup -setup_margin 0.0
+
+# Note: The 4-pass approach provides:
+# - Progressive reduction in wire length (50->25->15->10um)
+# - Increasing utilization allowance (95->98->99->unconstrained)
+# - Maximum buffer insertion and cell resizing opportunities
+# - Each pass builds on improvements from previous passes
 
 puts "Buffer insertion ECO complete"
 """
@@ -630,6 +639,7 @@ class CellResizeECO(ECO):
 # Resize cells on critical paths to improve timing using repair_design
 # Size multiplier: {size_mult}x
 # Max paths to repair: {max_paths}
+# Ultra-aggressive multi-pass strategy for extreme timing recovery
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -637,20 +647,24 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Use repair_design for comprehensive timing optimization
-# Aggressive parameters for extreme timing recovery:
-# - Short wire lengths (75um) force more buffering
-# - High utilization (0.95) allows significant area expansion
-# - Enables aggressive resizing and buffering
-repair_design -max_wire_length 75 -max_utilization 0.95
-
-# Run targeted timing repair for setup violations
+# Pass 1: Initial aggressive resizing and buffering
+repair_design -max_wire_length 60 -max_utilization 0.95
 repair_timing -setup -setup_margin 0.0
 
-# For extreme cases, run a second pass with even tighter constraints
-# This iterative approach can achieve better results
-repair_design -max_wire_length 50 -max_utilization 0.98
+# Pass 2: More aggressive with shorter wires
+repair_design -max_wire_length 35 -max_utilization 0.98
 repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Pass 3: Ultra-aggressive push
+repair_design -max_wire_length 20 -max_utilization 0.99
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Pass 4: Final attempt with minimal constraints
+repair_design -max_wire_length 12
+repair_timing -setup -setup_margin 0.0
+
+# Note: The 4-pass approach with progressively tighter constraints
+# enables maximum cell resizing and buffering for extreme cases
 
 puts "Cell resize ECO complete"
 """
@@ -705,6 +719,7 @@ class CellSwapECO(ECO):
         tcl_script = f"""# Cell Swap ECO
 # Swap cells to faster variants on critical paths using repair_design
 # Number of paths to analyze: {path_count}
+# Ultra-aggressive multi-pass strategy for extreme timing recovery
 
 # Set wire RC for accurate parasitic estimation
 set_wire_rc -signal -layer metal3
@@ -712,26 +727,24 @@ set_wire_rc -signal -layer metal3
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
 
-# Use repair_design for comprehensive optimization
-# Aggressive parameters for cell swapping and optimization:
-# - Moderate wire length (100um) balances buffering vs congestion
-# - High utilization (0.95) enables aggressive transformations
-repair_design -max_wire_length 100 -max_utilization 0.95
-
-# Use repair_timing for targeted cell swapping
-# This considers both upsizing and VT swapping on critical paths
+# Pass 1: Initial cell swapping with moderate constraints
+repair_design -max_wire_length 80 -max_utilization 0.95
 repair_timing -setup -setup_margin 0.0
 
-# Second pass with tighter constraints for extreme cases
-# This iterative approach enables more aggressive optimization
-repair_design -max_wire_length 60 -max_utilization 0.98
+# Pass 2: More aggressive cell swapping
+repair_design -max_wire_length 45 -max_utilization 0.98
 repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
 
-# Note: The multi-pass combination provides:
-# - Initial buffer insertion and gate resizing (repair_design pass 1)
-# - Cell swapping to faster variants (repair_timing pass 1)
-# - Aggressive second pass for stubborn violations (passes 2)
-# - Area expansion up to 98% utilization
+# Pass 3: Ultra-aggressive final push
+repair_design -max_wire_length 25 -max_utilization 0.99
+repair_timing -setup -setup_margin 0.0 -hold_margin 0.0
+
+# Pass 4: Absolute final attempt with minimal constraints
+repair_design -max_wire_length 15
+repair_timing -setup -setup_margin 0.0
+
+# Note: The 4-pass approach enables maximum VT swapping,
+# cell upsizing, and buffer insertion for extreme cases
 
 puts "Cell swap ECO complete"
 """

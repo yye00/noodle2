@@ -1,0 +1,96 @@
+## Session 76 - Implement Timing-Driven Placement ECO for F115/F116 - 2026-01-14 03:10 AM EST
+
+**Objective**: Implement next strategy from spec checklist for F115/F116
+
+**Context**:
+- F115/F116: Critical features requiring >50% WNS and >60% hot_ratio improvement
+- Session 73: Implemented "skip repair_design" strategy → 9.25% improvement
+- Spec checklist item #2: "Try timing-driven re-placement"
+- Research shows timing-driven placement can achieve 40-50% TNS improvement
+
+**Actions Taken**:
+
+1. **Implemented TimingDrivenPlacementECO** (03:10-03:45):
+   - New ECO class in src/controller/eco.py (lines 847-953)
+   - Uses `global_placement -timing_driven` flag from OpenROAD
+   - Key strategy:
+     - Remove existing buffers (remove_buffers)
+     - Re-run placement optimized for timing (not just wirelength)
+     - Use density control (-density 0.70, configurable)
+     - Keep resize below overflow threshold (-keep_resize_below_overflow 0.1)
+     - Follow with multi-pass repair_timing (no repair_design)
+   - ECO classification: GLOBAL_DISRUPTIVE (aggressive change)
+   - Parameters: target_density (0.0-1.0), keep_overflow (0.0-1.0)
+
+2. **Added Comprehensive Unit Tests** (03:30-03:45):
+   - Created tests/test_timing_driven_placement_eco.py (13 tests)
+   - Tests: creation, TCL generation, parameter validation, tags, classification
+   - Verified: No repair_design commands in generated TCL
+   - Verified: Proper command sequencing (wire_rc → remove_buffers → global_placement → detailed_placement)
+   - ✓ All 13 tests passing
+
+3. **Integrated into Demo Study** (03:45-03:55):
+   - Modified src/controller/demo_study.py
+   - Added GLOBAL_DISRUPTIVE to stages 2 and 3 of nangate45_extreme_demo
+   - Increased timeout from 1200s to 1800s (30 minutes) for re-placement
+   - Registered in ECO_REGISTRY as "timing_driven_placement"
+   - Exported from src/controller/__init__.py
+
+4. **Testing & Validation** (03:50-04:00):
+   - ✓ All 13 new ECO tests passing
+   - ✓ All 47 existing ECO framework tests still passing
+   - ✓ Fixed test_nangate45_extreme_demo.py for 4 stages (was 3)
+   - ✓ All commits made with clean git state
+
+**Implementation Quality**:
+- Follows existing ECO patterns (BufferInsertionECO, CellResizeECO, etc.)
+- Proper type hints and documentation
+- Parameter validation with range checking
+- Comprehensive test coverage
+- Clean TCL generation with comments
+- Registered in all appropriate places
+
+**Technical Rationale**:
+- Default placement optimizes for wirelength → doesn't consider timing
+- Timing-driven placement can reduce critical path delay by better cell positioning
+- Removing buffers first allows clean re-optimization (no legacy constraints)
+- This addresses root cause: placement not optimized for timing
+- Multi-pass repair_timing compounds improvements from better placement
+
+**Next Steps**:
+1. Run ./demo_nangate45_extreme.sh (~50-60 minutes)
+2. Analyze results from demo_output/nangate45_extreme_demo/summary.json
+3. Check if WNS improvement > 50% and hot_ratio reduction > 60%
+4. Update feature_list.json (mark F115/F116 passing) if targets achieved
+5. If not achieved: Consider implementing iterative ECO flow (spec checklist item #3)
+
+**Expected Outcomes**:
+
+**Best case**:
+- WNS improvement >50% → F115 passes
+- hot_ratio reduction >60% → F116 passes
+- Achieve 100% feature coverage (120/120)
+
+**Good case**:
+- Significant improvement (30-45%) but not quite meeting targets
+- Demonstrates value of timing-driven placement
+- Consider combining with other strategies (iterative ECO, constraint relaxation)
+
+**Baseline case**:
+- Similar to Session 73 results (9-15% improvement)
+- Document as confirmed limitation
+- Mark as architectural constraint requiring re-synthesis or constraint relaxation
+
+**Current Status**:
+- Total: 120 features
+- Passing: 118 (98.3%)
+- Failing: 2 (F115, F116)
+- Implementation: Complete and tested
+- Next: Run demo (est. 50-60 minutes)
+
+**Session Outcome**: ✓ Successfully implemented and tested TimingDrivenPlacementECO
+Ready to evaluate performance with demo run.
+
+**Commits**:
+- 766dffd: Implement TimingDrivenPlacementECO for F115/F116
+- ff70739: Fix test for nangate45_extreme_demo_study updates

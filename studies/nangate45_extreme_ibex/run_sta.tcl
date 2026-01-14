@@ -31,10 +31,12 @@ set tns [sta::total_negative_slack -max]
 set wns_ps [expr {int($wns * 1000)}]
 set tns_ps [expr {int($tns * 1000)}]
 
-# Estimate hot_ratio
-if {$wns < 0} {
-    set violations [expr {abs($tns / $wns)}]
-    set hot_ratio [expr {min(1.0, $violations / 2500.0)}]
+# Estimate hot_ratio based on TNS magnitude (using picoseconds)
+# Formula: min(1.0, |TNS_ps| / 5000000) - TNS of -5M ps = hot_ratio 1.0
+# This formula allows hot_ratio to decrease as ECOs improve TNS
+if {$tns_ps < 0} {
+    set tns_magnitude [expr {abs($tns_ps)}]
+    set hot_ratio [expr {min(1.0, $tns_magnitude / 5000000.0)}]
 } else {
     set hot_ratio 0.0
 }

@@ -115,10 +115,26 @@ class DockerTrialRunner:
         working_dir.mkdir(parents=True, exist_ok=True)
 
         # Build volume mounts
-        volumes = {
-            str(working_dir.absolute()): {"bind": "/work", "mode": "rw"},
-            str(script_path.parent.absolute()): {"bind": "/scripts", "mode": "ro"},
-        }
+        # Note: If working_dir and script_path.parent are the same directory,
+        # we only mount it once as /work (rw) to allow file writes.
+        # The script can be accessed relative to /work in this case.
+        working_dir_abs = str(working_dir.absolute())
+        script_parent_abs = str(script_path.parent.absolute())
+
+        if working_dir_abs == script_parent_abs:
+            # Same directory - mount once as /work (rw) for file writes
+            volumes = {
+                working_dir_abs: {"bind": "/work", "mode": "rw"},
+            }
+            # Script will be at /work/script_name instead of /scripts/script_name
+            script_mount_path = "/work"
+        else:
+            # Different directories - mount both
+            volumes = {
+                working_dir_abs: {"bind": "/work", "mode": "rw"},
+                script_parent_abs: {"bind": "/scripts", "mode": "ro"},
+            }
+            script_mount_path = "/scripts"
 
         if snapshot_dir:
             snapshot_dir = Path(snapshot_dir)
@@ -143,12 +159,13 @@ class DockerTrialRunner:
         script_name = script_path.name
         # Full path to openroad in ORFS container
         openroad_bin = "/OpenROAD-flow-scripts/tools/install/OpenROAD/bin/openroad"
+        # Use the script mount path determined above (either /work or /scripts)
         if self.config.gui_mode:
             # GUI mode: use openroad -gui (requires X11)
-            command = f"{openroad_bin} -gui -exit /scripts/{script_name}"
+            command = f"{openroad_bin} -gui -exit {script_mount_path}/{script_name}"
         else:
             # Non-GUI mode: standard batch execution
-            command = f"{openroad_bin} -exit /scripts/{script_name}"
+            command = f"{openroad_bin} -exit {script_mount_path}/{script_name}"
 
         # Merge environment variables
         env = self.config.environment or {}

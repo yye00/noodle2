@@ -814,7 +814,7 @@ def inject_eco_commands(
     Inject ECO commands into a base TCL script.
 
     This function:
-    1. Loads the input ODB (if provided)
+    1. Replaces the original read_db with input ODB (if provided) to enable ODB propagation
     2. Runs baseline STA (before ECO)
     3. Applies the ECO commands
     4. Runs STA again (after ECO)
@@ -824,7 +824,7 @@ def inject_eco_commands(
     Args:
         base_script: Base TCL script (STA/congestion analysis)
         eco_tcl: ECO TCL commands to inject
-        input_odb_path: Optional input ODB file path
+        input_odb_path: Optional input ODB file path (from previous stage's modified design)
         output_odb_path: Output ODB file path for modified design
 
     Returns:
@@ -833,6 +833,21 @@ def inject_eco_commands(
     # Split the base script to find where to inject
     # We want to inject ECO commands before the final "exit 0"
     lines = base_script.splitlines()
+
+    # If input_odb_path is provided, replace the read_db line in the base script
+    # This ensures we start from the modified design from the previous stage
+    if input_odb_path:
+        import re
+        modified_lines = []
+        for line in lines:
+            # Look for read_db command and replace the path
+            if re.match(r'^\s*read_db\s+', line):
+                # Replace with the input ODB path from previous stage
+                modified_lines.append(f'read_db "{input_odb_path}"')
+                modified_lines.append(f'puts "Loaded modified ODB from previous stage: {input_odb_path}"')
+            else:
+                modified_lines.append(line)
+        lines = modified_lines
 
     # Find the exit command
     exit_index = -1
@@ -852,14 +867,6 @@ def inject_eco_commands(
     eco_section.append("# ECO APPLICATION")
     eco_section.append("# ============================================================================")
     eco_section.append("")
-
-    # Load input ODB if provided
-    if input_odb_path:
-        eco_section.append(f"# Load input ODB file")
-        eco_section.append(f"puts \"Loading input ODB: {input_odb_path}\"")
-        eco_section.append(f"read_db \"{input_odb_path}\"")
-        eco_section.append("puts \"Input ODB loaded successfully\"")
-        eco_section.append("")
 
     # Run baseline STA (before ECO)
     eco_section.append("# Run baseline STA (before ECO)")
@@ -899,10 +906,13 @@ def inject_eco_commands(
     eco_section.append("set wns_ps [expr {int($wns * 1000)}]")
     eco_section.append("set tns_ps [expr {int($tns * 1000)}]")
     eco_section.append("")
-    eco_section.append("# Recalculate hot_ratio")
-    eco_section.append("if {$wns < 0} {")
-    eco_section.append("    set estimated_violations [expr {abs($tns / $wns)}]")
-    eco_section.append("    set hot_ratio [expr {min(1.0, $estimated_violations / 100.0)}]")
+    eco_section.append("# Recalculate hot_ratio based on TNS magnitude (in picoseconds)")
+    eco_section.append("# hot_ratio estimates design health based on total negative slack")
+    eco_section.append("# Formula: min(1.0, |TNS_ps| / 5000000) - TNS of -5M ps = hot_ratio 1.0")
+    eco_section.append("# This formula allows hot_ratio to decrease as ECOs improve TNS")
+    eco_section.append("if {$tns_ps < 0} {")
+    eco_section.append("    set tns_magnitude [expr {abs($tns_ps)}]")
+    eco_section.append("    set hot_ratio [expr {min(1.0, $tns_magnitude / 5000000.0)}]")
     eco_section.append("} else {")
     eco_section.append("    set hot_ratio 0.0")
     eco_section.append("}")

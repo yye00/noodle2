@@ -1252,6 +1252,10 @@ class StudyExecutor:
                     "eco_parameters": eco.metadata.parameters if eco else {},
                 },
             )
+            # Add trial case to case graph for tracking and survivor selection
+            # Skip if already exists (e.g., base case or checkpoint restore)
+            if self.case_graph.get_case(trial_case.case_id) is None:
+                self.case_graph.add_case(trial_case)
             trial_cases.append(trial_case)
 
             print(f"  Trial {trial_index + 1}/{trials_to_execute}: {trial_case.identifier} (ECO: {eco_name})")
@@ -1272,12 +1276,15 @@ class StudyExecutor:
 
             # Determine if snapshot_path is a modified ODB file from previous stage
             input_odb_path = None
+            input_odb_container_path = None  # Path as seen inside Docker container
             actual_snapshot_dir = self.config.snapshot_path  # Default to base snapshot
             if snapshot_path.suffix == ".odb":
                 # This is a modified ODB file from a previous stage
-                input_odb_path = str(snapshot_path)
+                input_odb_path = str(snapshot_path)  # Host path (for metadata tracking)
                 # Snapshot dir should be the parent directory containing the ODB
                 actual_snapshot_dir = str(snapshot_path.parent)
+                # Convert to container path: the parent dir is mounted as /snapshot
+                input_odb_container_path = f"/snapshot/{snapshot_path.name}"
             else:
                 # Regular snapshot directory
                 actual_snapshot_dir = str(snapshot_path)
@@ -1289,7 +1296,14 @@ class StudyExecutor:
 
                 # Read the snapshot's base STA script to use as foundation
                 # This ensures we load the real design properly
-                base_script_path = snapshot_path / "run_sta.tcl"
+                # Note: If we're using a modified ODB, get script from original snapshot
+                if snapshot_path.suffix == ".odb":
+                    # Modified ODB - use original snapshot for script
+                    base_script_path = Path(self.config.snapshot_path) / "run_sta.tcl"
+                else:
+                    # Regular snapshot directory
+                    base_script_path = snapshot_path / "run_sta.tcl"
+
                 if base_script_path.exists():
                     # Use snapshot's script as base (has proper ODB loading)
                     base_script = base_script_path.read_text()
@@ -1308,7 +1322,8 @@ class StudyExecutor:
                 script_content = inject_eco_commands(
                     base_script=base_script,
                     eco_tcl=eco_tcl,
-                    input_odb_path=input_odb_path,  # Use modified ODB from previous stage if available
+                    # Use container path for modified ODB from previous stage
+                    input_odb_path=input_odb_container_path,
                     output_odb_path=f"/work/modified_design_{trial_index}.odb",
                 )
 
@@ -1338,7 +1353,8 @@ class StudyExecutor:
                     "pdk": self.config.pdk,
                     "eco_type": eco_name,
                     "eco_parameters": eco.metadata.parameters if eco else {},
-                    "input_odb_path": input_odb_path,  # Track if using modified ODB
+                    "input_odb_path": input_odb_path,  # Host path for tracking
+                    "input_odb_container_path": input_odb_container_path,  # Container path used in TCL
                 },
             )
             trial_configs.append(trial_config)
@@ -1497,7 +1513,8 @@ class StudyExecutor:
         self, trial_results: list[TrialResult], survivor_count: int
     ) -> list[str]:
         """
-        Default survivor selection: rank by WNS (higher is better).
+        Default survivor selection: rank by WNS (higher is better), with preference for
+        trials that produced modified ODBs (to enable cumulative ECO improvements).
 
         Args:
             trial_results: All trial results from stage
@@ -1512,10 +1529,28 @@ class StudyExecutor:
         if not successful_trials:
             return []
 
-        # Sort by WNS (higher/less negative is better)
-        # For now, use a simple heuristic based on return code
-        # In real implementation, would parse metrics.timing.wns_ps
-        sorted_trials = sorted(successful_trials, key=lambda t: t.return_code)
+        def get_sort_key(trial: TrialResult) -> tuple:
+            """
+            Sort key: (primary: WNS descending, secondary: has_modified_odb)
+            Higher WNS is better (less negative). Prefer trials with modified ODB for cumulative improvements.
+            """
+            wns_ps = None
+            if trial.metrics and "wns_ps" in trial.metrics:
+                wns_ps = trial.metrics["wns_ps"]
+            elif trial.metrics and "timing" in trial.metrics and "wns_ps" in trial.metrics["timing"]:
+                wns_ps = trial.metrics["timing"]["wns_ps"]
+
+            # Default to very negative WNS if not found
+            wns_ps = wns_ps if wns_ps is not None else -999999
+
+            # Prefer trials with modified ODB (for cumulative ECO improvements)
+            has_modified_odb = 1 if trial.modified_odb_path else 0
+
+            # Sort by: WNS (higher is better), then by has_modified_odb (1 > 0)
+            return (wns_ps, has_modified_odb)
+
+        # Sort by WNS (higher/less negative is better), with preference for modified ODB
+        sorted_trials = sorted(successful_trials, key=get_sort_key, reverse=True)
 
         # Select top N
         survivors = sorted_trials[:survivor_count]

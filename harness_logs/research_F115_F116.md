@@ -118,8 +118,32 @@ The current snapshot uses 0.5ns clock (4.4x faster than 2.2ns default). This cre
 
 ## Action Items for Harness
 
-1. [ ] Use Perplexity to research any additional strategies
-2. [ ] Try timing-driven re-placement before ECOs
-3. [ ] Implement iterative ECO flow (min 5 passes)
-4. [ ] If still failing, create less extreme snapshot
-5. [ ] Document all attempts with metrics
+1. [x] Use Perplexity to research any additional strategies (DONE - this document)
+2. [x] Try timing-driven re-placement before ECOs (DONE - TimingDrivenPlacementECO)
+3. [x] Implement iterative ECO flow (min 5 passes) (DONE - IterativeTimingDrivenECO)
+4. [ ] Run demo with IterativeTimingDrivenECO and measure results
+5. [ ] If still failing, create less extreme snapshot OR document as architectural limitation
+
+## Implementation Status (Session 79)
+
+### Newly Implemented: IterativeTimingDrivenECO
+
+Created ultra-aggressive iterative ECO based on research findings:
+
+**Features:**
+- Combines timing-driven placement re-optimization
+- Iterative repair_timing with up to 10 passes
+- Convergence checking (stops if improvement < 2%)
+- Adaptive margin scheduling (starts at 30%, ends at 0%)
+- Registered in ECO_REGISTRY as "iterative_timing_driven"
+
+**Implementation:**
+- Location: `src/controller/eco.py` (IterativeTimingDrivenECO class)
+- Tests: `tests/test_iterative_timing_driven_eco.py` (8 tests, all passing)
+- Classification: ECOClass.GLOBAL_DISRUPTIVE
+
+**Expected Improvement:**
+Based on research, iterative ECO flows can provide 20-40% additional improvement beyond single-pass timing-driven placement. Current best: 10.1%, so with iterative approach, could potentially reach 30-50% improvement.
+
+**Next Step:**
+Run demo with this new ECO to measure actual improvement vs target of 50%.

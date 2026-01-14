@@ -26,6 +26,15 @@
       "passing_at_end": null,
       "features_completed": [],
       "features_attempted": []
+    },
+    {
+      "session_num": 211,
+      "started_at": "2026-01-14T13:43:46.703459",
+      "ended_at": null,
+      "passing_at_start": 118,
+      "passing_at_end": null,
+      "features_completed": [],
+      "features_attempted": []
     }
   ],
   "feature_attempts": {},

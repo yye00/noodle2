@@ -46,12 +46,12 @@ January 2026
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Orchestration** | Noodle2 (Python) | ECO selection, survivor management, prior learning |
-| **Parallelism** | Ray | Distributed trial execution, multi-node scaling |
-| **EDA Engine** | OpenROAD | Physical design, timing analysis, ECO application |
-| **Build Flow** | OpenROAD-flow-scripts (ORFS) | Design synthesis, placement, routing |
-| **PDKs** | Nangate45, ASAP7, Sky130HD | Process design kits for different technology nodes |
-| **Visualization** | Matplotlib, NumPy | Heatmaps, trajectories, stage progression |
+| **Orchestration** | Noodle2 (Python) | ECO selection, prior learning |
+| **Parallelism** | Ray | Distributed execution |
+| **EDA Engine** | OpenROAD | Timing analysis, ECO application |
+| **Build Flow** | ORFS | Synthesis, placement, routing |
+| **PDKs** | Nangate45, ASAP7, Sky130 | Process design kits |
+| **Visualization** | Matplotlib | Heatmaps, trajectories |
 
 ---
 
@@ -128,7 +128,7 @@ ray start --address=<head-ip>:6379
 
 # Ray Dashboard - Overview
 
-![](images/ray/ray_overview.png)
+![h:420](images/ray/ray_overview.png)
 
 Real-time monitoring of Noodle2 ECO study execution
 
@@ -136,7 +136,7 @@ Real-time monitoring of Noodle2 ECO study execution
 
 # Ray Dashboard - Jobs
 
-![](images/ray/ray_jobs.png)
+![h:420](images/ray/ray_jobs.png)
 
 Active jobs showing parallel trial execution across stages
 
@@ -144,7 +144,7 @@ Active jobs showing parallel trial execution across stages
 
 # Ray Dashboard - Cluster Resources
 
-![](images/ray/ray_cluster.png)
+![h:420](images/ray/ray_cluster.png)
 
 CPU and memory utilization during study execution
 
@@ -152,7 +152,7 @@ CPU and memory utilization during study execution
 
 # Ray Dashboard - Metrics
 
-![](images/ray/ray_metrics.png)
+![h:420](images/ray/ray_metrics.png)
 
 Performance metrics and task distribution
 

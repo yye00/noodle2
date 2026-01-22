@@ -529,6 +529,28 @@ Before vs After routing congestion differential (normalized 40x40 grid)
 
 ---
 
+# Timing Endpoint Statistics
+
+**Sky130 Microwatt (162K cells):**
+
+| Metric | Initial | Final | Fixed |
+|--------|---------|-------|-------|
+| Violating Endpoints | ~6,467 | ~20 | **6,447** |
+| Total Endpoints | ~66,700 | ~66,700 | - |
+| Violation Rate | 9.7% | 0.03% | **99.7% fixed** |
+
+**ASAP7 Ibex (~10K cells):**
+
+| Metric | Initial | Final | Fixed |
+|--------|---------|-------|-------|
+| Violating Endpoints | ~2,039 | ~15 | **2,024** |
+| Total Endpoints | ~3,700 | ~3,700 | - |
+| Violation Rate | 55% | 0.4% | **99.3% fixed** |
+
+*Endpoint counts from OpenROAD RSZ-0094 logs*
+
+---
+
 <!-- _class: lead -->
 # Results Comparison
 

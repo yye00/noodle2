@@ -126,6 +126,38 @@ ray start --address=<head-ip>:6379
 
 ---
 
+# Ray Dashboard - Overview
+
+![](images/ray/ray_overview.png)
+
+Real-time monitoring of Noodle2 ECO study execution
+
+---
+
+# Ray Dashboard - Jobs
+
+![](images/ray/ray_jobs.png)
+
+Active jobs showing parallel trial execution across stages
+
+---
+
+# Ray Dashboard - Cluster Resources
+
+![](images/ray/ray_cluster.png)
+
+CPU and memory utilization during study execution
+
+---
+
+# Ray Dashboard - Metrics
+
+![](images/ray/ray_metrics.png)
+
+Performance metrics and task distribution
+
+---
+
 # ORFS - OpenROAD Flow Scripts
 
 **OpenROAD-flow-scripts (ORFS)** provides the build infrastructure:

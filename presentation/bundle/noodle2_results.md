@@ -12,7 +12,10 @@ style: |
   .warning { color: #FFD700; }
   .danger { color: #E74C3C; }
   img { max-height: 480px; }
-  table { font-size: 0.85em; }
+  table { font-size: 0.85em; background-color: #2a2a40; border-collapse: collapse; }
+  th { background-color: #4A90E2; color: white; padding: 8px 12px; }
+  td { background-color: #2a2a40; color: #eee; padding: 6px 12px; border: 1px solid #3a3a50; }
+  tr:nth-child(even) td { background-color: #252538; }
 ---
 
 # Noodle2

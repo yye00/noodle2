@@ -531,23 +531,15 @@ Before vs After routing congestion differential (normalized 40x40 grid)
 
 # Timing Endpoint Statistics
 
-**Sky130 Microwatt (162K cells):**
+| Design | Cells | Initial Violating | Final Violating | **Endpoints Fixed** |
+|--------|-------|-------------------|-----------------|---------------------|
+| **Sky130 Microwatt** | 162K | ~6,467 | ~20 | **6,447 (99.7%)** |
+| **ASAP7 Ibex** | ~10K | ~2,039 | ~15 | **2,024 (99.3%)** |
+| **Nangate45 Ibex** | ~10K | ~3,580 | ~1,020 | **2,560 (71.5%)** |
 
-| Metric | Initial | Final | Fixed |
-|--------|---------|-------|-------|
-| Violating Endpoints | ~6,467 | ~20 | **6,447** |
-| Total Endpoints | ~66,700 | ~66,700 | - |
-| Violation Rate | 9.7% | 0.03% | **99.7% fixed** |
+**Key Insight:** ECOs successfully eliminated thousands of timing violations across all PDKs.
 
-**ASAP7 Ibex (~10K cells):**
-
-| Metric | Initial | Final | Fixed |
-|--------|---------|-------|-------|
-| Violating Endpoints | ~2,039 | ~15 | **2,024** |
-| Total Endpoints | ~3,700 | ~3,700 | - |
-| Violation Rate | 55% | 0.4% | **99.3% fixed** |
-
-*Endpoint counts from OpenROAD RSZ-0094 logs*
+*Endpoint counts extracted from OpenROAD RSZ-0094 logs*
 
 ---
 

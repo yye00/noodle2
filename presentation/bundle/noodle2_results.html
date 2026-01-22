@@ -1697,69 +1697,42 @@ td { background-color: #2a2a40; color: #eee; padding: 6px 12px; border: 1px soli
 tr:nth-child(even) td { background-color: #252538; }
 ;color:#eee;background-color:#1a1a2e;background-image:none;" data-marpit-pagination-total="54">
 <h1 id="timing-endpoint-statistics">Timing Endpoint Statistics</h1>
-<p><strong>Sky130 Microwatt (162K cells):</strong></p>
 <table>
 <thead>
 <tr>
-<th>Metric</th>
-<th>Initial</th>
-<th>Final</th>
-<th>Fixed</th>
+<th>Design</th>
+<th>Cells</th>
+<th>Initial Violating</th>
+<th>Final Violating</th>
+<th><strong>Endpoints Fixed</strong></th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td>Violating Endpoints</td>
+<td><strong>Sky130 Microwatt</strong></td>
+<td>162K</td>
 <td>~6,467</td>
 <td>~20</td>
-<td><strong>6,447</strong></td>
+<td><strong>6,447 (99.7%)</strong></td>
 </tr>
 <tr>
-<td>Total Endpoints</td>
-<td>~66,700</td>
-<td>~66,700</td>
-<td>-</td>
-</tr>
-<tr>
-<td>Violation Rate</td>
-<td>9.7%</td>
-<td>0.03%</td>
-<td><strong>99.7% fixed</strong></td>
-</tr>
-</tbody>
-</table>
-<p><strong>ASAP7 Ibex (~10K cells):</strong></p>
-<table>
-<thead>
-<tr>
-<th>Metric</th>
-<th>Initial</th>
-<th>Final</th>
-<th>Fixed</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>Violating Endpoints</td>
+<td><strong>ASAP7 Ibex</strong></td>
+<td>~10K</td>
 <td>~2,039</td>
 <td>~15</td>
-<td><strong>2,024</strong></td>
+<td><strong>2,024 (99.3%)</strong></td>
 </tr>
 <tr>
-<td>Total Endpoints</td>
-<td>~3,700</td>
-<td>~3,700</td>
-<td>-</td>
-</tr>
-<tr>
-<td>Violation Rate</td>
-<td>55%</td>
-<td>0.4%</td>
-<td><strong>99.3% fixed</strong></td>
+<td><strong>Nangate45 Ibex</strong></td>
+<td>~10K</td>
+<td>~3,580</td>
+<td>~1,020</td>
+<td><strong>2,560 (71.5%)</strong></td>
 </tr>
 </tbody>
 </table>
-<p><em>Endpoint counts from OpenROAD RSZ-0094 logs</em></p>
+<p><strong>Key Insight:</strong> ECOs successfully eliminated thousands of timing violations across all PDKs.</p>
+<p><em>Endpoint counts extracted from OpenROAD RSZ-0094 logs</em></p>
 </section>
 </foreignObject></svg><svg data-marpit-svg="" viewBox="0 0 1280 720"><foreignObject width="1280" height="720"><section id="45" data-paginate="true" data-background-color="#1a1a2e" data-color="#eee" data-class="lead" data-theme="default" data-style="h1 { color: #4A90E2; }
 h2 { color: #50C878; }

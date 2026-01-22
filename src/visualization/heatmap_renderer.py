@@ -14,7 +14,89 @@ from matplotlib.colors import LinearSegmentedColormap
 matplotlib.use("Agg")
 
 
-def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.ndarray, dict[str, Any]]:
+def parse_heatmap_csv_native(csv_path: str | Path) -> tuple[list[dict], dict[str, Any]]:
+    """
+    Parse heatmap CSV file and return native bbox data with design bounds.
+
+    This preserves the original OpenROAD bbox data without resampling,
+    allowing true-to-floorplan rendering.
+
+    Args:
+        csv_path: Path to CSV file
+
+    Returns:
+        Tuple of (boxes, metadata) where boxes is list of bbox dicts
+        and metadata contains design bounds in microns
+
+    Raises:
+        FileNotFoundError: If CSV file doesn't exist
+        ValueError: If CSV format is invalid
+    """
+    csv_path = Path(csv_path)
+    if not csv_path.exists():
+        raise FileNotFoundError(f"Heatmap CSV not found: {csv_path}")
+
+    boxes = []
+    with open(csv_path) as f:
+        reader = csv.reader(f)
+        first_row = next(reader, None)
+
+        if not first_row:
+            raise ValueError(f"Empty CSV file: {csv_path}")
+
+        # Check if it's OpenROAD bbox format
+        if len(first_row) == 5 and 'x0' in first_row[0].lower():
+            for row in reader:
+                if len(row) == 5:
+                    try:
+                        x0, y0, x1, y1, value = row
+                        boxes.append({
+                            'x0': float(x0),
+                            'y0': float(y0),
+                            'x1': float(x1),
+                            'y1': float(y1),
+                            'value': float(value),
+                        })
+                    except ValueError:
+                        continue
+        else:
+            raise ValueError(f"Expected OpenROAD bbox format (x0,y0,x1,y1,value): {csv_path}")
+
+    if not boxes:
+        raise ValueError(f"No valid bbox data found in CSV: {csv_path}")
+
+    # Calculate design bounds
+    min_x = min(b['x0'] for b in boxes)
+    max_x = max(b['x1'] for b in boxes)
+    min_y = min(b['y0'] for b in boxes)
+    max_y = max(b['y1'] for b in boxes)
+
+    width_um = max_x - min_x
+    height_um = max_y - min_y
+    aspect_ratio = width_um / height_um if height_um > 0 else 1.0
+
+    values = [b['value'] for b in boxes]
+
+    metadata = {
+        "bounds": {
+            "min_x": min_x,
+            "max_x": max_x,
+            "min_y": min_y,
+            "max_y": max_y,
+        },
+        "width_um": width_um,
+        "height_um": height_um,
+        "aspect_ratio": aspect_ratio,
+        "box_count": len(boxes),
+        "min_value": min(values),
+        "max_value": max(values),
+        "mean_value": sum(values) / len(values),
+    }
+
+    return boxes, metadata
+
+
+def parse_heatmap_csv(csv_path: str | Path, grid_size: int | None = 50) -> tuple[np.ndarray, dict[str, Any]]:
     """
     Parse heatmap CSV file exported by OpenROAD gui::dump_heatmap.
 
@@ -24,11 +106,14 @@ def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.nda
 
     Args:
         csv_path: Path to CSV file
-        grid_size: Size of output grid for bbox format (default: 50x50)
+        grid_size: Size of output grid for bbox format.
+                   - int: Fixed grid size (e.g., 50 creates 50x50)
+                   - None: Auto-calculate based on aspect ratio (preserves proportions)
+                   Default: 50 for backward compatibility
 
     Returns:
         Tuple of (data_array, metadata) where data_array is 2D numpy array
-        and metadata contains grid dimensions and value ranges
+        and metadata contains grid dimensions, value ranges, and design bounds
 
     Raises:
         FileNotFoundError: If CSV file doesn't exist
@@ -74,28 +159,58 @@ def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.nda
             min_y = min(b['y0'] for b in boxes)
             max_y = max(b['y1'] for b in boxes)
 
+            width_um = max_x - min_x
+            height_um = max_y - min_y
+            aspect_ratio = width_um / height_um if height_um > 0 else 1.0
+
+            # Determine grid dimensions
+            if grid_size is None:
+                # Auto-calculate based on aspect ratio
+                # Use ~50 cells on the shorter dimension, scale longer proportionally
+                base_size = 50
+                if aspect_ratio >= 1.0:
+                    grid_x = int(base_size * aspect_ratio)
+                    grid_y = base_size
+                else:
+                    grid_x = base_size
+                    grid_y = int(base_size / aspect_ratio)
+            else:
+                grid_x = grid_size
+                grid_y = grid_size
+
             # Create grid
-            data = np.zeros((grid_size, grid_size), dtype=np.float64)
+            data = np.zeros((grid_y, grid_x), dtype=np.float64)
 
             # Map boxes to grid
-            dx = (max_x - min_x) / grid_size if max_x > min_x else 1.0
-            dy = (max_y - min_y) / grid_size if max_y > min_y else 1.0
+            dx = width_um / grid_x if width_um > 0 else 1.0
+            dy = height_um / grid_y if height_um > 0 else 1.0
 
             for box in boxes:
                 # Find grid cells overlapped by this box
                 i0 = int((box['y0'] - min_y) / dy)
-                i1 = min(int((box['y1'] - min_y) / dy) + 1, grid_size)
+                i1 = min(int((box['y1'] - min_y) / dy) + 1, grid_y)
                 j0 = int((box['x0'] - min_x) / dx)
-                j1 = min(int((box['x1'] - min_x) / dx) + 1, grid_size)
+                j1 = min(int((box['x1'] - min_x) / dx) + 1, grid_x)
 
                 # Clamp to grid bounds
-                i0 = max(0, min(i0, grid_size - 1))
-                i1 = max(0, min(i1, grid_size))
-                j0 = max(0, min(j0, grid_size - 1))
-                j1 = max(0, min(j1, grid_size))
+                i0 = max(0, min(i0, grid_y - 1))
+                i1 = max(0, min(i1, grid_y))
+                j0 = max(0, min(j0, grid_x - 1))
+                j1 = max(0, min(j1, grid_x))
 
                 # Fill grid cells with box value
                 data[i0:i1, j0:j1] = box['value']
+
+            # Store design bounds in metadata
+            bounds_metadata = {
+                "min_x": min_x,
+                "max_x": max_x,
+                "min_y": min_y,
+                "max_y": max_y,
+                "width_um": width_um,
+                "height_um": height_um,
+                "aspect_ratio": aspect_ratio,
+            }
 
         else:
             # Simple grid format - read all rows
@@ -126,6 +241,7 @@ def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.nda
 
             # Convert to numpy array
             data = np.array(rows, dtype=np.float64)
+            bounds_metadata = None
 
     # Extract metadata
     metadata = {
@@ -135,6 +251,10 @@ def parse_heatmap_csv(csv_path: str | Path, grid_size: int = 50) -> tuple[np.nda
         "mean_value": float(np.mean(data)),
         "nonzero_count": int(np.count_nonzero(data)),
     }
+
+    # Add bounds if available
+    if bounds_metadata:
+        metadata["bounds"] = bounds_metadata
 
     return data, metadata
 
@@ -148,7 +268,10 @@ def render_heatmap_png(
     figsize: tuple[int, int] = (8, 6),
 ) -> dict[str, Any]:
     """
-    Render heatmap CSV as PNG image.
+    Render heatmap CSV as PNG image (scaled/normalized version).
+
+    This renders a fixed-size normalized heatmap suitable for quick comparison.
+    For true-to-floorplan rendering, use render_heatmap_true_scale().
 
     Args:
         csv_path: Path to heatmap CSV file
@@ -216,18 +339,153 @@ def render_heatmap_png(
     }
 
 
+def render_heatmap_true_scale(
+    csv_path: str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    colormap: str = "hot",
+    dpi: int = 150,
+    max_dimension_inches: float = 12.0,
+    show_micron_axes: bool = True,
+) -> dict[str, Any]:
+    """
+    Render heatmap with true-to-floorplan proportions.
+
+    This preserves the actual design aspect ratio and shows real micron
+    coordinates on axes. The figure size is automatically calculated
+    to maintain the design's proportions while fitting within max_dimension_inches.
+
+    Args:
+        csv_path: Path to heatmap CSV file (must be OpenROAD bbox format)
+        output_path: Path where PNG should be saved
+        title: Optional title for the plot
+        colormap: Matplotlib colormap name (default: 'hot')
+        dpi: Resolution in dots per inch (default: 150)
+        max_dimension_inches: Maximum figure dimension in inches (default: 12)
+        show_micron_axes: If True, show micron coordinates on axes (default: True)
+
+    Returns:
+        Metadata dictionary with rendering information and design bounds
+
+    Raises:
+        FileNotFoundError: If CSV file doesn't exist
+        ValueError: If CSV format is invalid or not bbox format
+    """
+    csv_path = Path(csv_path)
+    output_path = Path(output_path)
+
+    # Parse with auto grid size to preserve aspect ratio
+    data, metadata = parse_heatmap_csv(csv_path, grid_size=None)
+
+    if "bounds" not in metadata:
+        raise ValueError(
+            f"True-scale rendering requires OpenROAD bbox format CSV: {csv_path}"
+        )
+
+    bounds = metadata["bounds"]
+    width_um = bounds["width_um"]
+    height_um = bounds["height_um"]
+    aspect_ratio = bounds["aspect_ratio"]
+
+    # Calculate figure size to preserve aspect ratio
+    if aspect_ratio >= 1.0:
+        # Wider than tall
+        fig_width = max_dimension_inches
+        fig_height = max_dimension_inches / aspect_ratio
+    else:
+        # Taller than wide
+        fig_height = max_dimension_inches
+        fig_width = max_dimension_inches * aspect_ratio
+
+    # Ensure minimum size
+    fig_width = max(fig_width, 4.0)
+    fig_height = max(fig_height, 4.0)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=dpi)
+
+    # Calculate extent for proper coordinate display
+    extent = [bounds["min_x"], bounds["max_x"], bounds["min_y"], bounds["max_y"]]
+
+    # Render heatmap with true proportions
+    im = ax.imshow(
+        data,
+        cmap=colormap,
+        interpolation="nearest",
+        aspect="equal",  # Preserve spatial proportions
+        origin="lower",  # Y increases upward (standard coordinate system)
+        extent=extent,
+    )
+
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label("Value", rotation=270, labelpad=20)
+
+    # Set title with design dimensions
+    if title:
+        full_title = f"{title}\n({width_um:.1f} × {height_um:.1f} µm)"
+    else:
+        full_title = f"Heatmap: {csv_path.stem}\n({width_um:.1f} × {height_um:.1f} µm)"
+    ax.set_title(full_title)
+
+    # Add axis labels
+    if show_micron_axes:
+        ax.set_xlabel("X (µm)")
+        ax.set_ylabel("Y (µm)")
+        # Format tick labels with appropriate precision
+        ax.ticklabel_format(style='plain', axis='both')
+    else:
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+
+    # Add subtle grid for reference
+    ax.grid(True, alpha=0.15, linestyle="--", linewidth=0.5, color="white")
+
+    # Tight layout
+    plt.tight_layout()
+
+    # Ensure output directory exists
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save figure
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+    # Return metadata with bounds info
+    return {
+        "csv_path": str(csv_path),
+        "png_path": str(output_path),
+        "data_shape": metadata["shape"],
+        "value_range": [metadata["min_value"], metadata["max_value"]],
+        "colormap": colormap,
+        "dpi": dpi,
+        "figsize": (fig_width, fig_height),
+        "true_scale": True,
+        "bounds": bounds,
+        "width_um": width_um,
+        "height_um": height_um,
+        "aspect_ratio": aspect_ratio,
+    }
+
+
 def render_all_heatmaps(
     heatmaps_dir: str | Path,
     output_dir: str | Path | None = None,
     colormap: str = "hot",
+    generate_true_scale: bool = True,
 ) -> list[dict[str, Any]]:
     """
     Render all heatmap CSVs in a directory as PNG images.
+
+    Generates two versions for each heatmap:
+    1. Scaled version (50x50 grid, fixed size) - good for quick comparison
+    2. True-scale version (preserves floorplan proportions) - accurate to design
 
     Args:
         heatmaps_dir: Directory containing heatmap CSV files
         output_dir: Optional output directory (defaults to same as heatmaps_dir)
         colormap: Matplotlib colormap name
+        generate_true_scale: If True, also generate true-scale versions (default: True)
 
     Returns:
         List of metadata dictionaries for each rendered heatmap
@@ -247,13 +505,15 @@ def render_all_heatmaps(
     csv_files = list(heatmaps_dir.glob("*.csv"))
 
     for csv_path in csv_files:
-        # Generate PNG filename
-        png_path = output_dir / f"{csv_path.stem}.png"
+        # Skip grid files (intermediate format)
+        if csv_path.stem.endswith(".grid"):
+            continue
 
         # Determine title from filename
         title = csv_path.stem.replace("_", " ").title()
 
-        # Render heatmap
+        # 1. Render scaled version (for quick comparison)
+        png_path = output_dir / f"{csv_path.stem}.png"
         try:
             metadata = render_heatmap_png(
                 csv_path=csv_path,
@@ -261,10 +521,31 @@ def render_all_heatmaps(
                 title=title,
                 colormap=colormap,
             )
+            metadata["version"] = "scaled"
             results.append(metadata)
         except Exception as e:
-            # Log error but continue processing other files
-            print(f"Warning: Failed to render {csv_path}: {e}")
+            print(f"Warning: Failed to render scaled {csv_path}: {e}")
+
+        # 2. Render true-scale version (accurate to floorplan)
+        if generate_true_scale:
+            true_scale_path = output_dir / f"{csv_path.stem}_true_scale.png"
+            try:
+                metadata = render_heatmap_true_scale(
+                    csv_path=csv_path,
+                    output_path=true_scale_path,
+                    title=title,
+                    colormap=colormap,
+                )
+                metadata["version"] = "true_scale"
+                results.append(metadata)
+            except ValueError as e:
+                # True-scale requires bbox format - skip if not available
+                if "bbox format" in str(e):
+                    pass  # Silently skip non-bbox CSVs
+                else:
+                    print(f"Warning: Failed to render true-scale {csv_path}: {e}")
+            except Exception as e:
+                print(f"Warning: Failed to render true-scale {csv_path}: {e}")
 
     return results
 
@@ -371,7 +652,7 @@ def render_diff_heatmap(
     figsize: tuple[int, int] = (10, 6),
 ) -> dict[str, Any]:
     """
-    Render comparative heatmap showing before/after ECO spatial impact.
+    Render comparative heatmap showing before/after ECO spatial impact (scaled version).
 
     Green/positive areas show improvement (reduced congestion/density).
     Red/negative areas show degradation (increased congestion/density).
@@ -484,6 +765,181 @@ def render_diff_heatmap(
         "total_degradation": metadata["total_degradation"],
         "dpi": dpi,
         "figsize": figsize,
+    }
+
+
+def render_diff_heatmap_true_scale(
+    baseline_csv: str | Path,
+    comparison_csv: str | Path,
+    output_path: str | Path,
+    title: str | None = None,
+    dpi: int = 150,
+    max_dimension_inches: float = 12.0,
+    show_micron_axes: bool = True,
+) -> dict[str, Any]:
+    """
+    Render comparative heatmap with true-to-floorplan proportions.
+
+    Green/positive areas show improvement (reduced congestion/density).
+    Red/negative areas show degradation (increased congestion/density).
+
+    Args:
+        baseline_csv: Path to baseline heatmap CSV (before ECO)
+        comparison_csv: Path to comparison heatmap CSV (after ECO)
+        output_path: Path where diff heatmap PNG should be saved
+        title: Optional title for the plot
+        dpi: Resolution in dots per inch (default: 150)
+        max_dimension_inches: Maximum figure dimension in inches (default: 12)
+        show_micron_axes: If True, show micron coordinates on axes (default: True)
+
+    Returns:
+        Metadata dictionary with rendering information, impact statistics, and bounds
+
+    Raises:
+        FileNotFoundError: If either CSV file doesn't exist
+        ValueError: If CSV formats are invalid or not bbox format
+    """
+    baseline_csv = Path(baseline_csv)
+    comparison_csv = Path(comparison_csv)
+    output_path = Path(output_path)
+
+    # Parse both with auto grid size to preserve aspect ratio
+    baseline_data, baseline_meta = parse_heatmap_csv(baseline_csv, grid_size=None)
+    comparison_data, comparison_meta = parse_heatmap_csv(comparison_csv, grid_size=None)
+
+    if "bounds" not in baseline_meta:
+        raise ValueError(
+            f"True-scale rendering requires OpenROAD bbox format CSV: {baseline_csv}"
+        )
+
+    bounds = baseline_meta["bounds"]
+    width_um = bounds["width_um"]
+    height_um = bounds["height_um"]
+    aspect_ratio = bounds["aspect_ratio"]
+
+    # Ensure shapes match (they should if from same design)
+    if baseline_data.shape != comparison_data.shape:
+        # Resize comparison to match baseline
+        from scipy.ndimage import zoom
+        zoom_factors = (
+            baseline_data.shape[0] / comparison_data.shape[0],
+            baseline_data.shape[1] / comparison_data.shape[1],
+        )
+        comparison_data = zoom(comparison_data, zoom_factors, order=1)
+
+    # Compute difference
+    diff = baseline_data - comparison_data
+
+    # Compute statistics
+    improved_bins = int(np.sum(diff > 0))
+    degraded_bins = int(np.sum(diff < 0))
+    unchanged_bins = int(np.sum(diff == 0))
+    mean_diff = float(np.mean(diff))
+    total_improvement = float(np.sum(diff[diff > 0]))
+    total_degradation = float(np.abs(np.sum(diff[diff < 0])))
+
+    # Create diverging colormap
+    cmap = LinearSegmentedColormap.from_list(
+        "impact",
+        ["#d62728", "#ffffff", "#2ca02c"],
+        N=256,
+    )
+
+    # Calculate figure size to preserve aspect ratio
+    if aspect_ratio >= 1.0:
+        fig_width = max_dimension_inches
+        fig_height = max_dimension_inches / aspect_ratio
+    else:
+        fig_height = max_dimension_inches
+        fig_width = max_dimension_inches * aspect_ratio
+
+    fig_width = max(fig_width, 4.0)
+    fig_height = max(fig_height, 4.0)
+
+    # Create figure
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height), dpi=dpi)
+
+    # Calculate extent for proper coordinate display
+    extent = [bounds["min_x"], bounds["max_x"], bounds["min_y"], bounds["max_y"]]
+
+    # Symmetric color limits
+    vmax = max(abs(np.min(diff)), abs(np.max(diff)))
+    vmin = -vmax
+
+    # Render diff heatmap with true proportions
+    im = ax.imshow(
+        diff,
+        cmap=cmap,
+        interpolation="nearest",
+        aspect="equal",
+        origin="lower",
+        extent=extent,
+        vmin=vmin,
+        vmax=vmax,
+    )
+
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, shrink=0.8)
+    cbar.set_label("Impact (positive = improvement)", rotation=270, labelpad=20)
+
+    # Set title with dimensions
+    if title:
+        full_title = f"{title}\n({width_um:.1f} × {height_um:.1f} µm)"
+    else:
+        full_title = f"ECO Impact: {baseline_csv.stem}\n({width_um:.1f} × {height_um:.1f} µm)"
+    ax.set_title(full_title)
+
+    # Add axis labels
+    if show_micron_axes:
+        ax.set_xlabel("X (µm)")
+        ax.set_ylabel("Y (µm)")
+        ax.ticklabel_format(style='plain', axis='both')
+    else:
+        ax.set_xlabel("X")
+        ax.set_ylabel("Y")
+
+    # Add statistics text box
+    stats_text = (
+        f"Improved: {improved_bins} ({100 * improved_bins / diff.size:.1f}%)\n"
+        f"Degraded: {degraded_bins} ({100 * degraded_bins / diff.size:.1f}%)\n"
+        f"Mean: {mean_diff:.2f}"
+    )
+    ax.text(
+        0.02,
+        0.98,
+        stats_text,
+        transform=ax.transAxes,
+        verticalalignment="top",
+        bbox=dict(boxstyle="round", facecolor="white", alpha=0.8),
+        fontsize=8,
+    )
+
+    ax.grid(True, alpha=0.15, linestyle="--", linewidth=0.5, color="gray")
+    plt.tight_layout()
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.savefig(output_path, dpi=dpi, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+
+    return {
+        "baseline_csv": str(baseline_csv),
+        "comparison_csv": str(comparison_csv),
+        "diff_png": str(output_path),
+        "data_shape": diff.shape,
+        "diff_range": [float(np.min(diff)), float(np.max(diff))],
+        "mean_diff": mean_diff,
+        "improved_bins": improved_bins,
+        "degraded_bins": degraded_bins,
+        "unchanged_bins": unchanged_bins,
+        "total_improvement": total_improvement,
+        "total_degradation": total_degradation,
+        "dpi": dpi,
+        "figsize": (fig_width, fig_height),
+        "true_scale": True,
+        "bounds": bounds,
+        "width_um": width_um,
+        "height_um": height_um,
+        "aspect_ratio": aspect_ratio,
     }
 
 
@@ -765,17 +1221,23 @@ def generate_eco_impact_heatmaps(
     baseline_heatmaps_dir: str | Path,
     comparison_heatmaps_dir: str | Path,
     output_dir: str | Path,
+    generate_true_scale: bool = True,
 ) -> list[dict[str, Any]]:
     """
     Generate comparative heatmaps for all matching heatmap types.
 
     For each heatmap type found in both directories (e.g., placement_density,
-    routing_congestion), generates a diff heatmap showing the spatial impact.
+    routing_congestion), generates diff heatmaps showing the spatial impact.
+
+    Generates two versions:
+    1. Scaled version (fixed size) - good for quick comparison
+    2. True-scale version (preserves floorplan proportions) - accurate to design
 
     Args:
         baseline_heatmaps_dir: Directory containing baseline heatmaps (before ECO)
         comparison_heatmaps_dir: Directory containing comparison heatmaps (after ECO)
         output_dir: Directory where diff heatmaps should be saved
+        generate_true_scale: If True, also generate true-scale versions (default: True)
 
     Returns:
         List of metadata dictionaries for each generated diff heatmap
@@ -801,6 +1263,10 @@ def generate_eco_impact_heatmaps(
 
     # Process each baseline heatmap
     for heatmap_name, baseline_csv in baseline_csvs.items():
+        # Skip grid files (intermediate format)
+        if heatmap_name.endswith(".grid"):
+            continue
+
         # Look for matching comparison heatmap
         comparison_csv = comparison_dir / f"{heatmap_name}.csv"
 
@@ -810,10 +1276,10 @@ def generate_eco_impact_heatmaps(
             )
             continue
 
-        # Generate diff heatmap
-        diff_png = output_dir / f"{heatmap_name}_diff.png"
         title = f"{heatmap_name.replace('_', ' ').title()} - ECO Impact"
 
+        # 1. Generate scaled diff heatmap
+        diff_png = output_dir / f"{heatmap_name}_diff.png"
         try:
             metadata = render_diff_heatmap(
                 baseline_csv=baseline_csv,
@@ -821,9 +1287,31 @@ def generate_eco_impact_heatmaps(
                 output_path=diff_png,
                 title=title,
             )
+            metadata["version"] = "scaled"
             results.append(metadata)
         except Exception as e:
-            print(f"Warning: Failed to generate diff for {heatmap_name}: {e}")
+            print(f"Warning: Failed to generate scaled diff for {heatmap_name}: {e}")
+
+        # 2. Generate true-scale diff heatmap
+        if generate_true_scale:
+            true_scale_png = output_dir / f"{heatmap_name}_diff_true_scale.png"
+            try:
+                metadata = render_diff_heatmap_true_scale(
+                    baseline_csv=baseline_csv,
+                    comparison_csv=comparison_csv,
+                    output_path=true_scale_png,
+                    title=title,
+                )
+                metadata["version"] = "true_scale"
+                results.append(metadata)
+            except ValueError as e:
+                # True-scale requires bbox format - skip if not available
+                if "bbox format" in str(e):
+                    pass
+                else:
+                    print(f"Warning: Failed to generate true-scale diff for {heatmap_name}: {e}")
+            except Exception as e:
+                print(f"Warning: Failed to generate true-scale diff for {heatmap_name}: {e}")
 
     return results
 

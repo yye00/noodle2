@@ -1,0 +1,302 @@
+# Noodle 2 Study Configuration
+# Nangate45 Extreme Demo - Fixing severely broken timing
+
+study:
+  name: "nangate45_extreme_demo"
+  description: "Fix extremely broken Nangate45 Ibex design with severe timing violations"
+  author: "Noodle2 Team"
+  version: "2.0.0"
+
+# Design Configuration
+design:
+  pdk: "Nangate45"
+  base_case_name: "nangate45_extreme_ibex"
+  snapshot_path: "studies/nangate45_extreme_ibex"
+
+  # Run base case STA before Stage 0 to establish baseline metrics
+  # This verifies the snapshot works and captures actual WNS/TNS/hot_ratio
+  establish_baseline: true
+
+  # Reference metrics (optional - if establish_baseline is true, actual values are computed)
+  # These are for documentation/comparison only
+  initial_metrics:
+    wns_ps: -1848
+    tns_ps: -500000
+    hot_ratio: 0.57
+
+# Safety Configuration
+safety:
+  # Options: sandbox (all ECOs), guarded (no global_disruptive), locked (topology_neutral only)
+  domain: "sandbox"
+
+  # Run legality check before execution
+  check_legality: true
+
+  # Block execution if configuration is illegal
+  block_on_illegal: true
+
+# Execution Configuration
+execution:
+  # Use Ray for parallel execution
+  use_ray: true
+  ray_dashboard: true
+  ray_dashboard_port: 8265
+
+  # Maximum concurrent trials (0 = unlimited)
+  max_concurrent_trials: 0
+
+  # Per-trial timeout in seconds
+  trial_timeout_seconds: 1800
+
+# Early Failure Detection / Viability Criteria
+viability:
+  # Abort study if base case fails verification
+  abort_on_base_case_failure: true
+
+  # Minimum improvement required to continue (percentage)
+  min_improvement_threshold: 0.0
+
+  # Maximum WNS degradation allowed before abort (ps)
+  max_wns_degradation_ps: null  # null = no limit
+
+  # Abort if all trials in a stage fail
+  abort_on_stage_failure: true
+
+  # Rollback Configuration - revert to best known state if timing degrades
+  enable_rollback: true
+
+  # WNS degradation threshold (ps) that triggers rollback to best known state
+  rollback_threshold_ps: 100
+
+  # Recovery Configuration - try re-applying successful ECOs before rollback
+  enable_recovery: true
+  recovery_trials: 5
+  recovery_strategy: "top_performers"
+
+# Prior Learning Configuration
+prior_learning:
+  # Enable prior-based ECO filtering
+  enabled: true
+
+  # Filter suspicious ECOs starting from this stage
+  filter_from_stage: 3
+
+  # Minimum data points before assigning prior state
+  min_data_points: 3
+
+  # Success rate threshold for "trusted" state
+  trusted_threshold: 0.8
+
+  # Failure rate threshold for "suspicious" state
+  suspicious_threshold: 0.7
+
+  # Cross-project prior database (null = disabled)
+  cross_project_db: null  # e.g., "priors/nangate45_priors.db"
+
+  # Enhanced Learning Options
+
+  # Prioritize ECOs by WNS improvement magnitude (not just pass/fail)
+  use_wns_weighted_selection: true
+
+  # Use current study's successful ECOs to influence later stages
+  within_study_learning: true
+
+  # Load priors from other studies/PDKs (e.g., ASAP7 learns from Nangate45)
+  cross_study_learning: false
+
+  # Weight for cross-study priors (0.0-1.0, lower = less influence from other PDKs)
+  cross_study_weight: 0.3
+
+  # Skip ECOs with known anti-patterns for current design context
+  check_anti_patterns: true
+
+  # Fraction of trials reserved for exploration (try less-proven ECOs)
+  exploration_rate: 0.15
+
+# Stage Configuration
+stages:
+  # Number of stages to run
+  count: 20
+
+  # Default values (can be overridden per-stage below)
+  defaults:
+    trial_budget: 25
+    survivor_count: 8
+    timeout_seconds: 1800
+    visualization_enabled: true
+    abort_threshold_wns_ps: null  # null = no abort
+
+  # Per-stage overrides (optional)
+  overrides:
+    # Stages 0-1: Base ECOs only
+    - stages: [0, 1]
+      allowed_eco_classes: ["topology_neutral", "placement_local"]
+
+    # Stages 2+: All ECO classes
+    - stages: "2+"
+      allowed_eco_classes: ["topology_neutral", "placement_local", "routing_affecting", "global_disruptive"]
+
+  # Survivor count progression (funnel shape)
+  survivor_progression:
+    type: "funnel"  # Options: fixed, funnel, custom
+    start: 8
+    end: 2
+    # For custom: survivors: [8, 8, 7, 7, 6, 6, 5, 5, 4, 4, 3, 3, 2, 2, 2, 2, 2, 2, 2, 2]
+
+# ECO Configuration
+ecos:
+  # Base ECOs (applied in early stages)
+  base:
+    cell_resize:
+      enabled: true
+      parameters:
+        size_multiplier: [1.2, 1.5, 1.8]  # Variants
+        max_paths: [50, 100, 150]
+
+    buffer_insertion:
+      enabled: true
+      parameters:
+        max_capacitance: [0.1, 0.15, 0.2]
+        buffer_cell: ["BUF_X2", "BUF_X4", "BUF_X8"]
+
+    cell_swap:
+      enabled: true
+      parameters:
+        path_count: [30, 50, 70]
+
+    gate_cloning:
+      enabled: true
+      parameters:
+        max_fanout: [12, 16, 20]
+
+    placement_density:
+      enabled: true
+      parameters:
+        target_density: [0.65, 0.60, 0.55]
+
+    pin_swap:
+      enabled: true
+      parameters:
+        setup_margin: [0.05, 0.075, 0.1]
+        max_passes: [3, 5, 7]
+
+    repair_design:
+      enabled: true
+      parameters:
+        slew_margin: [10, 20, 30]  # Percentage
+        cap_margin: [10, 20, 30]
+
+    buffer_removal:
+      enabled: true
+      parameters: {}
+
+    dead_logic_elimination:
+      enabled: true
+      parameters: {}
+
+    tie_fanout_repair:
+      enabled: true
+      parameters:
+        max_fanout: [8, 12, 16]
+
+    clock_net_repair:
+      enabled: true
+      parameters: {}
+
+  # Aggressive ECOs (applied in later stages)
+  aggressive:
+    # Compound/Pipeline ECOs (highest priority)
+    full_optimization:
+      enabled: true
+      priority: 1  # Lower = higher priority
+      parameters:
+        max_passes: [3, 5, 7]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    sequential_repair:
+      enabled: true
+      priority: 2
+      parameters:
+        slew_margin: [20, 30, 40]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    multi_pass_timing:
+      enabled: true
+      priority: 3
+      parameters:
+        num_passes: [3, 5, 7]
+        margin_decay: [0.8, 0.7, 0.6]
+        initial_margin: [0.1, 0.15, 0.2]
+
+    # Single Aggressive ECOs
+    aggressive_timing:
+      enabled: true
+      priority: 4
+      parameters:
+        max_passes: [8, 10, 12]
+        tns_repair_percent: [80, 90, 100]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    hold_repair:
+      enabled: true
+      priority: 5
+      parameters:
+        hold_margin: [0.0, 0.02, 0.04]
+        max_buffer_percent: [15, 20, 25]
+
+    power_recovery:
+      enabled: true
+      priority: 6
+      parameters:
+        recover_percent: [30, 50, 70]
+        slack_margin: [0.15, 0.10, 0.05]
+
+    vt_swap:
+      enabled: true
+      priority: 7
+      parameters:
+        setup_margin: [0.05, 0.075, 0.1]
+        skip_critical_vt: [false, false, true]
+
+    # Placement ECOs (most disruptive)
+    timing_driven_placement:
+      enabled: true
+      priority: 8
+      parameters:
+        target_density: [0.70, 0.65, 0.60]
+        keep_overflow: [0.10, 0.15, 0.20]
+
+    iterative_timing_driven:
+      enabled: true
+      priority: 9
+      parameters:
+        target_density: [0.70, 0.65, 0.60]
+        keep_overflow: [0.10, 0.15, 0.20]
+        max_iterations: [8, 10, 12]
+        convergence_threshold: [0.02, 0.015, 0.01]
+
+# Target Improvements (for success criteria)
+targets:
+  wns_improvement_percent: 50
+  hot_ratio_target: 0.12
+
+# Output Configuration
+output:
+  # Single output directory for all study outputs
+  dir: "output"
+
+  # Generate before/after/comparison visualizations
+  visualizations: true
+
+  # Generate heatmap PNGs from CSV data
+  heatmaps: true
+
+  # Generate case lineage graph (DOT format)
+  lineage_graph: true
+
+  # Generate ECO effectiveness leaderboard
+  eco_leaderboard: true
+
+  # Keep raw trial artifacts (ODB, reports) in trials/ subdirectory
+  # Set to false to save disk space (only keeps summaries)
+  keep_trial_artifacts: true

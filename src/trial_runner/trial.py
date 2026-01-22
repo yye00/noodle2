@@ -39,6 +39,8 @@ class TrialConfig:
     max_retries: int = 3  # Maximum number of retry attempts
     retry_backoff_base: float = 2.0  # Base multiplier for exponential backoff (seconds)
     retry_backoff_max: float = 60.0  # Maximum backoff delay (seconds)
+    # Input ODB file from previous stage (will be copied to trial's snapshot directory)
+    input_odb_file: str | Path | None = None
 
 
 @dataclass
@@ -216,6 +218,9 @@ class Trial:
         - Each trial operates on its own copy
         - Trials are side-effect free with respect to the snapshot
 
+        If input_odb_file is specified (modified ODB from previous stage),
+        it will also be copied to the snapshot directory.
+
         Returns:
             Path to the copied snapshot directory, or None if no snapshot
         """
@@ -235,6 +240,15 @@ class Trial:
             shutil.rmtree(snapshot_dest)
 
         shutil.copytree(snapshot_src, snapshot_dest, symlinks=False)
+
+        # Copy input ODB from previous stage if specified
+        # This allows using a modified ODB while keeping original SDC and other files
+        if self.config.input_odb_file:
+            input_odb = Path(self.config.input_odb_file)
+            if input_odb.exists():
+                # Copy the ODB to the snapshot directory
+                odb_dest = snapshot_dest / input_odb.name
+                shutil.copy2(input_odb, odb_dest)
 
         return snapshot_dest
 
@@ -304,7 +318,7 @@ class Trial:
 
         # Save logs
         logs_dir = self.trial_dir / "logs"
-        logs_dir.mkdir(exist_ok=True)
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
         stdout_file = logs_dir / "stdout.txt"
         stderr_file = logs_dir / "stderr.txt"

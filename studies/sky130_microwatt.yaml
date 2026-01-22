@@ -1,0 +1,225 @@
+# Noodle 2 Study Configuration
+# Sky130 Microwatt Extreme Demo - OpenPOWER core with severe timing violations
+
+study:
+  name: "sky130_microwatt_demo"
+  description: "Fix extremely broken Sky130 Microwatt OpenPOWER design with severe timing violations"
+  author: "Noodle2 Team"
+  version: "2.0.0"
+
+# Design Configuration
+design:
+  pdk: "Sky130"
+  base_case_name: "sky130_microwatt"
+  snapshot_path: "studies/sky130_microwatt"
+  establish_baseline: true
+  
+  # Reference metrics - Microwatt with 4ns clock (250 MHz)
+  # 162,637 cells - much larger than Ibex
+  initial_metrics:
+    wns_ps: -2740
+    tns_ps: -1805110
+    hot_ratio: 0.43
+
+# Safety Configuration
+safety:
+  domain: "sandbox"
+  check_legality: true
+  block_on_illegal: true
+
+# Execution Configuration
+execution:
+  use_ray: true
+  ray_dashboard: true
+  ray_dashboard_port: 8265
+  max_concurrent_trials: 0
+  trial_timeout_seconds: 3600  # 1 hour per trial - large design
+
+# Viability Configuration
+viability:
+  abort_on_base_case_failure: true
+  min_improvement_threshold: 0.0
+  max_wns_degradation_ps: null
+  abort_on_stage_failure: true
+  enable_rollback: true
+  rollback_threshold_ps: 200
+  enable_recovery: true
+  recovery_trials: 5
+  recovery_strategy: "top_performers"
+
+# Prior Learning Configuration
+prior_learning:
+  enabled: true
+  filter_from_stage: 3
+  min_data_points: 3
+  trusted_threshold: 0.8
+  suspicious_threshold: 0.7
+  cross_project_db: null
+  use_wns_weighted_selection: true
+  within_study_learning: true
+  cross_study_learning: false
+  cross_study_weight: 0.3
+  check_anti_patterns: true
+  exploration_rate: 0.15
+
+# Stage Configuration
+stages:
+  count: 20
+  defaults:
+    trial_budget: 25
+    survivor_count: 8
+    timeout_seconds: 3600
+    visualization_enabled: true
+    abort_threshold_wns_ps: null
+
+  overrides:
+    - stages: [0, 1]
+      allowed_eco_classes: ["topology_neutral", "placement_local"]
+    - stages: "2+"
+      allowed_eco_classes: ["topology_neutral", "placement_local", "routing_affecting", "global_disruptive"]
+
+  survivor_progression:
+    type: "funnel"
+    start: 8
+    end: 2
+
+# ECO Configuration - Sky130 specific
+ecos:
+  base:
+    cell_resize:
+      enabled: true
+      parameters:
+        size_multiplier: [1.2, 1.5, 1.8]
+        max_paths: [50, 100, 150]
+
+    buffer_insertion:
+      enabled: true
+      parameters:
+        max_capacitance: [0.1, 0.15, 0.2]
+        buffer_cell: ["sky130_fd_sc_hd__buf_2", "sky130_fd_sc_hd__buf_4", "sky130_fd_sc_hd__buf_8"]
+
+    cell_swap:
+      enabled: true
+      parameters:
+        path_count: [30, 50, 70]
+
+    gate_cloning:
+      enabled: true
+      parameters:
+        max_fanout: [12, 16, 20]
+
+    placement_density:
+      enabled: true
+      parameters:
+        target_density: [0.40, 0.38, 0.35]  # Lower for large design
+
+    pin_swap:
+      enabled: true
+      parameters:
+        setup_margin: [0.05, 0.075, 0.1]
+        max_passes: [3, 5, 7]
+
+    repair_design:
+      enabled: true
+      parameters:
+        slew_margin: [10, 20, 30]
+        cap_margin: [10, 20, 30]
+
+    buffer_removal:
+      enabled: true
+      parameters: {}
+
+    dead_logic_elimination:
+      enabled: true
+      parameters: {}
+
+    tie_fanout_repair:
+      enabled: true
+      parameters:
+        max_fanout: [8, 12, 16]
+
+    clock_net_repair:
+      enabled: true
+      parameters: {}
+
+  aggressive:
+    full_optimization:
+      enabled: true
+      priority: 1
+      parameters:
+        max_passes: [3, 5, 7]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    sequential_repair:
+      enabled: true
+      priority: 2
+      parameters:
+        slew_margin: [20, 30, 40]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    multi_pass_timing:
+      enabled: true
+      priority: 3
+      parameters:
+        num_passes: [3, 5, 7]
+        margin_decay: [0.8, 0.7, 0.6]
+        initial_margin: [0.1, 0.15, 0.2]
+
+    aggressive_timing:
+      enabled: true
+      priority: 4
+      parameters:
+        max_passes: [8, 10, 12]
+        tns_repair_percent: [80, 90, 100]
+        setup_margin: [0.1, 0.07, 0.04]
+
+    hold_repair:
+      enabled: true
+      priority: 5
+      parameters:
+        hold_margin: [0.0, 0.02, 0.04]
+        max_buffer_percent: [15, 20, 25]
+
+    power_recovery:
+      enabled: true
+      priority: 6
+      parameters:
+        recover_percent: [30, 50, 70]
+        slack_margin: [0.15, 0.10, 0.05]
+
+    vt_swap:
+      enabled: true
+      priority: 7
+      parameters:
+        setup_margin: [0.05, 0.075, 0.1]
+        skip_critical_vt: [false, false, true]
+
+    timing_driven_placement:
+      enabled: true
+      priority: 8
+      parameters:
+        target_density: [0.42, 0.40, 0.38]
+        keep_overflow: [0.10, 0.15, 0.20]
+
+    iterative_timing_driven:
+      enabled: true
+      priority: 9
+      parameters:
+        target_density: [0.42, 0.40, 0.38]
+        keep_overflow: [0.10, 0.15, 0.20]
+        max_iterations: [8, 10, 12]
+        convergence_threshold: [0.02, 0.015, 0.01]
+
+# Targets
+targets:
+  wns_improvement_percent: 50
+  hot_ratio_target: 0.15
+
+# Output Configuration
+output:
+  dir: "output"
+  visualizations: true
+  heatmaps: true
+  lineage_graph: true
+  eco_leaderboard: true
+  keep_trial_artifacts: true

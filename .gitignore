@@ -57,10 +57,23 @@ temp_scripts/
 *.log
 *.spef
 
-# Do track
-!feature_list.json
-!init.sh
-!README.md
-!app_spec.txt
+# Demo outputs (large, regeneratable)
+output/
 demo_output/
+presentation/
+test_outputs/
+debug_report/
+harness_logs/
+telemtry/
+session_reports/
+session_*_artifacts/
+
+# Old session/status files
+SESSION_*.md
+PROJECT_STATUS.md
+KNOWN_LIMITATIONS.md
+TIMING_DRIVEN_PLACEMENT_PLAN.md
+claude-progress.txt
+
+# ORFS build directory
 /orfs/

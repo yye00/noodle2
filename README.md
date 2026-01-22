@@ -33,345 +33,654 @@ Noodle 2 does **not** replace PD tools or algorithms. Instead, it provides a det
 - **Case lineage graphs**: DAG visualization of derivation relationships
 
 ### Supported PDKs
-- **Nangate45** (fast bring-up, educational reference)
-- **ASAP7** (advanced-node, high routing pressure)
-- **Sky130/Sky130A** (open-source production PDK)
+- **Nangate45** (45nm educational reference)
+- **ASAP7** (7nm advanced-node, high routing pressure)
+- **Sky130** (130nm open-source production PDK)
 
-All PDKs are pre-installed in the container (`efabless/openlane:ci2504-dev-amd64`).
+All PDKs are pre-installed in the Docker container.
 
 ## Prerequisites
 
 - **Python 3.10+**
 - **Docker** (with daemon running)
 - **8GB+ RAM** recommended for single-node development
-- **X11 server** (optional, for GUI-based heatmap exports)
 
 ## Quick Start
 
-### 1. Clone and Initialize
+### 1. Initialize Environment
 
 ```bash
-# Clone the repository (or extract the archive)
 cd noodle2
 
-# Make init script executable
-chmod +x init.sh
-
-# Run initialization (installs dependencies, starts Ray)
+# Run initialization (creates venv, installs dependencies, starts Ray)
 ./init.sh
 ```
 
 The `init.sh` script will:
-- Create a Python virtual environment
-- Install Ray and other dependencies
-- Pull the required Docker images
+- Create Python virtual environment (`.venv/`)
+- Install Ray and other Python dependencies
+- Pull required Docker images
 - Start a single-node Ray cluster
-- Verify the setup
 
-### 2. Activate Environment
+### 2. Run a Demo
 
 ```bash
-source venv/bin/activate
+# Nangate45 extreme timing demo
+./demo_nangate45_extreme.sh
+
+# ASAP7 extreme timing demo
+./demo_asap7_extreme.sh
+
+# Sky130 extreme timing demo
+./demo_sky130_extreme.sh
 ```
 
-### 3. Access Ray Dashboard
+Each demo:
+- Uses YAML configuration from `studies/` directory
+- Establishes baseline metrics from the design snapshot
+- Runs 20 stages of ECO optimization trials
+- Generates summary reports and visualizations
 
-Open your browser to: **http://localhost:8265**
+### 3. View Results
 
-You'll see the Ray cluster status and can monitor trial execution in real-time.
+Results are written to `output/<study_name>/`:
+
+```
+output/nangate45_extreme_demo/
+├── summary.json                    # Study results with ECO tracking and rollback info
+├── eco_leaderboard.json            # ECO effectiveness rankings
+├── lineage.dot                     # Case derivation graph (Graphviz DOT format)
+├── comparison/
+│   └── stage_progression.png       # Multi-row stage visualization with ECO badges
+├── stages/
+│   └── stage_*/stage_summary.json  # Per-stage summaries with ECO distribution
+└── trials/                         # Raw trial artifacts (ODB, timing reports)
+```
+
+**Key Output Files:**
+
+- **summary.json**: Contains `stage_eco_summary` showing which ECOs were most effective per stage, `recovery_info` for recovery attempts, and `rollback_info` if any rollbacks occurred
+- **stage_progression.png**: Visual flow diagram showing stages in a multi-row grid (5 per row), with ECO badges, survivor counts, and degradation warnings
+- **stage_summary.json**: Per-stage details including `eco_distribution` with success rates by ECO type
+
+### 4. Access Ray Dashboard
+
+Open **http://localhost:8265** to monitor trial execution in real-time.
+
+---
 
 ## Project Structure
 
 ```
 noodle2/
-├── README.md                 # This file
-├── app_spec.txt             # Complete product specification
-├── feature_list.json        # 200+ test cases (single source of truth)
-├── init.sh                  # Environment setup script
-├── venv/                    # Python virtual environment (created by init.sh)
-├── artifacts/               # Study artifacts directory
-├── studies/                 # Study definitions directory
-└── src/                     # Source code (to be implemented)
-    ├── controller/          # Study orchestration logic
-    ├── trial_runner/        # OpenROAD execution wrapper
-    ├── parsers/             # Timing & congestion report parsers
-    ├── policy/              # Safety & ranking policies
-    ├── telemetry/           # Structured logging & artifact indexing
-    └── visualization/       # Heatmap rendering & graph generation
+├── README.md                    # This file
+├── init.sh                      # Environment setup (venv, Ray, Docker)
+├── run_demo.py                  # Main study runner
+├── demo_nangate45_extreme.sh    # Nangate45 demo launcher
+├── demo_asap7_extreme.sh        # ASAP7 demo launcher
+├── demo_sky130_extreme.sh       # Sky130 demo launcher
+├── pyproject.toml               # Python project configuration
+├── studies/                     # Study configurations and snapshots
+│   ├── nangate45_extreme.yaml   # Nangate45 study config
+│   ├── asap7_extreme.yaml       # ASAP7 study config
+│   ├── sky130_extreme.yaml      # Sky130 study config
+│   ├── nangate45_extreme_ibex/  # Nangate45 design snapshot
+│   ├── asap7_extreme_ibex/      # ASAP7 design snapshot
+│   └── sky130_extreme/          # Sky130 design snapshot
+├── output/                      # Study outputs (created at runtime)
+├── src/                         # Source code
+│   ├── controller/              # Study orchestration, ECOs, safety
+│   ├── trial_runner/            # OpenROAD/Docker execution
+│   ├── parsers/                 # Timing & congestion report parsers
+│   ├── telemetry/               # Structured logging & events
+│   └── visualization/           # Heatmap and graph generation
+├── tests/                       # Test suite
+└── .venv/                       # Python virtual environment
 ```
 
-## Development Workflow
+---
 
-### Feature-Driven Development
+## Running Studies
 
-All development is tracked via `feature_list.json`, which contains **205 detailed test cases** covering:
-- **Functional features** (175): core system capabilities
-- **Style features** (30): UI/UX and observability requirements
+### Using Demo Scripts (Recommended)
 
-Each feature has:
-- `category`: "functional" or "style"
-- `description`: what the feature does
-- `steps`: detailed test steps (2-12 steps each)
-- `passes`: boolean (initially `false`, set to `true` when implemented and verified)
-
-**CRITICAL**: Never remove or edit features. Only mark as passing.
-
-### Check Progress
+Demo scripts are the easiest way to run studies:
 
 ```bash
-# View all pending features
-cat feature_list.json | jq '.[] | select(.passes == false) | .description'
-
-# Count completion
-cat feature_list.json | jq '[.[] | select(.passes == true)] | length'
-
-# View features by category
-cat feature_list.json | jq '.[] | select(.category == "functional" and .passes == false) | .description' | head -20
+./demo_nangate45_extreme.sh
+./demo_asap7_extreme.sh
+./demo_sky130_extreme.sh
 ```
 
-### Implementation Priority
+Each script:
+1. Activates the Python virtual environment
+2. Invokes `run_demo.py` with the appropriate YAML config
+3. Writes outputs to `output/`
 
-Features are ordered by priority in `feature_list.json`. Start from the top:
+### Using run_demo.py Directly
 
-1. **Gate 0: Baseline viability** (features 1-10)
-   - Ray cluster initialization
-   - Base case execution
-   - Report parsing
-   - Failure detection
+For more control, invoke `run_demo.py` directly:
 
-2. **Gate 1: Full output contract** (features 11-50)
-   - Telemetry emission
-   - Artifact indexing
-   - Safety gates
-   - Multi-stage execution
+```bash
+# Activate virtual environment first
+source .venv/bin/activate
 
-3. **Gate 2: Controlled failure injection** (features 51-100)
-   - Failure classification
-   - Containment scopes
-   - Abort triggers
-   - ECO memory
+# Run with YAML configuration (recommended)
+python run_demo.py --config studies/nangate45_extreme.yaml --output-dir output
 
-4. **Gates 3-4: Cross-target parity & extreme scenarios** (features 101-200+)
+# List available YAML configurations
+python run_demo.py --list-configs
 
-### Validation Ladder
+# Run without Ray (sequential execution)
+python run_demo.py --config studies/nangate45_extreme.yaml --no-ray
 
-Noodle 2 follows a strict staged validation ladder:
-
-**Gate 0**: Base case must run for each PDK (Nangate45, ASAP7, Sky130) or stop
-**Gate 1**: Full observability contract on basic config (timing, congestion, telemetry)
-**Gate 2**: Controlled regression/failure injection on fast targets
-**Gate 3**: Cross-target parity (same contracts on all PDKs)
-**Gate 4**: Extreme scenarios (severe violations, adversarial conditions)
-
-## Core Concepts
-
-### Study
-Top-level unit of work defining:
-- Base design snapshot
-- Safety domain
-- Policy and rail configuration
-- One or more multi-stage experiment graphs
-
-### Case
-Concrete design state derived from a Study:
-- Base case = original snapshot
-- Derived cases = base + ECO sequence
-- Forms a DAG within Study
-- Naming: `<case_name>_<stage_index>_<derived_index>`
-
-### Stage
-Refinement phase within Study:
-- Execution mode (STA-only, STA+congestion, etc.)
-- Trial budget and survivor count
-- Allowed ECO classes
-- Abort and safety thresholds
-
-### ECO (Engineering Change Order)
-First-class auditable unit of change:
-- Stable name and classification
-- Emits metrics, logs, failure semantics
-- Comparable across cases and studies
-- Belongs to ECO class with defined risk envelope
-
-## Technology Stack
-
-- **Python 3.10+**: Core controller and policy logic
-- **Ray**: Distributed execution and scheduling
-- **Docker**: Isolated trial execution (efabless/openlane:ci2504-dev-amd64)
-- **OpenROAD**: Physical design tool (inside container)
-- **OpenSTA**: Static timing analysis (inside container)
-
-## Safety Model
-
-### Safety Domains
-
-- **sandbox**: Exploratory, permissive (all ECO classes allowed)
-- **guarded**: Default, production-like (restricted ECO classes, standard gates)
-- **locked**: Conservative, regression-only (minimal changes, strict gates)
-
-### ECO Classes by Blast Radius
-
-- **topology_neutral**: Safe, no connectivity changes
-- **placement_local**: Localized placement adjustments
-- **routing_affecting**: May change routing topology
-- **global_disruptive**: Large-scale changes, highest risk
-
-Safety domains constrain which ECO classes are legal at each stage.
-
-## Execution Model
-
-1. **Controller layer** (Python) runs outside container
-2. **Trial execution layer** runs OpenROAD/OpenSTA inside container
-3. Each trial:
-   - Executes in isolated working directory
-   - Consumes immutable snapshot (read-only)
-   - Emits structured artifacts
-   - Is side-effect free
-
-## Observability
-
-### Ray Dashboard
-- Cluster health and node status
-- Running/completed trial tasks per stage
-- Per-stage throughput, failures, resource utilization
-- Deep links to trial artifacts
-
-### Artifacts
-- **Study-level**: summary, safety trace, Run Legality Report
-- **Stage-level**: aggregated metrics, performance summaries
-- **Trial-level**: timing reports, congestion reports, heatmaps, logs
-
-### Telemetry Schema
-- Study/Stage/Case indexed
-- JSON format (machine-readable)
-- Backward-compatible evolution
-- Timestamps, provenance, metrics
-
-## Reference Studies
-
-Noodle 2 ships with baseline studies for each supported PDK:
-
-- **nangate45_base**: Fast bring-up target
-- **asap7_base**: High routing pressure, timing-driven
-- **sky130_base**: OpenLane sky130A reference
-
-### ASAP7-Specific Workarounds
-
-ASAP7 requires explicit configuration workarounds:
-
-```tcl
-# Explicit routing layers
-set_routing_layers -signal metal2-metal9 -clock metal6-metal9
-
-# Explicit floorplan site
-initialize_floorplan \
-  -utilization 0.55 \
-  -site asap7sc7p5t_28_R_24_NP_162NW_34O
-
-# Pin placement on mid-stack metals
-place_pins -random \
-  -hor_layers {metal4} \
-  -ver_layers {metal5}
+# Specify custom output directory
+python run_demo.py --config studies/my_study.yaml --output-dir /path/to/output
 ```
 
-**Memory anchor**: ASAP7 is "timing-driven, high-metal, low-utilization, STA-first."
+### Command-Line Options
+
+| Option | Description |
+|--------|-------------|
+| `--config PATH` | Path to YAML study configuration file |
+| `--output-dir PATH` | Output directory for results (default: `output`) |
+| `--no-ray` | Disable Ray parallel execution (run sequentially) |
+| `--no-dashboard` | Disable Ray dashboard |
+| `--list-configs` | List available YAML configuration files |
+
+---
+
+## Adding a New Study
+
+### Step 1: Create a Design Snapshot
+
+A snapshot is a directory containing the design state to optimize:
+
+```
+studies/my_design_snapshot/
+├── design.odb           # OpenDB database (placed design)
+├── design.sdc           # Timing constraints (SDC format)
+├── run_sta.tcl          # STA script for metrics extraction
+├── metadata.json        # Snapshot metadata
+└── metrics.json         # Initial timing metrics (optional)
+```
+
+**Required files:**
+
+1. **design.odb** - OpenROAD database with placed cells. This is the starting point for ECO optimization.
+
+2. **design.sdc** - Standard timing constraints:
+   ```tcl
+   create_clock -name clk -period 10.0 [get_ports clk]
+   set_input_delay -clock clk 0.5 [all_inputs]
+   set_output_delay -clock clk 0.5 [all_outputs]
+   ```
+
+3. **run_sta.tcl** - Script to run STA and extract metrics:
+   ```tcl
+   # Load PDK libraries (paths inside ORFS container)
+   set platform_dir "/OpenROAD-flow-scripts/flow/platforms/nangate45"
+   read_lef "$platform_dir/lef/NangateOpenCellLibrary.tech.lef"
+   read_lef "$platform_dir/lef/NangateOpenCellLibrary.macro.lef"
+   read_liberty "$platform_dir/lib/NangateOpenCellLibrary_typical.lib"
+
+   # Load design
+   read_db /snapshot/design.odb
+
+   # Read constraints
+   read_sdc /snapshot/design.sdc
+
+   # Run STA
+   set wns [sta::worst_slack -max]
+   set tns [sta::total_negative_slack -max]
+
+   # Write metrics
+   set fp [open /work/metrics.json w]
+   puts $fp "{\"wns_ps\": [expr int($wns * 1000)], ...}"
+   close $fp
+   ```
+
+4. **metadata.json** - Snapshot information:
+   ```json
+   {
+     "design_name": "my_design",
+     "pdk": "Nangate45",
+     "clock_period_ns": 10.0,
+     "created_at": "2024-01-15T10:30:00Z"
+   }
+   ```
+
+### Step 2: Create YAML Configuration
+
+Create `studies/my_study.yaml`:
+
+```yaml
+# Study metadata
+study:
+  name: "my_study"
+  description: "Optimize timing on my design"
+  author: "Your Name"
+  version: "1.0.0"
+
+# Design configuration
+design:
+  pdk: "Nangate45"                              # PDK name
+  base_case_name: "my_design_base"              # Base case identifier
+  snapshot_path: "studies/my_design_snapshot"   # Path to snapshot directory
+  establish_baseline: true                       # Run STA to get actual metrics
+
+# Safety configuration
+safety:
+  domain: "sandbox"      # Options: sandbox, guarded, locked
+  check_legality: true
+  block_on_illegal: true
+
+# Execution configuration
+execution:
+  use_ray: true
+  ray_dashboard: true
+  trial_timeout_seconds: 1800
+
+# Stage configuration
+stages:
+  count: 10                    # Number of stages
+  defaults:
+    trial_budget: 25           # Trials per stage
+    survivor_count: 5          # Survivors per stage
+    timeout_seconds: 1800
+  survivor_progression:
+    type: "funnel"             # Reduce survivors over stages
+    start: 8
+    end: 2
+
+# Target improvements
+targets:
+  wns_improvement_percent: 30
+  hot_ratio_target: 0.15
+
+# Output configuration
+output:
+  dir: "output"
+  visualizations: true
+  keep_trial_artifacts: true
+```
+
+### Step 3: Run the Study
+
+```bash
+source .venv/bin/activate
+python run_demo.py --config studies/my_study.yaml --output-dir output
+```
+
+---
+
+## YAML Configuration Reference
+
+### study (required)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Study identifier (used in output paths) |
+| `description` | string | Human-readable description |
+| `author` | string | Study author |
+| `version` | string | Configuration version |
+
+### design (required)
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `pdk` | string | PDK name: `Nangate45`, `ASAP7`, or `Sky130` |
+| `base_case_name` | string | Base case identifier |
+| `snapshot_path` | string | Path to snapshot directory |
+| `establish_baseline` | boolean | Run STA before Stage 0 to capture actual metrics |
+| `initial_metrics` | object | Reference metrics (wns_ps, tns_ps, hot_ratio) |
+
+### safety
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `domain` | string | `guarded` | Safety domain: `sandbox`, `guarded`, `locked` |
+| `check_legality` | boolean | `true` | Validate config before execution |
+| `block_on_illegal` | boolean | `true` | Block execution if config is illegal |
+
+**Safety Domains:**
+
+| Domain | Allowed ECO Classes | Use Case |
+|--------|---------------------|----------|
+| `sandbox` | All classes | Exploratory experimentation |
+| `guarded` | No global_disruptive | Production-like safety |
+| `locked` | topology_neutral only | Regression testing |
+
+### execution
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `use_ray` | boolean | `true` | Enable Ray parallel execution |
+| `ray_dashboard` | boolean | `true` | Enable Ray dashboard |
+| `ray_dashboard_port` | integer | `8265` | Dashboard port |
+| `max_concurrent_trials` | integer | `0` | Max concurrent trials (0 = unlimited) |
+| `trial_timeout_seconds` | integer | `1800` | Per-trial timeout |
+
+### stages
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `count` | integer | Number of stages (1-50) |
+| `defaults.trial_budget` | integer | Trials per stage |
+| `defaults.survivor_count` | integer | Survivors per stage |
+| `defaults.timeout_seconds` | integer | Per-trial timeout |
+| `survivor_progression.type` | string | `fixed`, `funnel`, or `custom` |
+| `survivor_progression.start` | integer | Initial survivor count (funnel) |
+| `survivor_progression.end` | integer | Final survivor count (funnel) |
+| `overrides` | list | Per-stage override rules |
+
+**Stage Overrides:**
+
+```yaml
+stages:
+  overrides:
+    - stages: [0, 1]
+      allowed_eco_classes: ["topology_neutral", "placement_local"]
+    - stages: "2+"
+      allowed_eco_classes: ["topology_neutral", "placement_local", "routing_affecting", "global_disruptive"]
+```
+
+### prior_learning
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `enabled` | boolean | `true` | Enable ECO prior tracking |
+| `filter_from_stage` | integer | `3` | Start filtering suspicious ECOs at this stage |
+| `min_data_points` | integer | `3` | Minimum trials before assigning prior state |
+| `trusted_threshold` | float | `0.8` | Success rate for "trusted" state |
+| `suspicious_threshold` | float | `0.7` | Failure rate for "suspicious" state |
+| `cross_project_db` | string | `null` | Path to cross-project prior database |
+
+**Enhanced Learning Options:**
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `use_wns_weighted_selection` | boolean | `true` | Prioritize ECOs by WNS improvement magnitude (not just pass/fail) |
+| `within_study_learning` | boolean | `true` | Use current study's successful ECOs to influence later stages |
+| `cross_study_learning` | boolean | `false` | Load priors from other studies/PDKs (e.g., ASAP7 learns from Sky130) |
+| `cross_study_weight` | float | `0.3` | Weight for cross-study priors (0.0-1.0, lower = less influence) |
+| `check_anti_patterns` | boolean | `true` | Skip ECOs with known anti-patterns for current design context |
+| `exploration_rate` | float | `0.15` | Fraction of trials reserved for exploration (try less-proven ECOs) |
+
+**How Enhanced Learning Works:**
+
+1. **WNS-Weighted Selection**: Instead of simple round-robin ECO selection, the executor tracks the actual WNS improvement each ECO achieves. ECOs that historically produce larger improvements are selected more frequently in later stages.
+
+2. **Within-Study Learning**: As a study progresses, successful ECOs from earlier stages influence selection in later stages. If `buffer_insertion` improved WNS by 500ps in Stage 2, it gets a higher selection probability in Stage 5.
+
+3. **Cross-Study Learning**: When enabled, priors from other PDKs/designs contribute to ECO selection. For example, ASAP7 studies can benefit from learnings on Nangate45 designs. The `cross_study_weight` controls how much influence cross-study data has (0.3 = 30% weight).
+
+4. **Anti-Pattern Checking**: The system tracks ECO+context combinations that frequently fail. For example, if `vt_swap` fails >70% of the time when hot_ratio > 0.5, it will be skipped in similar contexts.
+
+5. **Exploration Rate**: Even with strong priors, a fraction of trials (default 15%) are reserved for exploration—trying ECOs that haven't been proven yet. This prevents the system from getting stuck in local optima.
+
+**Example Configuration:**
+
+```yaml
+prior_learning:
+  enabled: true
+  filter_from_stage: 3
+  min_data_points: 3
+  trusted_threshold: 0.8
+  suspicious_threshold: 0.7
+  # Enhanced learning
+  use_wns_weighted_selection: true
+  within_study_learning: true
+  cross_study_learning: true       # Enable cross-PDK learning
+  cross_study_weight: 0.3          # 30% influence from other PDKs
+  check_anti_patterns: true
+  exploration_rate: 0.15           # 15% exploration
+```
+
+### viability
+
+Early failure detection and rollback configuration.
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `abort_on_base_case_failure` | boolean | `true` | Abort study if base case fails |
+| `min_improvement_threshold` | float | `0.0` | Minimum improvement required |
+| `max_wns_degradation_ps` | integer | `null` | Max WNS degradation before abort |
+| `abort_on_stage_failure` | boolean | `true` | Abort if all trials in stage fail |
+| `enable_rollback` | boolean | `false` | Enable rollback to best known state |
+| `rollback_threshold_ps` | integer | `50` | WNS degradation threshold for rollback |
+| `enable_recovery` | boolean | `false` | Try re-applying successful ECOs before rollback |
+| `recovery_trials` | integer | `5` | Number of recovery trials to attempt |
+| `recovery_strategy` | string | `top_performers` | Recovery ECO selection strategy |
+
+**Recovery Feature:**
+
+When `enable_recovery: true`, the executor tracks which ECOs improved WNS during the study. If a regression is detected:
+
+1. **Recovery attempt first**: Re-apply the most successful ECOs before triggering rollback
+2. **If recovery succeeds**: Continue with the recovered state (no rollback needed)
+3. **If recovery fails**: Fall back to rollback to best known state
+
+**Recovery Strategies:**
+
+| Strategy | Description |
+|----------|-------------|
+| `top_performers` | ECOs ranked by total WNS improvement achieved |
+| `conservative` | Prefer safe ECOs (cell_resize, buffer_insertion, etc.) |
+| `recent_successful` | ECOs from most recent stages that showed improvement |
+
+**Rollback Feature:**
+
+When `enable_rollback: true`, the executor tracks the best known timing state (best WNS achieved). If a stage degrades WNS by more than `rollback_threshold_ps` from the best known state, the next stage will start from the best known state instead of the current stage's survivors.
+
+Example:
+```yaml
+viability:
+  abort_on_base_case_failure: true
+  abort_on_stage_failure: true
+  # Recovery - try successful ECOs first
+  enable_recovery: true
+  recovery_trials: 5
+  recovery_strategy: "top_performers"
+  # Rollback - fall back to best known state if recovery fails
+  enable_rollback: true
+  rollback_threshold_ps: 100
+```
+
+This two-tier approach prevents a single bad ECO from derailing an otherwise successful optimization run:
+- First tries to recover by re-applying known-good ECOs
+- Only rolls back if recovery cannot restore timing
+
+### targets
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `wns_improvement_percent` | float | Target WNS improvement percentage |
+| `hot_ratio_target` | float | Target hot_ratio (fraction of timing-critical area) |
+
+### output
+
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| `dir` | string | `output` | Output directory |
+| `visualizations` | boolean | `true` | Generate visualizations |
+| `heatmaps` | boolean | `true` | Generate heatmap PNGs |
+| `lineage_graph` | boolean | `true` | Generate case lineage DOT file |
+| `eco_leaderboard` | boolean | `true` | Generate ECO effectiveness ranking |
+| `keep_trial_artifacts` | boolean | `true` | Keep raw trial ODB/reports |
+
+---
+
+## ECO Reference
+
+### ECO Classes
+
+| Class | Blast Radius | Description |
+|-------|--------------|-------------|
+| `TOPOLOGY_NEUTRAL` | Minimal | No connectivity changes (resize, swap, pin swap) |
+| `PLACEMENT_LOCAL` | Low | Localized placement changes (cloning, density) |
+| `ROUTING_AFFECTING` | Medium | May affect routing (buffer insertion, repair) |
+| `GLOBAL_DISRUPTIVE` | High | Large-scale changes (full optimization, TDP) |
+
+### Available ECOs
+
+**Base ECOs** (safe, applied early):
+| ECO | Class | Description |
+|-----|-------|-------------|
+| `cell_resize` | TOPOLOGY_NEUTRAL | Resize cells on critical paths |
+| `buffer_insertion` | TOPOLOGY_NEUTRAL | Insert buffers for slew/cap |
+| `cell_swap` | TOPOLOGY_NEUTRAL | Swap cells for timing |
+| `pin_swap` | TOPOLOGY_NEUTRAL | Swap equivalent pins |
+| `gate_cloning` | PLACEMENT_LOCAL | Clone high-fanout gates |
+| `placement_density` | PLACEMENT_LOCAL | Adjust placement density |
+| `repair_design` | ROUTING_AFFECTING | Fix DRV violations |
+| `buffer_removal` | TOPOLOGY_NEUTRAL | Remove unnecessary buffers |
+
+**Aggressive ECOs** (applied in later stages):
+| ECO | Class | Description |
+|-----|-------|-------------|
+| `full_optimization` | GLOBAL_DISRUPTIVE | Complete optimization pipeline |
+| `aggressive_timing` | GLOBAL_DISRUPTIVE | Maximum timing repair |
+| `timing_driven_placement` | GLOBAL_DISRUPTIVE | Re-optimize placement |
+| `sequential_repair` | ROUTING_AFFECTING | DRV then timing repair |
+| `multi_pass_timing` | ROUTING_AFFECTING | Iterative timing with decaying margins |
+| `hold_repair` | ROUTING_AFFECTING | Fix hold violations |
+| `vt_swap` | TOPOLOGY_NEUTRAL | Swap VT variants (LVT/SVT/HVT) |
+
+---
+
+## Supported Tooling
+
+### Docker Container
+
+Noodle 2 executes trials inside Docker containers with pre-installed PDKs:
+
+- **Container**: `efabless/openlane` or ORFS-compatible image
+- **OpenROAD**: Full flow including placement, routing, STA
+- **OpenSTA**: Static timing analysis
+- **PDKs**: Nangate45, ASAP7, Sky130HD pre-installed
+
+### Ray Cluster
+
+Ray provides distributed execution:
+
+```bash
+# Start Ray (done by init.sh)
+ray start --head --dashboard-host=0.0.0.0
+
+# Stop Ray
+ray stop
+
+# Check Ray status
+ray status
+```
+
+Dashboard: **http://localhost:8265**
+
+### Python Environment
+
+```bash
+# Activate environment
+source .venv/bin/activate
+
+# Install additional dependencies
+pip install <package>
+
+# Run tests
+pytest tests/
+```
+
+---
+
+## PDK-Specific Notes
+
+### Nangate45
+- 45nm educational PDK
+- Fast execution (good for development)
+- Metal layers: `metal1` through `metal10`
+
+### ASAP7
+- 7nm predictive PDK
+- High routing pressure, timing-critical
+- Metal layers: `M1` through `M9` (uppercase)
+- Requires explicit routing layer configuration
+
+### Sky130
+- 130nm open-source production PDK
+- Metal layers: `li1`, `met1` through `met5` (abbreviated naming)
+- Longer gate delays, different optimization characteristics
+
+---
 
 ## Common Tasks
 
-### Start Ray Cluster
+### Start/Stop Ray
 
 ```bash
+# Start Ray cluster
 ray start --head --dashboard-host=0.0.0.0
-# Dashboard: http://localhost:8265
-```
 
-### Stop Ray Cluster
-
-```bash
+# Stop Ray cluster
 ray stop
 ```
 
-### Execute a Study (future)
+### Clean Output Directory
 
 ```bash
-python -m noodle2.controller run --study studies/nangate45_demo.yaml
+rm -rf output/*
 ```
 
-### Generate Reports (future)
+### View Study Summary
 
 ```bash
-python -m noodle2.reports summary --study nangate45_demo
-python -m noodle2.reports lineage --study nangate45_demo --format dot
+cat output/nangate45_extreme_demo/summary.json | jq .
 ```
 
-## Development Notes
+### Convert Lineage Graph to PNG
 
-### Current Development Phase
-This is **Session 1** of the implementation. The foundation is being established:
-- ✅ Feature list created (205 features)
-- ✅ Init script implemented
-- ✅ README and project structure defined
-- 🚧 Core controller logic (next priority)
-- 🚧 Trial runner and parsers (next priority)
-
-### Deferred Features (Workarounds Available)
-- **Multi-node Ray**: Use single-node for development
-- **Headless GUI (Xvfb)**: Use interactive X11 passthrough for heatmap exports
-- **Reference snapshots**: Start with Nangate45, add ASAP7/Sky130 progressively
-
-### Explicit Non-Goals
-Noodle 2 intentionally does **not**:
-- Invent ECOs (delegates to human or future AI)
-- Replace OpenROAD algorithms
-- Modify PD tool internals
-- Rely on opaque optimization or ML
-- Silently escalate risk
-
-## Contributing
-
-### Marking Features as Complete
-
-When you complete a feature:
-
-```python
-# Load feature list
-import json
-with open('feature_list.json', 'r') as f:
-    features = json.load(f)
-
-# Find and mark feature as passing
-for feature in features:
-    if "Ray cluster" in feature['description']:
-        feature['passes'] = True
-
-# Save updated list
-with open('feature_list.json', 'w') as f:
-    json.dump(features, f, indent=2)
+```bash
+dot -Tpng output/nangate45_extreme_demo/lineage.dot -o lineage.png
 ```
 
-**Never remove features or edit descriptions/steps.** This ensures no functionality is missed.
+---
 
-### Commit Guidelines
+## Troubleshooting
 
-- Commit frequently with descriptive messages
-- Reference feature numbers when implementing features
-- Run validation before committing (when tests exist)
-- Include Co-Authored-By line for Claude assistance
+### Ray Dashboard Won't Start
 
-## Resources
+```
+ERROR: Failed to start the dashboard
+```
 
-- **Full specification**: See `app_spec.txt` for complete product requirements
-- **Feature list**: `feature_list.json` is the single source of truth for development
-- **Ray documentation**: https://docs.ray.io/
-- **OpenROAD documentation**: https://openroad.readthedocs.io/
+This is usually non-fatal. Ray will continue without the dashboard. Check if port 8265 is in use.
+
+### Docker Permission Denied
+
+```bash
+# Add user to docker group
+sudo usermod -aG docker $USER
+# Then log out and back in
+```
+
+### Trial Timeout
+
+Increase timeout in YAML:
+```yaml
+execution:
+  trial_timeout_seconds: 3600  # 1 hour
+```
+
+---
 
 ## License
 
-To be determined.
+MIT License
+
+---
 
 ## Contact
 
-To be determined.
+For issues and feature requests, open a GitHub issue.
 
 ---
 

@@ -7,14 +7,29 @@ from typing import Any, Callable
 
 from src.controller.case import Case, CaseGraph
 from src.controller.eco import (
+    AggressiveTimingECO,
     BufferInsertionECO,
+    BufferRemovalECO,
     CellResizeECO,
     CellSwapECO,
+    ClockNetRepairECO,
+    DeadLogicEliminationECO,
     ECO,
     ECOEffectiveness,
+    FullOptimizationECO,
     GateCloningECO,
+    HoldRepairECO,
+    IterativeTimingDrivenECO,
+    MultiPassTimingECO,
     NoOpECO,
+    PinSwapECO,
     PlacementDensityECO,
+    PowerRecoveryECO,
+    RepairDesignECO,
+    SequentialRepairECO,
+    TieFanoutRepairECO,
+    TimingDrivenPlacementECO,
+    VTSwapECO,
 )
 from src.controller.eco_leaderboard import ECOLeaderboardGenerator
 from src.controller.graceful_shutdown import GracefulShutdownHandler
@@ -90,6 +105,9 @@ class StudyResult:
     author: str | None = None
     creation_date: str | None = None
     description: str | None = None
+    # Rollback and recovery events tracking
+    rollback_events: list[dict[str, Any]] = field(default_factory=list)
+    recovery_events: list[dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization with aggregate statistics."""
@@ -190,6 +208,22 @@ class StudyResult:
         if self.description is not None:
             result["description"] = self.description
 
+        # Include rollback info if any rollbacks occurred
+        if self.rollback_events:
+            result["rollback_info"] = {
+                "rollbacks_occurred": len(self.rollback_events),
+                "rollback_events": self.rollback_events,
+            }
+
+        # Include recovery info if any recovery attempts occurred
+        if self.recovery_events:
+            successful_recoveries = [e for e in self.recovery_events if e.get("success")]
+            result["recovery_info"] = {
+                "recovery_attempts": len(self.recovery_events),
+                "successful_recoveries": len(successful_recoveries),
+                "recovery_events": self.recovery_events,
+            }
+
         return result
 
 
@@ -277,6 +311,15 @@ class StudyExecutor:
 
         # Initialize Study checkpoint tracking
         self.study_checkpoint: StudyCheckpoint = initialize_checkpoint(config.name)
+
+        # Best known state tracking for rollback support
+        self.best_known_state: dict[str, Any] | None = None
+        self.rollback_events: list[dict[str, Any]] = []
+
+        # ECO success history for recovery strategy
+        # Maps ECO type to list of (wns_improvement, stage_index, case_id)
+        self.eco_success_history: dict[str, list[dict[str, Any]]] = {}
+        self.recovery_events: list[dict[str, Any]] = []
 
         # Track completed approval gates for dependency enforcement
 
@@ -424,6 +467,407 @@ class StudyExecutor:
                 return False
 
         return True
+
+    def _update_best_known_state(
+        self,
+        stage_result: "StageResult",
+        stage_index: int,
+    ) -> bool:
+        """
+        Update best known state if this stage improved WNS.
+
+        Args:
+            stage_result: Result from the just-completed stage
+            stage_index: Index of the stage
+
+        Returns:
+            True if best known state was updated, False otherwise
+        """
+        # Get best WNS from this stage's successful trials
+        successful_trials = [t for t in stage_result.trial_results if t.success]
+        if not successful_trials:
+            return False
+
+        best_wns = max(
+            (t.metrics.get("wns_ps", float("-inf")) for t in successful_trials),
+            default=float("-inf"),
+        )
+
+        # Also track hot_ratio (lower is better)
+        best_hot_ratio = min(
+            (t.metrics.get("hot_ratio", float("inf")) for t in successful_trials),
+            default=float("inf"),
+        )
+
+        # Collect ODB paths from survivors
+        survivor_odb_paths = []
+        for trial in successful_trials:
+            if trial.config.case_name in stage_result.survivors and trial.modified_odb_path:
+                survivor_odb_paths.append(trial.modified_odb_path)
+
+        # Update best known state if this is better
+        if self.best_known_state is None or best_wns > self.best_known_state["wns_ps"]:
+            self.best_known_state = {
+                "wns_ps": best_wns,
+                "hot_ratio": best_hot_ratio,
+                "stage_index": stage_index,
+                "survivor_odb_paths": survivor_odb_paths,
+                "survivor_case_ids": list(stage_result.survivors),
+            }
+            print(f"   Best known state updated: WNS={best_wns}ps at stage {stage_index}")
+            return True
+
+        return False
+
+    def _should_rollback(
+        self,
+        stage_result: "StageResult",
+        stage_index: int,
+    ) -> tuple[bool, str]:
+        """
+        Check if we should rollback to best known state.
+
+        Args:
+            stage_result: Result from the just-completed stage
+            stage_index: Index of the stage
+
+        Returns:
+            Tuple of (should_rollback: bool, reason: str)
+        """
+        # Check if rollback is enabled in viability config
+        viability_config = self.config.metadata.get("viability", {})
+        if not viability_config.get("enable_rollback", False):
+            return False, ""
+
+        if self.best_known_state is None:
+            return False, ""
+
+        # Get best WNS from this stage's successful trials
+        successful_trials = [t for t in stage_result.trial_results if t.success]
+        if not successful_trials:
+            # All trials failed - consider rollback
+            return True, f"All {len(stage_result.trial_results)} trials failed in stage {stage_index}"
+
+        current_best_wns = max(
+            (t.metrics.get("wns_ps", float("-inf")) for t in successful_trials),
+            default=float("-inf"),
+        )
+
+        # Calculate degradation from best known state
+        degradation = self.best_known_state["wns_ps"] - current_best_wns
+
+        # Get threshold from config (default 50ps)
+        threshold_ps = viability_config.get("rollback_threshold_ps", 50)
+
+        if degradation > threshold_ps:
+            reason = (
+                f"WNS degraded by {degradation:.0f}ps (>{threshold_ps}ps threshold) "
+                f"from best state at stage {self.best_known_state['stage_index']} "
+                f"(best WNS={self.best_known_state['wns_ps']}ps, current={current_best_wns}ps)"
+            )
+            return True, reason
+
+        return False, ""
+
+    def _execute_rollback(self, from_stage: int) -> list[Case]:
+        """
+        Rollback to best known state and return cases to continue from.
+
+        Args:
+            from_stage: Stage index we're rolling back from
+
+        Returns:
+            List of Case objects created from best known state ODB paths
+        """
+        if self.best_known_state is None:
+            return []
+
+        to_stage = self.best_known_state["stage_index"]
+        print(f"\n⚠️  ROLLBACK: Rolling back from stage {from_stage} to stage {to_stage}")
+        print(f"   Best WNS was: {self.best_known_state['wns_ps']}ps")
+
+        # Create cases from best known ODB paths
+        rollback_cases: list[Case] = []
+        survivor_odbs = self.best_known_state.get("survivor_odb_paths", [])
+        survivor_ids = self.best_known_state.get("survivor_case_ids", [])
+
+        for idx, (odb_path, case_id) in enumerate(zip(survivor_odbs, survivor_ids)):
+            # Create a new case for rollback
+            rollback_case = Case(
+                case_id=f"rollback_{to_stage}_{idx}",
+                case_name=f"rollback_{to_stage}_{idx}",
+                snapshot_path=odb_path,
+                stage_index=from_stage + 1,  # Will be used in next stage
+                parent_id=case_id,
+                metadata={
+                    "rollback_from_stage": from_stage,
+                    "rollback_to_stage": to_stage,
+                    "source_case": case_id,
+                    "rollback_wns_ps": self.best_known_state["wns_ps"],
+                },
+            )
+            self.case_graph.add_case(rollback_case)
+            rollback_cases.append(rollback_case)
+
+        # Record rollback event
+        rollback_event = {
+            "from_stage": from_stage,
+            "to_stage": to_stage,
+            "best_wns_ps": self.best_known_state["wns_ps"],
+            "rollback_case_count": len(rollback_cases),
+        }
+        self.rollback_events.append(rollback_event)
+
+        print(f"   Rollback recorded: from stage {from_stage} to stage {to_stage}")
+        print(f"   Created {len(rollback_cases)} rollback cases from best known state")
+
+        return rollback_cases
+
+    def _record_eco_success(
+        self,
+        eco_type: str,
+        wns_before: int,
+        wns_after: int,
+        stage_index: int,
+        case_id: str,
+        trial_result: "TrialResult",
+    ) -> None:
+        """
+        Record a successful ECO application for recovery strategy.
+
+        Args:
+            eco_type: Type of ECO applied
+            wns_before: WNS before ECO (in ps)
+            wns_after: WNS after ECO (in ps)
+            stage_index: Stage where ECO was applied
+            case_id: Case ID that received the ECO
+            trial_result: Full trial result for reference
+        """
+        wns_improvement = wns_after - wns_before  # Positive = improvement
+
+        if wns_improvement <= 0:
+            return  # Only record improvements
+
+        if eco_type not in self.eco_success_history:
+            self.eco_success_history[eco_type] = []
+
+        self.eco_success_history[eco_type].append({
+            "wns_improvement": wns_improvement,
+            "wns_before": wns_before,
+            "wns_after": wns_after,
+            "stage_index": stage_index,
+            "case_id": case_id,
+            "modified_odb_path": trial_result.modified_odb_path,
+        })
+
+    def _get_recovery_ecos(self, strategy: str, max_count: int = 5) -> list[str]:
+        """
+        Select ECOs to try for recovery based on strategy.
+
+        Args:
+            strategy: Recovery strategy (top_performers, conservative, recent_successful)
+            max_count: Maximum number of ECOs to return
+
+        Returns:
+            List of ECO type names to try for recovery
+        """
+        if not self.eco_success_history:
+            return []
+
+        if strategy == "top_performers":
+            # Rank ECOs by total WNS improvement achieved
+            eco_scores: dict[str, int] = {}
+            for eco_type, successes in self.eco_success_history.items():
+                eco_scores[eco_type] = sum(s["wns_improvement"] for s in successes)
+
+            sorted_ecos = sorted(eco_scores.keys(), key=lambda e: eco_scores[e], reverse=True)
+            return sorted_ecos[:max_count]
+
+        elif strategy == "conservative":
+            # Prefer topology_neutral ECOs that have worked
+            conservative_order = [
+                "cell_resize", "buffer_insertion", "cell_swap", "pin_swap",
+                "repair_design", "buffer_removal", "gate_cloning",
+            ]
+            result = []
+            for eco in conservative_order:
+                if eco in self.eco_success_history and len(result) < max_count:
+                    result.append(eco)
+            # Fill with any other successful ECOs
+            for eco in self.eco_success_history:
+                if eco not in result and len(result) < max_count:
+                    result.append(eco)
+            return result
+
+        elif strategy == "recent_successful":
+            # Use ECOs from the most recent stages that showed improvement
+            all_successes = []
+            for eco_type, successes in self.eco_success_history.items():
+                for s in successes:
+                    all_successes.append((eco_type, s["stage_index"], s["wns_improvement"]))
+
+            # Sort by stage (most recent first), then by improvement
+            all_successes.sort(key=lambda x: (-x[1], -x[2]))
+
+            seen = set()
+            result = []
+            for eco_type, _, _ in all_successes:
+                if eco_type not in seen:
+                    seen.add(eco_type)
+                    result.append(eco_type)
+                    if len(result) >= max_count:
+                        break
+            return result
+
+        else:
+            # Default to top_performers
+            return self._get_recovery_ecos("top_performers", max_count)
+
+    def _attempt_recovery(
+        self,
+        current_cases: list[Case],
+        stage_index: int,
+        stage_config: "StageConfig",
+    ) -> tuple[bool, list["TrialResult"], list[str]]:
+        """
+        Attempt recovery by re-applying successful ECOs.
+
+        Args:
+            current_cases: Current cases to apply recovery ECOs to
+            stage_index: Current stage index
+            stage_config: Current stage configuration
+
+        Returns:
+            Tuple of (recovery_successful, trial_results, survivor_ids)
+            recovery_successful is True if any trial improved over best_known_state
+        """
+        viability_config = self.config.metadata.get("viability", {})
+        recovery_trials = viability_config.get("recovery_trials", 5)
+        recovery_strategy = viability_config.get("recovery_strategy", "top_performers")
+
+        recovery_ecos = self._get_recovery_ecos(recovery_strategy, recovery_trials)
+
+        if not recovery_ecos:
+            print("   No successful ECOs in history for recovery")
+            return False, [], []
+
+        print(f"\n   🔄 RECOVERY ATTEMPT: Trying {len(recovery_ecos)} ECOs: {recovery_ecos}")
+
+        # Map ECO names to ECO classes
+        eco_class_map = {
+            "cell_resize": CellResizeECO,
+            "buffer_insertion": BufferInsertionECO,
+            "cell_swap": CellSwapECO,
+            "pin_swap": PinSwapECO,
+            "gate_cloning": GateCloningECO,
+            "repair_design": RepairDesignECO,
+            "buffer_removal": BufferRemovalECO,
+            "placement_density": PlacementDensityECO,
+            "aggressive_timing": AggressiveTimingECO,
+            "full_optimization": FullOptimizationECO,
+            "sequential_repair": SequentialRepairECO,
+            "multi_pass_timing": MultiPassTimingECO,
+            "hold_repair": HoldRepairECO,
+            "timing_driven_placement": TimingDrivenPlacementECO,
+            "iterative_timing_driven": IterativeTimingDrivenECO,
+            "dead_logic_elimination": DeadLogicEliminationECO,
+            "tie_fanout_repair": TieFanoutRepairECO,
+            "clock_net_repair": ClockNetRepairECO,
+            "vt_swap": VTSwapECO,
+            "power_recovery": PowerRecoveryECO,
+        }
+
+        recovery_results: list[TrialResult] = []
+        best_recovery_wns = float("-inf")
+        best_known_wns = self.best_known_state["wns_ps"] if self.best_known_state else float("-inf")
+
+        # Try each recovery ECO on the first input case
+        input_case = current_cases[0] if current_cases else None
+        if not input_case:
+            return False, [], []
+
+        for eco_idx, eco_name in enumerate(recovery_ecos):
+            eco_class = eco_class_map.get(eco_name)
+            if not eco_class:
+                continue
+
+            # Create ECO instance with default parameters
+            try:
+                eco_instance = eco_class()
+            except Exception:
+                continue
+
+            # Create trial config for recovery
+            trial_config = TrialConfig(
+                study_name=self.config.name,
+                case_name=f"recovery_{stage_index}_{eco_idx}",
+                stage_index=stage_index,
+                trial_index=1000 + eco_idx,  # High trial index to distinguish recovery
+                script_path=str(Path(input_case.snapshot_path) / "run_sta.tcl"),
+                snapshot_dir=str(input_case.snapshot_path),
+                execution_mode=stage_config.execution_mode,
+                metadata={
+                    "recovery_trial": True,
+                    "eco_type": eco_name,
+                    "pdk": self.config.pdk,
+                },
+            )
+
+            # Execute recovery trial
+            trial = Trial(trial_config, artifacts_root=str(self.artifacts_root))
+
+            try:
+                # Apply ECO and run
+                eco_script = eco_instance.generate_tcl(self.config.pdk)
+                result = trial.execute(eco_script=eco_script)
+                recovery_results.append(result)
+
+                if result.success and result.metrics:
+                    wns = result.metrics.get("wns_ps", float("-inf"))
+                    print(f"      Recovery ECO '{eco_name}': WNS={wns}ps")
+
+                    if wns > best_recovery_wns:
+                        best_recovery_wns = wns
+
+                    # Check if this recovery beats best_known_state
+                    if wns >= best_known_wns:
+                        print(f"      ✓ Recovery successful! WNS={wns}ps >= best_known={best_known_wns}ps")
+
+                        # Record recovery event
+                        self.recovery_events.append({
+                            "stage_index": stage_index,
+                            "eco_used": eco_name,
+                            "wns_achieved": wns,
+                            "best_known_wns": best_known_wns,
+                            "success": True,
+                        })
+
+                        return True, recovery_results, [result.config.case_name]
+
+            except Exception as e:
+                print(f"      Recovery ECO '{eco_name}' failed: {e}")
+                continue
+
+        # No recovery trial beat best_known_state
+        print(f"   Recovery failed: best recovery WNS={best_recovery_wns}ps < best_known={best_known_wns}ps")
+
+        self.recovery_events.append({
+            "stage_index": stage_index,
+            "ecos_tried": recovery_ecos,
+            "best_recovery_wns": best_recovery_wns,
+            "best_known_wns": best_known_wns,
+            "success": False,
+        })
+
+        return False, recovery_results, []
+
+    def _should_attempt_recovery(self) -> bool:
+        """Check if recovery should be attempted before rollback."""
+        viability_config = self.config.metadata.get("viability", {})
+        return (
+            viability_config.get("enable_recovery", False)
+            and len(self.eco_success_history) > 0
+        )
 
     def execute(self) -> StudyResult:
         """
@@ -786,6 +1230,40 @@ class StudyExecutor:
                 checkpoint_path = save_checkpoint(self.study_checkpoint, report_dir)
                 print(f"   Checkpoint saved: {checkpoint_path}")
 
+                # Update best known state tracking (for rollback support)
+                self._update_best_known_state(stage_result, stage_index)
+
+                # Check if rollback is needed (only if not aborting)
+                should_rollback, rollback_reason = self._should_rollback(stage_result, stage_index)
+                if should_rollback:
+                    print(f"\n⚠️  REGRESSION DETECTED: {rollback_reason}")
+
+                    # Try recovery first if enabled
+                    recovery_success = False
+                    if self._should_attempt_recovery():
+                        print("   Attempting recovery before rollback...")
+                        recovery_success, recovery_results, recovery_survivors = self._attempt_recovery(
+                            current_cases, stage_index, stage_config
+                        )
+
+                        if recovery_success:
+                            print("   ✓ Recovery successful - avoiding rollback")
+                            stage_result.metadata["recovery_attempted"] = True
+                            stage_result.metadata["recovery_success"] = True
+                            # Don't mark rollback_triggered since recovery worked
+                        else:
+                            print("   ✗ Recovery failed - proceeding with rollback")
+                            stage_result.metadata["recovery_attempted"] = True
+                            stage_result.metadata["recovery_success"] = False
+
+                    # If no recovery or recovery failed, trigger rollback
+                    if not recovery_success:
+                        print(f"   ⚠️  ROLLBACK TRIGGERED")
+                        stage_result.metadata["rollback_triggered"] = True
+                        stage_result.metadata["rollback_reason"] = rollback_reason
+                        stage_result.metadata["rollback_from_stage"] = stage_index
+                        stage_result.metadata["rollback_to_stage"] = self.best_known_state["stage_index"] if self.best_known_state else None
+
             # Record stage abort check in safety trace (only for execution stages)
             if stage_config.stage_type == StageType.EXECUTION and stage_result.abort_decision:
                 # Emit abort evaluation event
@@ -879,35 +1357,41 @@ class StudyExecutor:
             # Prepare cases for next stage (only for execution stages)
             if stage_config.stage_type == StageType.EXECUTION:
                 if stage_index < len(self.config.stages) - 1:
-                    # Derive new cases from survivors for next stage
-                    current_cases = []
-                    for derived_idx, survivor_id in enumerate(stage_result.survivors):
-                        survivor_case = self.case_graph.get_case(survivor_id)
-                        if survivor_case:
-                            # Find the trial result for this survivor to get modified ODB path
-                            modified_odb_path = None
-                            for trial_result in stage_result.trial_results:
-                                if trial_result.config.case_name == survivor_id and trial_result.success:
-                                    modified_odb_path = trial_result.modified_odb_path
-                                    break
+                    # Check if rollback was triggered for this stage
+                    if stage_result.metadata.get("rollback_triggered"):
+                        # Use rollback cases instead of derived survivors
+                        current_cases = self._execute_rollback(stage_index)
+                        print(f"   Using {len(current_cases)} rollback cases for next stage")
+                    else:
+                        # Derive new cases from survivors for next stage (normal flow)
+                        current_cases = []
+                        for derived_idx, survivor_id in enumerate(stage_result.survivors):
+                            survivor_case = self.case_graph.get_case(survivor_id)
+                            if survivor_case:
+                                # Find the trial result for this survivor to get modified ODB path
+                                modified_odb_path = None
+                                for trial_result in stage_result.trial_results:
+                                    if trial_result.config.case_name == survivor_id and trial_result.success:
+                                        modified_odb_path = trial_result.modified_odb_path
+                                        break
 
-                            # Use modified ODB as snapshot for next stage, fallback to original
-                            next_snapshot_path = modified_odb_path if modified_odb_path else self.config.snapshot_path
+                                # Use modified ODB as snapshot for next stage, fallback to original
+                                next_snapshot_path = modified_odb_path if modified_odb_path else self.config.snapshot_path
 
-                            # Create derived case for next stage
-                            derived = survivor_case.derive(
-                                eco_name="pass_through",  # Placeholder for actual ECO
-                                new_stage_index=stage_index + 1,
-                                derived_index=derived_idx,
-                                snapshot_path=next_snapshot_path,  # Use modified ODB if available
-                                metadata={
-                                    "source_trial": survivor_id,
-                                    "input_odb_from_stage": stage_index if modified_odb_path else None,
-                                    "accumulated_modifications": modified_odb_path is not None,
-                                },
-                            )
-                            self.case_graph.add_case(derived)
-                            current_cases.append(derived)
+                                # Create derived case for next stage
+                                derived = survivor_case.derive(
+                                    eco_name="pass_through",  # Placeholder for actual ECO
+                                    new_stage_index=stage_index + 1,
+                                    derived_index=derived_idx,
+                                    snapshot_path=next_snapshot_path,  # Use modified ODB if available
+                                    metadata={
+                                        "source_trial": survivor_id,
+                                        "input_odb_from_stage": stage_index if modified_odb_path else None,
+                                        "accumulated_modifications": modified_odb_path is not None,
+                                    },
+                                )
+                                self.case_graph.add_case(derived)
+                                current_cases.append(derived)
                 else:
                     # Final stage - survivors are final results
                     print(f"\nFinal survivors: {stage_result.survivors}")
@@ -989,6 +1473,8 @@ class StudyExecutor:
             author=self.config.author,
             creation_date=self.config.creation_date,
             description=self.config.description,
+            rollback_events=self.rollback_events,
+            recovery_events=self.recovery_events,
         )
         study_summary_json_path = report_dir / "study_summary.json"
         with open(study_summary_json_path, "w") as f:
@@ -1175,6 +1661,12 @@ class StudyExecutor:
         from src.controller.eco import (
             TimingDrivenPlacementECO,
             IterativeTimingDrivenECO,
+            HoldRepairECO,
+            PowerRecoveryECO,
+            RepairDesignECO,
+            AggressiveTimingECO,
+            BufferRemovalECO,
+            PinSwapECO,
         )
 
         # First trial is always no-op (baseline)
@@ -1186,6 +1678,7 @@ class StudyExecutor:
         param_variant = ((trial_index - 1) // len([1,2,3])) % 3  # Which parameter set to use
 
         # Base ECOs for early stages (TOPOLOGY_NEUTRAL, PLACEMENT_LOCAL, ROUTING_AFFECTING)
+        # These are safe transforms that don't significantly disrupt the design
         base_eco_types = [
             ("cell_resize", lambda idx, var: CellResizeECO(
                 size_multiplier=1.2 + var * 0.3,  # 1.2, 1.5, 1.8
@@ -1204,11 +1697,62 @@ class StudyExecutor:
             ("placement_density", lambda idx, var: PlacementDensityECO(
                 target_density=0.65 - var * 0.05  # 0.65, 0.60, 0.55 (lower = more spreading)
             )),
+            # ECOs from OpenROAD resizer capabilities
+            ("pin_swap", lambda idx, var: PinSwapECO(
+                setup_margin=0.05 + var * 0.025,  # 0.05, 0.075, 0.1
+                max_passes=3 + var * 2  # 3, 5, 7
+            )),
+            ("repair_design", lambda idx, var: RepairDesignECO(
+                slew_margin=10 + var * 10,  # 10%, 20%, 30%
+                cap_margin=10 + var * 10  # 10%, 20%, 30%
+            )),
+            ("buffer_removal", lambda idx, var: BufferRemovalECO()),
+            # Utility ECOs for cleanup and DRV fixes
+            ("dead_logic_elimination", lambda idx, var: DeadLogicEliminationECO()),
+            ("tie_fanout_repair", lambda idx, var: TieFanoutRepairECO(
+                max_fanout=8 + var * 4  # 8, 12, 16
+            )),
+            ("clock_net_repair", lambda idx, var: ClockNetRepairECO()),
         ]
 
         # Aggressive ECOs for later stages (GLOBAL_DISRUPTIVE)
-        # These are designed for extreme timing violations (>5x over budget)
+        # PRIORITIZED: Compound/pipeline ECOs come FIRST (recommended approach)
+        # These follow the proper ECO order: cleanup → DRV → setup → hold → power
         aggressive_eco_types = [
+            # === COMPOUND/PIPELINE ECOs (highest priority) ===
+            # These apply ECOs in the recommended sequence for gradual improvement
+            ("full_optimization", lambda idx, var: FullOptimizationECO(
+                max_passes=3 + var * 2,  # 3, 5, 7 passes
+                setup_margin=0.1 - var * 0.03  # 0.1, 0.07, 0.04
+            )),
+            ("sequential_repair", lambda idx, var: SequentialRepairECO(
+                slew_margin=20 + var * 10,  # 20%, 30%, 40%
+                setup_margin=0.1 - var * 0.03  # 0.1, 0.07, 0.04
+            )),
+            ("multi_pass_timing", lambda idx, var: MultiPassTimingECO(
+                num_passes=3 + var * 2,  # 3, 5, 7 passes
+                margin_decay=0.8 - var * 0.1,  # 0.8, 0.7, 0.6 decay factor
+                initial_margin=0.1 + var * 0.05  # 0.1, 0.15, 0.2 initial margin
+            )),
+            # === SINGLE AGGRESSIVE ECOs ===
+            ("aggressive_timing", lambda idx, var: AggressiveTimingECO(
+                max_passes=8 + var * 2,  # 8, 10, 12
+                tns_repair_percent=80 + var * 10,  # 80%, 90%, 100%
+                setup_margin=0.1 - var * 0.03  # 0.1, 0.07, 0.04
+            )),
+            ("hold_repair", lambda idx, var: HoldRepairECO(
+                hold_margin=0.0 + var * 0.02,  # 0.0, 0.02, 0.04
+                max_buffer_percent=15 + var * 5  # 15%, 20%, 25%
+            )),
+            ("power_recovery", lambda idx, var: PowerRecoveryECO(
+                recover_percent=30 + var * 20,  # 30%, 50%, 70%
+                slack_margin=0.15 - var * 0.05  # 0.15, 0.10, 0.05
+            )),
+            ("vt_swap", lambda idx, var: VTSwapECO(
+                setup_margin=0.05 + var * 0.025,  # 0.05, 0.075, 0.1
+                skip_critical_vt=(var == 2)  # Skip critical VT on third variant
+            )),
+            # === PLACEMENT ECOs (more disruptive) ===
             ("timing_driven_placement", lambda idx, var: TimingDrivenPlacementECO(
                 target_density=0.70 - var * 0.05,  # 0.70, 0.65, 0.60
                 keep_overflow=0.1 + var * 0.05  # 0.10, 0.15, 0.20
@@ -1230,12 +1774,272 @@ class StudyExecutor:
         else:
             eco_types = base_eco_types
 
-        # Select ECO type based on trial index
-        eco_type_index = (trial_index - 1) % len(eco_types)
-        eco_name, eco_factory = eco_types[eco_type_index]
+        # Apply prior learning: filter out ECOs with high failure rates (F119/F120 enhancement)
+        # This uses historical effectiveness data to improve ECO selection
+        filtered_eco_types = self._filter_ecos_by_prior(eco_types, stage_index)
+
+        # Get current design context for anti-pattern checking (if available)
+        design_context = None
+        if self.baseline_wns_ps is not None:
+            design_context = {
+                "wns_ps": self.baseline_wns_ps,
+                "stage_index": stage_index,
+            }
+
+        # Use WNS-weighted selection if enabled, otherwise round-robin
+        prior_config = self.config.metadata.get("prior_learning", {})
+        if prior_config.get("use_wns_weighted_selection", True) and stage_index >= 2:
+            # Weighted selection for later stages (after we have some data)
+            eco_name, eco_factory = self._select_eco_weighted(
+                filtered_eco_types, stage_index, trial_index, design_context
+            )
+        else:
+            # Round-robin for early stages (exploration)
+            eco_type_index = (trial_index - 1) % len(filtered_eco_types)
+            eco_name, eco_factory = filtered_eco_types[eco_type_index]
 
         # Create ECO with varying parameters
         return eco_factory(trial_index, param_variant)
+
+    def _filter_ecos_by_prior(
+        self,
+        eco_types: list[tuple[str, Any]],
+        stage_index: int,
+    ) -> list[tuple[str, Any]]:
+        """Filter ECOs based on prior effectiveness data.
+
+        ECOs with "suspicious" prior state (high failure rate) are deprioritized
+        or excluded in later stages. This enables learning from past failures.
+
+        Args:
+            eco_types: List of (name, factory) tuples
+            stage_index: Current stage index
+
+        Returns:
+            Filtered list of ECO types, prioritizing historically effective ones
+        """
+        from src.controller.eco import ECOPrior
+
+        if not self.prior_repository:
+            return eco_types
+
+        # Get prior data for all ECO types
+        eco_priors: dict[str, tuple[int, int, ECOPrior]] = {}
+        for eco_name, _ in eco_types:
+            try:
+                prior_data = self.prior_repository.get_prior(eco_name)
+                if prior_data:
+                    successes, failures, state = prior_data
+                    eco_priors[eco_name] = (successes, failures, state)
+            except Exception:
+                pass  # Prior data not available
+
+        # If no prior data, return original list
+        if not eco_priors:
+            return eco_types
+
+        # Categorize ECOs by prior state
+        trusted_ecos = []
+        mixed_ecos = []
+        unknown_ecos = []
+        suspicious_ecos = []
+
+        for eco_tuple in eco_types:
+            eco_name = eco_tuple[0]
+            if eco_name in eco_priors:
+                successes, failures, state = eco_priors[eco_name]
+                if state == ECOPrior.TRUSTED:
+                    trusted_ecos.append(eco_tuple)
+                elif state == ECOPrior.SUSPICIOUS:
+                    suspicious_ecos.append(eco_tuple)
+                elif state == ECOPrior.MIXED:
+                    mixed_ecos.append(eco_tuple)
+                else:
+                    unknown_ecos.append(eco_tuple)
+            else:
+                unknown_ecos.append(eco_tuple)
+
+        # Stage-aware filtering strategy:
+        # - Early stages (0-1): Include all ECOs for exploration
+        # - Later stages (2+): Exclude suspicious ECOs, prioritize trusted ones
+        if stage_index >= 2:
+            # Later stages: exclude suspicious ECOs, prioritize trusted
+            filtered = trusted_ecos + mixed_ecos + unknown_ecos
+            if not filtered:
+                # Fallback: if all are suspicious, use original list
+                return eco_types
+            return filtered
+        else:
+            # Early stages: prioritize by effectiveness but include all
+            # Reorder: trusted first, then mixed, then unknown, suspicious last
+            return trusted_ecos + mixed_ecos + unknown_ecos + suspicious_ecos
+
+    def _get_eco_wns_scores(self) -> dict[str, float]:
+        """
+        Calculate WNS-based scores for ECOs using both within-study and cross-study data.
+
+        Returns:
+            Dictionary mapping ECO names to WNS improvement scores (higher = better)
+        """
+        scores: dict[str, float] = {}
+        prior_config = self.config.metadata.get("prior_learning", {})
+
+        # Within-study learning: use eco_success_history from current study
+        if prior_config.get("within_study_learning", True):
+            for eco_name, successes in self.eco_success_history.items():
+                if successes:
+                    # Calculate average WNS improvement from this study
+                    avg_improvement = sum(s["wns_improvement"] for s in successes) / len(successes)
+                    scores[eco_name] = scores.get(eco_name, 0) + avg_improvement
+
+        # Cross-study learning: use SQLite priors from other studies
+        if prior_config.get("cross_study_learning", False):
+            cross_weight = prior_config.get("cross_study_weight", 0.5)
+            try:
+                all_priors = self.prior_repository.get_all_priors()
+                for eco_name, effectiveness in all_priors.items():
+                    if effectiveness.average_wns_improvement_ps > 0:
+                        cross_score = effectiveness.average_wns_improvement_ps * cross_weight
+                        scores[eco_name] = scores.get(eco_name, 0) + cross_score
+            except Exception:
+                pass  # SQLite not available
+
+        return scores
+
+    def _check_eco_anti_patterns(
+        self,
+        eco_name: str,
+        design_context: dict[str, Any] | None = None,
+    ) -> tuple[bool, str | None]:
+        """
+        Check if an ECO has anti-patterns that match current design context.
+
+        Args:
+            eco_name: Name of the ECO to check
+            design_context: Current design state (wns_ps, hot_ratio, etc.)
+
+        Returns:
+            Tuple of (should_skip: bool, reason: str | None)
+        """
+        prior_config = self.config.metadata.get("prior_learning", {})
+        if not prior_config.get("check_anti_patterns", True):
+            return False, None
+
+        try:
+            anti_patterns = self.prior_repository.get_anti_patterns(eco_name)
+            if not anti_patterns:
+                return False, None
+
+            # Check each anti-pattern against current context
+            for pattern in anti_patterns:
+                if pattern["failure_rate"] < 0.7:
+                    continue  # Only skip for high failure rate patterns
+
+                context_pattern = pattern["context_pattern"]
+
+                # If no design context provided, skip pattern checking
+                if design_context is None:
+                    continue
+
+                # Check if current context matches anti-pattern
+                matches = True
+                for key, value in context_pattern.items():
+                    if key in design_context:
+                        # For numeric values, check if in same range
+                        if isinstance(value, (int, float)) and isinstance(design_context[key], (int, float)):
+                            # Consider it a match if within 20% of the pattern value
+                            if abs(design_context[key] - value) / max(abs(value), 1) > 0.2:
+                                matches = False
+                                break
+                        elif design_context[key] != value:
+                            matches = False
+                            break
+                    else:
+                        matches = False
+                        break
+
+                if matches:
+                    return True, pattern.get("recommendation", f"Anti-pattern detected: {context_pattern}")
+
+        except Exception:
+            pass  # Anti-pattern checking not available
+
+        return False, None
+
+    def _select_eco_weighted(
+        self,
+        eco_types: list[tuple[str, Any]],
+        stage_index: int,
+        trial_index: int,
+        design_context: dict[str, Any] | None = None,
+    ) -> tuple[str, Any]:
+        """
+        Select an ECO using WNS-weighted selection with exploration.
+
+        Args:
+            eco_types: List of (name, factory) tuples to choose from
+            stage_index: Current stage index
+            trial_index: Current trial index within stage
+            design_context: Current design state for anti-pattern checking
+
+        Returns:
+            Tuple of (eco_name, eco_factory)
+        """
+        import random
+
+        prior_config = self.config.metadata.get("prior_learning", {})
+        use_weighted = prior_config.get("use_wns_weighted_selection", True)
+        exploration_rate = prior_config.get("exploration_rate", 0.2)
+
+        # Filter out ECOs with matching anti-patterns
+        filtered_ecos = []
+        for eco_tuple in eco_types:
+            eco_name = eco_tuple[0]
+            should_skip, reason = self._check_eco_anti_patterns(eco_name, design_context)
+            if not should_skip:
+                filtered_ecos.append(eco_tuple)
+            else:
+                print(f"      [ANTI-PATTERN] Skipping {eco_name}: {reason}")
+
+        if not filtered_ecos:
+            filtered_ecos = eco_types  # Fallback to all if everything filtered
+
+        # Exploration: randomly select from all ECOs some fraction of the time
+        if random.random() < exploration_rate:
+            return random.choice(filtered_ecos)
+
+        # Get WNS-based scores
+        wns_scores = self._get_eco_wns_scores()
+
+        if not use_weighted or not wns_scores:
+            # Fall back to round-robin if no scores or weighted selection disabled
+            eco_index = trial_index % len(filtered_ecos)
+            return filtered_ecos[eco_index]
+
+        # Calculate selection weights (higher WNS improvement = higher weight)
+        weights = []
+        for eco_name, _ in filtered_ecos:
+            score = wns_scores.get(eco_name, 0)
+            # Add base weight so ECOs with no data still get selected sometimes
+            weight = max(score + 10, 1)  # Minimum weight of 1
+            weights.append(weight)
+
+        # Normalize weights
+        total_weight = sum(weights)
+        if total_weight == 0:
+            return random.choice(filtered_ecos)
+
+        # Weighted random selection
+        r = random.random() * total_weight
+        cumulative = 0
+        for i, weight in enumerate(weights):
+            cumulative += weight
+            if r <= cumulative:
+                selected = filtered_ecos[i]
+                print(f"      [WEIGHTED] Selected {selected[0]} (score={wns_scores.get(selected[0], 0):.0f}ps)")
+                return selected
+
+        return filtered_ecos[-1]  # Fallback
 
     def _execute_stage(
         self,
@@ -1319,22 +2123,21 @@ class StudyExecutor:
             # Determine if snapshot_path is a modified ODB file from previous stage
             input_odb_path = None
             input_odb_container_path = None  # Path as seen inside Docker container
-            actual_snapshot_dir = self.config.snapshot_path  # Default to base snapshot
+            # ALWAYS use base snapshot directory (contains SDC and other required files)
+            actual_snapshot_dir = self.config.snapshot_path
             if snapshot_path.suffix == ".odb":
                 # This is a modified ODB file from a previous stage
-                input_odb_path = str(snapshot_path)  # Host path (for metadata tracking)
-                # Snapshot dir should be the parent directory containing the ODB
-                actual_snapshot_dir = str(snapshot_path.parent)
-                # Convert to container path: the parent dir is mounted as /snapshot
+                input_odb_path = str(snapshot_path)  # Host path - will be copied to trial snapshot
+                # Container path: ODB will be copied to trial's snapshot dir as this name
                 input_odb_container_path = f"/snapshot/{snapshot_path.name}"
             else:
-                # Regular snapshot directory
+                # Regular snapshot directory - update if different from base
                 actual_snapshot_dir = str(snapshot_path)
 
             # Generate custom trial script with ECO
             if eco and not isinstance(eco, NoOpECO):
-                # Generate ECO TCL commands
-                eco_tcl = eco.generate_tcl()
+                # Generate ECO TCL commands (pass PDK for layer-aware generation)
+                eco_tcl = eco.generate_tcl(pdk=self.config.pdk)
 
                 # Read the snapshot's base STA script to use as foundation
                 # This ensures we load the real design properly
@@ -1375,9 +2178,42 @@ class StudyExecutor:
                 script_path = custom_script_path
             else:
                 # Use base script for no-op trials
-                script_path = snapshot_path / "run_sta.tcl"
-                if not script_path.exists():
-                    script_path = snapshot_path
+                # Handle case where snapshot_path is a modified ODB from previous stage
+                if snapshot_path.suffix == ".odb":
+                    # Modified ODB - generate a proper TCL script for it
+                    from src.trial_runner.tcl_generator import generate_trial_script, inject_eco_commands
+
+                    # Get base script from original snapshot
+                    base_script_path = Path(self.config.snapshot_path) / "run_sta.tcl"
+                    if base_script_path.exists():
+                        base_script = base_script_path.read_text()
+                    else:
+                        base_script = generate_trial_script(
+                            execution_mode=stage_config.execution_mode,
+                            design_name=self.config.base_case_name,
+                            clock_period_ns=10.0,
+                            pdk=self.config.pdk,
+                        )
+
+                    # Inject noop ECO commands (just reads ODB and reports metrics)
+                    noop_eco = NoOpECO()
+                    noop_tcl = noop_eco.generate_tcl(pdk=self.config.pdk)
+                    script_content = inject_eco_commands(
+                        base_script=base_script,
+                        eco_tcl=noop_tcl,
+                        input_odb_path=f"/snapshot/{snapshot_path.name}",
+                        output_odb_path=f"/work/modified_design_{trial_index}.odb",
+                    )
+
+                    # Save custom script to trial directory
+                    custom_script_path = trial_dir / f"trial_{trial_index}_with_eco.tcl"
+                    custom_script_path.write_text(script_content)
+                    script_path = custom_script_path
+                else:
+                    # Regular snapshot directory
+                    script_path = snapshot_path / "run_sta.tcl"
+                    if not script_path.exists():
+                        script_path = snapshot_path
 
             # Create trial configuration
             trial_config = TrialConfig(
@@ -1386,9 +2222,10 @@ class StudyExecutor:
                 stage_index=stage_index,
                 trial_index=trial_index,
                 script_path=str(script_path),
-                snapshot_dir=actual_snapshot_dir,  # Use correct snapshot dir (could be ODB parent)
+                snapshot_dir=actual_snapshot_dir,  # Base snapshot dir (has SDC and other files)
                 timeout_seconds=stage_config.timeout_seconds,
                 execution_mode=stage_config.execution_mode,
+                input_odb_file=input_odb_path,  # Modified ODB from previous stage (will be copied to snapshot)
                 metadata={
                     "stage_name": stage_config.name,
                     "execution_mode": stage_config.execution_mode.value,
@@ -1650,6 +2487,26 @@ class StudyExecutor:
                 success=trial_result.success,
                 wns_delta_ps=wns_delta_ps,
             )
+
+            # Record successful ECOs for recovery strategy
+            if trial_result.success and wns_delta_ps > 0:
+                # Get WNS values for recovery tracking
+                wns_before = self.baseline_wns_ps or 0
+                wns_after = wns_before + int(wns_delta_ps)
+                if trial_result.metrics:
+                    if isinstance(trial_result.metrics, dict):
+                        wns_after = trial_result.metrics.get("wns_ps", wns_after)
+                    elif "timing" in trial_result.metrics:
+                        wns_after = trial_result.metrics["timing"].get("wns_ps", wns_after)
+
+                self._record_eco_success(
+                    eco_type=eco_name,
+                    wns_before=wns_before,
+                    wns_after=wns_after,
+                    stage_index=trial_config.stage_index,
+                    case_id=trial_config.case_name,
+                    trial_result=trial_result,
+                )
 
             # Persist to SQLite database
             try:

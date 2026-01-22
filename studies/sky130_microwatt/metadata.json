@@ -1,0 +1,8 @@
+{
+  "design": "Microwatt OpenPOWER Core",
+  "pdk": "Sky130HD",
+  "cell_count": 162637,
+  "clock_period_ns": 4.0,
+  "clock_freq_mhz": 250,
+  "description": "OpenPOWER Microwatt core with aggressive 250MHz clock for timing closure demo"
+}

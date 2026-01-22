@@ -361,70 +361,46 @@ def create_nangate45_extreme_demo_study(
         # (uses ibex extreme snapshot with WNS < -1500ps and hot_ratio > 0.3)
         snapshot_path = str(Path("studies") / "nangate45_extreme_ibex")
 
-    # Stage 0: Aggressive exploration to find any improvements
-    # Start with topology-neutral ECOs which are safest
-    stage_0 = StageConfig(
-        name="aggressive_exploration",
-        execution_mode=ExecutionMode.STA_CONGESTION,  # Need both metrics
-        trial_budget=20,  # Increased from 15 for more exploration
-        survivor_count=5,  # Keep more survivors initially (was 4)
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-        ],
-        abort_threshold_wns_ps=-150000,  # -150ns - very permissive
-        visualization_enabled=True,
-        timeout_seconds=600,  # 10 minutes per trial
-    )
+    # Generate 20 stages for iterative refinement with focused exploration
+    # Strategy: Fewer trials per stage, more stages for gradual improvement
+    # This allows assessing ECO impact incrementally rather than shotgun parallel
+    # Stages 0-1: Base ECOs only (safe transforms)
+    # Stages 2+: All ECOs including compound/aggressive pipelines
+    num_stages = 20
+    stages = []
 
-    # Stage 1: Refinement with placement-affecting ECOs
-    stage_1 = StageConfig(
-        name="placement_refinement",
-        execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=15,  # Increased from 10 for more options
-        survivor_count=4,  # Keep more survivors (was 3)
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-            ECOClass.PLACEMENT_LOCAL,
-        ],
-        abort_threshold_wns_ps=-200000,  # -200ns
-        visualization_enabled=True,
-        timeout_seconds=900,  # 15 minutes per trial
-    )
+    for i in range(num_stages):
+        # Early stages (0-1): Only safe ECO classes
+        if i < 2:
+            eco_classes = [ECOClass.TOPOLOGY_NEUTRAL, ECOClass.PLACEMENT_LOCAL]
+        else:
+            # Later stages (2+): All ECO classes including aggressive
+            eco_classes = [
+                ECOClass.TOPOLOGY_NEUTRAL,
+                ECOClass.PLACEMENT_LOCAL,
+                ECOClass.ROUTING_AFFECTING,
+                ECOClass.GLOBAL_DISRUPTIVE,
+            ]
 
-    # Stage 2: Final closure with all available ECOs
-    stage_2 = StageConfig(
-        name="aggressive_closure",
-        execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=12,  # Increased from 8 for more final attempts
-        survivor_count=3,  # Keep more survivors (was 2)
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-            ECOClass.PLACEMENT_LOCAL,
-            ECOClass.ROUTING_AFFECTING,
-            ECOClass.GLOBAL_DISRUPTIVE,  # Allow timing-driven placement re-optimization
-        ],
-        abort_threshold_wns_ps=None,  # No abort in final stage
-        visualization_enabled=True,
-        timeout_seconds=1800,  # 30 minutes per trial (increased for re-placement)
-    )
+        # Survivor count decreases gradually (funnel shape)
+        # Start with 8 survivors, decrease to 2 by final stage
+        survivor_count = max(2, 8 - (i // 3))
 
-    # Stage 3: Ultra-aggressive final push (NEW!)
-    # Add a fourth stage to get cumulative improvements over 50%
-    stage_3 = StageConfig(
-        name="ultra_aggressive_closure",
-        execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=10,  # Final attempts with all knowledge
-        survivor_count=2,  # Final winnowing
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-            ECOClass.PLACEMENT_LOCAL,
-            ECOClass.ROUTING_AFFECTING,
-            ECOClass.GLOBAL_DISRUPTIVE,  # Allow timing-driven placement re-optimization
-        ],
-        abort_threshold_wns_ps=None,  # No abort
-        visualization_enabled=True,
-        timeout_seconds=1800,  # 30 minutes per trial (increased for re-placement)
-    )
+        # Trial budget: 25 trials per stage for focused exploration
+        # Total: 20 stages × 25 trials = 500 trials (but more iterations)
+        trial_budget = 25
+
+        stage = StageConfig(
+            name=f"stage_{i}",
+            execution_mode=ExecutionMode.STA_CONGESTION,
+            trial_budget=trial_budget,
+            survivor_count=survivor_count,
+            allowed_eco_classes=eco_classes,
+            abort_threshold_wns_ps=None,  # No abort
+            visualization_enabled=True,
+            timeout_seconds=1800,  # 30 minutes per trial
+        )
+        stages.append(stage)
 
     # Create the complete Study configuration
     study = StudyConfig(
@@ -432,7 +408,7 @@ def create_nangate45_extreme_demo_study(
         safety_domain=safety_domain,
         base_case_name="nangate45_extreme_ibex",
         pdk="Nangate45",
-        stages=[stage_0, stage_1, stage_2, stage_3],  # Added stage_3
+        stages=stages,  # 10 stages
         snapshot_path=snapshot_path,
         metadata={
             "purpose": "Demonstrate fixing extremely broken Nangate45 design",
@@ -467,7 +443,7 @@ def create_nangate45_extreme_demo_study(
 
 def create_asap7_extreme_demo_study(
     snapshot_path: str | None = None,
-    safety_domain: SafetyDomain = SafetyDomain.GUARDED,
+    safety_domain: SafetyDomain = SafetyDomain.SANDBOX,  # SANDBOX to allow aggressive ECOs
 ) -> StudyConfig:
     """Create an 'extreme' broken design demo Study for ASAP7.
 
@@ -489,7 +465,7 @@ def create_asap7_extreme_demo_study(
     Args:
         snapshot_path: Path to ASAP7 extreme design snapshot.
                       If None, uses default 'studies/asap7_extreme'
-        safety_domain: Safety domain for the Study (default: GUARDED)
+        safety_domain: Safety domain for the Study (default: SANDBOX for aggressive ECOs)
 
     Returns:
         StudyConfig: ASAP7 extreme demo Study configuration
@@ -501,70 +477,64 @@ def create_asap7_extreme_demo_study(
         >>> assert demo.stages[0].execution_mode in [ExecutionMode.STA_ONLY, ExecutionMode.STA_CONGESTION]
     """
     if snapshot_path is None:
-        # Default to studies/asap7_extreme relative to project root
-        # (uses extreme snapshot with timing violations for 7nm)
-        snapshot_path = str(Path("studies") / "asap7_extreme")
+        # Default to studies/asap7_extreme_ibex relative to project root
+        # (uses Ibex RISC-V core with extreme timing violations for 7nm)
+        snapshot_path = str(Path("studies") / "asap7_extreme_ibex")
 
-    # Stage 0: STA-first exploration (ASAP7 best practice)
-    # Use STA_CONGESTION instead of pure STA_ONLY to track both metrics
-    # but rely on STA-first staging philosophy
-    stage_0 = StageConfig(
-        name="sta_exploration",
-        execution_mode=ExecutionMode.STA_CONGESTION,  # Track both, STA-priority
-        trial_budget=12,  # More trials for ASAP7 complexity
-        survivor_count=4,
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-        ],
-        abort_threshold_wns_ps=-200000,  # -200ns - very permissive for extreme case
-        visualization_enabled=True,
-        timeout_seconds=900,  # 15 minutes per trial (ASAP7 is slower)
-    )
+    # Generate 20 stages for iterative refinement with focused exploration
+    # Strategy: Fewer trials per stage, more stages for gradual improvement
+    # This allows assessing ECO impact incrementally rather than shotgun parallel
+    # Stages 0-1: Base ECOs only (safe transforms)
+    # Stages 2+: All ECOs including compound/aggressive pipelines
+    num_stages = 20
+    stages = []
 
-    # Stage 1: Timing-focused refinement
-    stage_1 = StageConfig(
-        name="timing_refinement",
-        execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=8,
-        survivor_count=3,
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-            ECOClass.PLACEMENT_LOCAL,
-        ],
-        abort_threshold_wns_ps=-250000,  # -250ns
-        visualization_enabled=True,
-        timeout_seconds=1200,  # 20 minutes per trial
-    )
+    for i in range(num_stages):
+        # Early stages (0-1): Only safe ECO classes
+        if i < 2:
+            eco_classes = [ECOClass.TOPOLOGY_NEUTRAL, ECOClass.PLACEMENT_LOCAL]
+        else:
+            # Later stages (2+): All ECO classes including aggressive
+            eco_classes = [
+                ECOClass.TOPOLOGY_NEUTRAL,
+                ECOClass.PLACEMENT_LOCAL,
+                ECOClass.ROUTING_AFFECTING,
+                ECOClass.GLOBAL_DISRUPTIVE,
+            ]
 
-    # Stage 2: Final closure with careful routing consideration
-    stage_2 = StageConfig(
-        name="careful_closure",
-        execution_mode=ExecutionMode.STA_CONGESTION,
-        trial_budget=6,
-        survivor_count=2,
-        allowed_eco_classes=[
-            ECOClass.TOPOLOGY_NEUTRAL,
-            ECOClass.PLACEMENT_LOCAL,
-            ECOClass.ROUTING_AFFECTING,
-        ],
-        abort_threshold_wns_ps=None,  # No abort in final stage
-        visualization_enabled=True,
-        timeout_seconds=1800,  # 30 minutes per trial (ASAP7 routing is complex)
-    )
+        # Survivor count decreases gradually (funnel shape)
+        # Start with 8 survivors, decrease to 2 by final stage
+        survivor_count = max(2, 8 - (i // 3))
+
+        # Trial budget: 25 trials per stage for focused exploration
+        # Total: 20 stages × 25 trials = 500 trials (but more iterations)
+        trial_budget = 25
+
+        stage = StageConfig(
+            name=f"stage_{i}",
+            execution_mode=ExecutionMode.STA_CONGESTION,
+            trial_budget=trial_budget,
+            survivor_count=survivor_count,
+            allowed_eco_classes=eco_classes,
+            abort_threshold_wns_ps=None,  # No abort
+            visualization_enabled=True,
+            timeout_seconds=1800,  # 30 minutes per trial
+        )
+        stages.append(stage)
 
     # Create the complete Study configuration
     study = StudyConfig(
         name="asap7_extreme_demo",
         safety_domain=safety_domain,
-        base_case_name="asap7_extreme",
+        base_case_name="asap7_extreme_ibex",
         pdk="ASAP7",  # Triggers ASAP7-specific workarounds
-        stages=[stage_0, stage_1, stage_2],
+        stages=stages,  # 10 stages
         snapshot_path=snapshot_path,
         metadata={
-            "purpose": "Demonstrate fixing extremely broken ASAP7 design with STA-first staging",
-            "design": "AES or similar complex design with severe advanced-node issues",
+            "purpose": "Demonstrate fixing extremely broken ASAP7 Ibex design with STA-first staging",
+            "design": "Ibex RISC-V Core with severe 7nm timing violations",
             "expected_behavior": "Improve WNS by >40%, reduce hot_ratio from >0.4 to <0.15",
-            "version": "1.0.0",
+            "version": "2.0.0",
             "asap7_workarounds": [
                 "routing_layer_constraints",
                 "site_specification",
@@ -573,8 +543,9 @@ def create_asap7_extreme_demo_study(
             ],
             "staging_strategy": "STA-first for ASAP7 stability",
             "initial_state": {
-                "wns_ps_range": [-3500, -2500],
-                "hot_ratio_range": [0.40, 0.55],
+                "wns_ps": -972,
+                "tns_ps": -1617009,
+                "hot_ratio": 0.45,
             },
             "target_improvements": {
                 "wns_improvement_percent": 40,
@@ -583,14 +554,15 @@ def create_asap7_extreme_demo_study(
         },
         author="Noodle2 Team",
         description=(
-            "Extreme broken design demo Study for ASAP7 PDK. Showcases Noodle 2's "
-            "ability to systematically fix an advanced-node design with severe timing "
-            "violations (WNS ~ -3000ps) and congestion issues (hot_ratio > 0.4) through "
-            "STA-first staging, ASAP7-specific workarounds, and multi-stage ECO "
-            "application. Demonstrates ASAP7 best practices: low utilization (0.55), "
-            "timing-priority staging, and explicit routing/pin constraints."
+            "Extreme broken design demo Study for ASAP7 PDK using Ibex RISC-V core. "
+            "Showcases Noodle 2's ability to systematically fix an advanced-node design "
+            "with severe timing violations (WNS = -972ps, TNS = -1.6M ps) and congestion "
+            "issues (hot_ratio = 0.45) through STA-first staging, ASAP7-specific "
+            "workarounds, and multi-stage ECO application. Demonstrates ASAP7 best "
+            "practices: low utilization (0.55), timing-priority staging, and explicit "
+            "routing/pin constraints."
         ),
-        tags=["demo", "asap7", "extreme", "sta-first", "advanced-node"],
+        tags=["demo", "asap7", "extreme", "sta-first", "advanced-node", "ibex"],
     )
 
     # Validate configuration before returning

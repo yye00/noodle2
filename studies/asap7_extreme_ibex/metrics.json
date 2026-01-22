@@ -1,0 +1,10 @@
+{
+  "design": "ibex_core",
+  "pdk": "asap7",
+  "execution_type": "real_sta",
+  "wns_ps": -1067,
+  "tns_ps": -1808386,
+  "hot_ratio": 0.55,
+  "clock_period_ns": 0.1,
+  "status": "timing_violation"
+}

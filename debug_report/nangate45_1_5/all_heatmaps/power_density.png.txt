@@ -1,2 +1,0 @@
-Placeholder for power_density heatmap visualization
-In production, this would be a PNG image.

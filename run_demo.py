@@ -5,14 +5,42 @@ Noodle 2 Demo Runner - Executes actual studies with real visualizations.
 This script runs ACTUAL study executions with real OpenROAD/OpenSTA trials,
 generating real heatmap visualizations. NO mocking, NO placeholders.
 
-Usage:
-    python run_demo.py nangate45  # Run Nangate45 extreme demo
-    python run_demo.py asap7      # Run ASAP7 extreme demo
-    python run_demo.py sky130     # Run Sky130 extreme demo
-    python run_demo.py all        # Run all three demos
+By default, demos run with Ray parallel execution and dashboard enabled.
 
-    # With Ray parallel execution and dashboard:
-    python run_demo.py nangate45 --use-ray
+Output Structure:
+    All outputs go to a unified directory structure:
+        output/<study_name>/
+        ├── summary.json           # Study summary
+        ├── eco_leaderboard.json   # ECO rankings
+        ├── lineage.dot            # Case graph
+        ├── before/                # Initial state visualizations
+        ├── after/                 # Final state visualizations
+        ├── comparison/            # Differential analysis
+        ├── stages/                # Per-stage summaries
+        └── trials/                # Raw trial artifacts (ODB, reports)
+
+Usage:
+    # Run by PDK name (uses built-in demo configurations)
+    python run_demo.py nangate45  # Run Nangate45 extreme demo (parallel + dashboard)
+    python run_demo.py asap7      # Run ASAP7 extreme demo (parallel + dashboard)
+    python run_demo.py sky130     # Run Sky130 extreme demo (parallel + dashboard)
+    python run_demo.py all        # Run all three demos (parallel + dashboard)
+
+    # Run from YAML configuration (recommended for custom studies)
+    python run_demo.py --config studies/nangate45_extreme.yaml
+    python run_demo.py --config studies/asap7_extreme.yaml
+
+    # Custom output directory:
+    python run_demo.py nangate45 --output-dir my_output
+
+    # Disable Ray (run sequentially):
+    python run_demo.py nangate45 --no-ray
+
+    # Parallel execution without dashboard:
+    python run_demo.py nangate45 --no-dashboard
+
+    # Custom dashboard port:
+    python run_demo.py nangate45 --ray-dashboard-port 8080
 """
 
 import argparse
@@ -29,6 +57,11 @@ from src.controller.demo_study import (
     create_sky130_extreme_demo_study,
 )
 from src.controller.executor import StudyExecutor, StudyResult
+from src.controller.yaml_config import load_study_from_yaml, get_execution_config, get_output_config
+from src.controller.study_visualizations import (
+    generate_study_visualizations,
+    copy_study_artifacts_to_output,
+)
 from src.visualization.heatmap_renderer import (
     render_all_heatmaps,
     render_diff_heatmap,
@@ -65,68 +98,94 @@ def print_header(demo_name: str) -> None:
 def run_demo(
     pdk: str,
     output_dir: Path,
-    artifacts_root: Path,
-    telemetry_root: Path,
     use_ray: bool = False,
+    study_config=None,
+    output_config: dict | None = None,
 ) -> tuple[bool, StudyResult | None, dict]:
     """
     Run actual demo study execution.
 
+    Uses unified output directory structure:
+        output/<study_name>/
+        ├── summary.json           # Study summary
+        ├── eco_leaderboard.json   # ECO rankings
+        ├── lineage.dot            # Case graph
+        ├── before/                # Initial state visualizations
+        ├── after/                 # Final state visualizations
+        ├── comparison/            # Differential analysis
+        ├── stages/                # Per-stage summaries
+        └── trials/                # Raw trial artifacts (ODB, reports)
+
     Args:
-        pdk: PDK name (nangate45, asap7, sky130)
-        output_dir: Output directory for demo artifacts
-        artifacts_root: Root for study artifacts
-        telemetry_root: Root for telemetry data
+        pdk: PDK name (nangate45, asap7, sky130) - only used if study_config is None
+        output_dir: Base output directory (e.g., "output")
         use_ray: Use Ray for parallel trial execution with dashboard
+        study_config: Pre-loaded StudyConfig (e.g., from YAML). If None, uses built-in demo.
+        output_config: Output configuration dict with visualization flags
 
     Returns:
         Tuple of (success, study_result, metrics)
     """
     start_time = time.time()
 
-    # Create study configuration based on PDK
-    print(f"{Colors.YELLOW}Creating {pdk} extreme demo study configuration...{Colors.NC}")
-
-    if pdk == "nangate45":
-        study_config = create_nangate45_extreme_demo_study()
-    elif pdk == "asap7":
-        study_config = create_asap7_extreme_demo_study()
-    elif pdk == "sky130":
-        study_config = create_sky130_extreme_demo_study()
+    # Use provided study_config or create from PDK
+    if study_config is not None:
+        print(f"{Colors.YELLOW}Using provided study configuration: {study_config.name}{Colors.NC}")
+        pdk = study_config.pdk.lower()
     else:
-        print(f"{Colors.RED}Unknown PDK: {pdk}{Colors.NC}")
-        return False, None, {}
+        # Create study configuration based on PDK
+        print(f"{Colors.YELLOW}Creating {pdk} extreme demo study configuration...{Colors.NC}")
 
-    # Create output directory structure
+        if pdk == "nangate45":
+            study_config = create_nangate45_extreme_demo_study()
+        elif pdk == "asap7":
+            study_config = create_asap7_extreme_demo_study()
+        elif pdk == "sky130":
+            study_config = create_sky130_extreme_demo_study()
+        else:
+            print(f"{Colors.RED}Unknown PDK: {pdk}{Colors.NC}")
+            return False, None, {}
+
+    # Default output config if not provided
+    if output_config is None:
+        output_config = {
+            "visualizations": True,
+            "heatmaps": True,
+            "lineage_graph": True,
+            "eco_leaderboard": True,
+            "keep_trial_artifacts": True,
+        }
+
+    # Create unified output directory structure
     print(f"{Colors.YELLOW}Setting up output directories...{Colors.NC}")
-    demo_output = output_dir / f"{pdk}_extreme_demo"
-    demo_output.mkdir(parents=True, exist_ok=True)
+    study_output = output_dir / study_config.name
+    study_output.mkdir(parents=True, exist_ok=True)
 
-    # Create subdirectories
-    (demo_output / "before" / "heatmaps").mkdir(parents=True, exist_ok=True)
-    (demo_output / "before" / "overlays").mkdir(parents=True, exist_ok=True)
-    (demo_output / "after" / "heatmaps").mkdir(parents=True, exist_ok=True)
-    (demo_output / "after" / "overlays").mkdir(parents=True, exist_ok=True)
-    (demo_output / "comparison").mkdir(parents=True, exist_ok=True)
-    (demo_output / "stages").mkdir(parents=True, exist_ok=True)
-    (demo_output / "diagnosis").mkdir(parents=True, exist_ok=True)
-    (demo_output / "eco_analysis").mkdir(parents=True, exist_ok=True)
+    # Create trials subdirectory for raw artifacts
+    trials_dir = study_output / "trials"
+    trials_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create telemetry directory inside study output
+    telemetry_dir = study_output / "telemetry"
+    telemetry_dir.mkdir(parents=True, exist_ok=True)
 
     # For Sky130, create audit trail directory (production feature)
     if pdk == "sky130":
-        (demo_output / "audit_trail").mkdir(parents=True, exist_ok=True)
+        (study_output / "audit_trail").mkdir(parents=True, exist_ok=True)
 
     # Create executor and run the actual study
+    # Note: artifacts_root points to trials/ subdirectory
     print(f"{Colors.GREEN}Executing actual study with real trials...{Colors.NC}")
     print(f"  Study name: {study_config.name}")
     print(f"  PDK: {study_config.pdk}")
     print(f"  Stages: {len(study_config.stages)}")
+    print(f"  Output: {study_output}")
     print()
 
     executor = StudyExecutor(
         config=study_config,
-        artifacts_root=str(artifacts_root),
-        telemetry_root=str(telemetry_root),
+        artifacts_root=str(trials_dir),
+        telemetry_root=str(telemetry_dir),
         skip_base_case_verification=False,  # Run real verification
         use_ray=use_ray,  # Parallel execution with Ray
     )
@@ -141,21 +200,21 @@ def run_demo(
     # Collect metrics from the study result
     metrics = collect_study_metrics(study_result, study_config)
 
-    # Generate visualizations from actual data
+    # Generate visualizations using the new unified module
     print(f"{Colors.YELLOW}Generating visualizations from actual data...{Colors.NC}")
-    generate_demo_visualizations(
+    generate_study_visualizations(
         study_result=study_result,
         study_config=study_config,
-        demo_output=demo_output,
-        artifacts_root=artifacts_root,
+        output_dir=study_output,
+        output_config=output_config,
     )
 
-    # Copy diagnosis reports
-    copy_diagnosis_reports(
+    # Copy study artifacts (leaderboard, lineage, etc.) from trials/ to top level
+    copy_study_artifacts_to_output(
         study_result=study_result,
         study_config=study_config,
-        demo_output=demo_output,
-        telemetry_root=telemetry_root,
+        artifacts_root=trials_dir,
+        output_dir=study_output,
     )
 
     # For Sky130, generate production-realistic features
@@ -164,22 +223,12 @@ def run_demo(
         generate_sky130_production_features(
             study_result=study_result,
             study_config=study_config,
-            demo_output=demo_output,
+            demo_output=study_output,
             metrics=metrics,
         )
 
-    # Generate summary report
-    duration = time.time() - start_time
-    generate_summary_report(
-        pdk=pdk,
-        study_result=study_result,
-        metrics=metrics,
-        demo_output=demo_output,
-        duration=duration,
-        study_config=study_config,
-    )
-
     # Print results
+    duration = time.time() - start_time
     print_demo_results(pdk, study_result, metrics, duration)
 
     return study_result.stages_completed > 0, study_result, metrics
@@ -1041,10 +1090,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
+    # Built-in demo configurations:
     python run_demo.py nangate45   # Run Nangate45 extreme demo
     python run_demo.py asap7       # Run ASAP7 extreme demo
     python run_demo.py sky130      # Run Sky130 extreme demo
     python run_demo.py all         # Run all three demos
+
+    # YAML configuration files (recommended for custom studies):
+    python run_demo.py --config studies/nangate45_extreme.yaml
+    python run_demo.py --config studies/asap7_extreme.yaml
+
+    # List available YAML configurations:
+    python run_demo.py --list-configs
 
 IMPORTANT: This runs ACTUAL OpenROAD/OpenSTA trials.
            NO mocking. NO placeholders. Real execution only.
@@ -1053,31 +1110,30 @@ IMPORTANT: This runs ACTUAL OpenROAD/OpenSTA trials.
 
     parser.add_argument(
         "pdk",
+        nargs="?",  # Optional when using --config
         choices=["nangate45", "asap7", "sky130", "all"],
-        help="PDK to run demo for (or 'all' for all three)",
+        help="PDK to run demo for (or 'all' for all three). Not needed if using --config.",
+    )
+    parser.add_argument(
+        "--config",
+        type=Path,
+        help="Path to YAML configuration file. Overrides pdk argument.",
+    )
+    parser.add_argument(
+        "--list-configs",
+        action="store_true",
+        help="List available YAML configuration files in studies/ directory",
     )
     parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("demo_output"),
-        help="Output directory for demo artifacts (default: demo_output)",
+        default=Path("output"),
+        help="Base output directory for all study outputs (default: output)",
     )
     parser.add_argument(
-        "--artifacts-root",
-        type=Path,
-        default=Path("artifacts"),
-        help="Root directory for study artifacts (default: artifacts)",
-    )
-    parser.add_argument(
-        "--telemetry-root",
-        type=Path,
-        default=Path("telemetry"),
-        help="Root directory for telemetry data (default: telemetry)",
-    )
-    parser.add_argument(
-        "--use-ray",
+        "--no-ray",
         action="store_true",
-        help="Use Ray for parallel trial execution with dashboard monitoring",
+        help="Disable Ray parallel execution (run sequentially instead)",
     )
     parser.add_argument(
         "--ray-dashboard-port",
@@ -1085,46 +1141,153 @@ IMPORTANT: This runs ACTUAL OpenROAD/OpenSTA trials.
         default=8265,
         help="Ray dashboard port (default: 8265)",
     )
+    parser.add_argument(
+        "--no-dashboard",
+        action="store_true",
+        help="Disable Ray dashboard (useful if dashboard build is unavailable)",
+    )
 
     args = parser.parse_args()
 
-    # Initialize Ray if requested
-    if args.use_ray:
+    # Handle --list-configs
+    if args.list_configs:
+        from src.controller.yaml_config import list_available_configs
+        print(f"{Colors.BLUE}Available YAML configurations:{Colors.NC}")
+        configs = list_available_configs()
+        if configs:
+            for cfg in configs:
+                print(f"  - {cfg}")
+        else:
+            print("  No YAML configuration files found in studies/")
+        sys.exit(0)
+
+    # Validate arguments
+    if args.config is None and args.pdk is None:
+        parser.error("Either pdk argument or --config is required")
+
+    # Determine Ray usage (enabled by default)
+    use_ray = not args.no_ray
+
+    # If using YAML config, check if it specifies Ray and output settings
+    output_config = None
+    if args.config:
+        try:
+            exec_config = get_execution_config(args.config)
+            if not args.no_ray:
+                use_ray = exec_config.get("use_ray", True)
+            # Update dashboard port from YAML if not overridden by CLI
+            if args.ray_dashboard_port == 8265:  # Default value
+                args.ray_dashboard_port = exec_config.get("ray_dashboard_port", 8265)
+
+            # Load output configuration from YAML
+            output_config = get_output_config(args.config)
+            # Override output directory from YAML if specified
+            if output_config.get("dir") and args.output_dir == Path("output"):
+                args.output_dir = Path(output_config["dir"])
+        except Exception as e:
+            print(f"{Colors.YELLOW}Warning: Could not read config from YAML: {e}{Colors.NC}")
+
+    # Initialize Ray for parallel execution (enabled by default)
+    if use_ray:
         import ray
-        print(f"{Colors.CYAN}Initializing Ray with dashboard...{Colors.NC}")
-        ray.init(
-            dashboard_host="0.0.0.0",
-            dashboard_port=args.ray_dashboard_port,
-            include_dashboard=True,
-        )
-        dashboard_url = f"http://localhost:{args.ray_dashboard_port}"
-        print(f"{Colors.GREEN}Ray Dashboard available at: {dashboard_url}{Colors.NC}")
-        print(f"{Colors.CYAN}Open the dashboard to monitor trial execution in real-time.{Colors.NC}")
+        print(f"{Colors.CYAN}Initializing Ray for parallel execution...{Colors.NC}")
+
+        # Enable dashboard by default unless --no-dashboard is specified
+        include_dashboard = not args.no_dashboard
+
+        try:
+            ray.init(
+                include_dashboard=include_dashboard,
+                dashboard_port=args.ray_dashboard_port if include_dashboard else None,
+            )
+            if include_dashboard:
+                print(f"{Colors.GREEN}Ray initialized with dashboard at http://localhost:{args.ray_dashboard_port}{Colors.NC}")
+            else:
+                print(f"{Colors.GREEN}Ray initialized for parallel trial execution (dashboard disabled).{Colors.NC}")
+        except Exception as e:
+            # Fall back to no dashboard if it fails
+            print(f"{Colors.YELLOW}Dashboard initialization failed: {e}{Colors.NC}")
+            print(f"{Colors.YELLOW}Falling back to Ray without dashboard...{Colors.NC}")
+            ray.init(include_dashboard=False)
+            print(f"{Colors.GREEN}Ray initialized for parallel trial execution.{Colors.NC}")
         print()
 
-    # Determine which PDKs to run
-    if args.pdk == "all":
-        pdks = ["nangate45", "asap7", "sky130"]
-    else:
-        pdks = [args.pdk]
-
-    # Run demos
+    # Run from YAML config or PDK name
     all_success = True
-    for pdk in pdks:
-        print_header(f"{pdk.upper()} Extreme -> Fixed")
-        success, result, metrics = run_demo(
-            pdk=pdk,
-            output_dir=args.output_dir,
-            artifacts_root=args.artifacts_root,
-            telemetry_root=args.telemetry_root,
-            use_ray=args.use_ray,
-        )
-        if not success:
-            all_success = False
-            print(f"{Colors.RED}Demo for {pdk} failed!{Colors.NC}")
+
+    if args.config:
+        # Load study from YAML configuration
+        print(f"{Colors.CYAN}Loading study configuration from: {args.config}{Colors.NC}")
+        try:
+            study_config = load_study_from_yaml(args.config)
+            print(f"{Colors.GREEN}Loaded study: {study_config.name}{Colors.NC}")
+            print(f"  PDK: {study_config.pdk}")
+            print(f"  Stages: {len(study_config.stages)}")
+            print(f"  Safety domain: {study_config.safety_domain.value}")
+            print()
+
+            pdk = study_config.pdk.lower()
+            print_header(f"{pdk.upper()} Study: {study_config.name}")
+            success, result, metrics = run_demo(
+                pdk=pdk,
+                output_dir=args.output_dir,
+                use_ray=use_ray,
+                study_config=study_config,
+                output_config=output_config,
+            )
+            if not success:
+                all_success = False
+                print(f"{Colors.RED}Study execution failed!{Colors.NC}")
+
+        except Exception as e:
+            print(f"{Colors.RED}Failed to load YAML configuration: {e}{Colors.NC}")
+            sys.exit(1)
+    else:
+        # Determine which PDKs to run
+        if args.pdk == "all":
+            pdks = ["nangate45", "asap7", "sky130"]
+        else:
+            pdks = [args.pdk]
+
+        # Map PDK names to their YAML config files
+        pdk_yaml_configs = {
+            "nangate45": "studies/nangate45_extreme.yaml",
+            "asap7": "studies/asap7_extreme.yaml",
+            "sky130": "studies/sky130_extreme.yaml",
+        }
+
+        # Run demos - prefer YAML configs for consistent stage counts
+        for pdk in pdks:
+            yaml_config = pdk_yaml_configs.get(pdk)
+            study_config = None
+            pdk_output_config = None
+
+            # Try to load from YAML for full 20-stage runs
+            if yaml_config and Path(yaml_config).exists():
+                try:
+                    print(f"{Colors.CYAN}Loading study configuration from: {yaml_config}{Colors.NC}")
+                    study_config = load_study_from_yaml(yaml_config)
+                    pdk_output_config = get_output_config(yaml_config)
+                    print(f"{Colors.GREEN}Loaded study: {study_config.name} ({len(study_config.stages)} stages){Colors.NC}")
+                except Exception as e:
+                    print(f"{Colors.YELLOW}Warning: Could not load YAML config: {e}{Colors.NC}")
+                    print(f"{Colors.YELLOW}Falling back to built-in demo configuration...{Colors.NC}")
+                    study_config = None
+
+            print_header(f"{pdk.upper()} Extreme -> Fixed")
+            success, result, metrics = run_demo(
+                pdk=pdk,
+                output_dir=args.output_dir,
+                use_ray=use_ray,
+                study_config=study_config,
+                output_config=pdk_output_config,
+            )
+            if not success:
+                all_success = False
+                print(f"{Colors.RED}Demo for {pdk} failed!{Colors.NC}")
 
     # Shutdown Ray if it was initialized
-    if args.use_ray:
+    if use_ray:
         import ray
         ray.shutdown()
         print(f"{Colors.CYAN}Ray shutdown complete.{Colors.NC}")

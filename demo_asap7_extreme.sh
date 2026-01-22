@@ -1,10 +1,9 @@
 #!/bin/bash
-# ASAP7 Extreme -> Fixed Demo
-# Runs ACTUAL Noodle 2 study execution with real OpenROAD trials
+# ASAP7 Extreme Demo
+# Runs Noodle 2 study using YAML configuration
 #
-# IMPORTANT: This script executes ACTUAL study runs.
-#            NO mocking. NO placeholders. Real execution only.
-#            All visualizations are generated from real OpenROAD data.
+# Configuration: studies/asap7_extreme.yaml
+# See the YAML file for all study parameters (stages, ECOs, thresholds)
 
 set -e  # Exit on error
 set -u  # Exit on undefined variable
@@ -21,17 +20,16 @@ echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Noodle 2 - ASAP7 Extreme Demo${NC}"
 echo -e "${BLUE}========================================${NC}"
 echo ""
-echo -e "${CYAN}IMPORTANT: This runs ACTUAL study execution.${NC}"
-echo -e "${CYAN}NO mocking. NO placeholders. Real OpenROAD trials.${NC}"
+echo -e "${CYAN}Configuration: studies/asap7_extreme.yaml${NC}"
+echo -e "${CYAN}See YAML for study parameters (stages, ECOs, metrics)${NC}"
 echo ""
-echo "This demo showcases fixing an extremely broken ASAP7 design:"
-echo "  Initial: WNS ~ -1500ps, hot_ratio > 0.25"
-echo "  Target:  WNS improvement > 40%, hot_ratio < 0.12"
+echo "This demo runs actual OpenROAD trials to fix timing violations"
+echo "on an ASAP7 Ibex RISC-V core design (7nm advanced node)."
 echo ""
-echo "ASAP7-specific features:"
-echo "  - STA-first staging strategy"
+echo "ASAP7 characteristics:"
+echo "  - High routing pressure"
+echo "  - Timing-driven optimization focus"
 echo "  - Automatic ASAP7 workarounds applied"
-echo "  - Advanced-node timing challenges"
 echo ""
 
 # Check for Python environment
@@ -46,21 +44,18 @@ cd "$SCRIPT_DIR"
 
 # Activate virtual environment if available
 if [ -f ".venv/bin/activate" ]; then
-    echo -e "${YELLOW}Activating virtual environment...${NC}"
+    echo -e "${YELLOW}Activating virtual environment (.venv)...${NC}"
     source .venv/bin/activate
 elif [ -f "venv/bin/activate" ]; then
-    echo -e "${YELLOW}Activating virtual environment...${NC}"
+    echo -e "${YELLOW}Activating virtual environment (venv)...${NC}"
     source venv/bin/activate
 fi
 
-# Run the actual demo
-echo -e "${GREEN}Starting actual study execution...${NC}"
+# Run using YAML configuration
+echo -e "${GREEN}Starting study execution...${NC}"
 echo ""
 
-python3 run_demo.py asap7 \
-    --output-dir demo_output \
-    --artifacts-root artifacts \
-    --telemetry-root telemetry
+python3 run_demo.py --config studies/asap7_extreme.yaml --output-dir output
 
 EXIT_CODE=$?
 
@@ -70,18 +65,13 @@ if [ $EXIT_CODE -eq 0 ]; then
     echo -e "${GREEN}Demo completed successfully!${NC}"
     echo -e "${GREEN}========================================${NC}"
     echo ""
-    echo "Output directory: demo_output/asap7_extreme_demo"
-    echo "Summary: demo_output/asap7_extreme_demo/summary.json"
+    echo "Outputs: output/asap7_extreme_demo/"
     echo ""
-    echo "Artifacts generated (from REAL execution):"
-    echo "  - before/ directory with initial state metrics and visualizations"
-    echo "  - after/ directory with final improved metrics"
-    echo "  - comparison/ directory with differential visualizations"
-    echo "  - stages/ directory with per-stage progression"
-    echo "  - diagnosis/ directory with auto-diagnosis reports"
+    echo "Key files:"
+    echo "  summary.json        - Study results and metrics"
+    echo "  eco_leaderboard.json - ECO effectiveness rankings"
+    echo "  trials/             - Raw trial artifacts"
     echo ""
-    echo -e "${CYAN}All visualizations are from actual OpenROAD data.${NC}"
-    echo -e "${CYAN}ASAP7 workarounds were automatically applied.${NC}"
 else
     echo ""
     echo -e "${RED}Demo failed with exit code: $EXIT_CODE${NC}"

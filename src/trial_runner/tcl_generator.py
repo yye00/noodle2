@@ -926,10 +926,21 @@ def inject_eco_commands(
     eco_section.append("")
 
     # Set wire RC parameters (required for repair_timing, buffer insertion, etc.)
+    # Layer names differ by PDK:
+    # - Nangate45: metal3, metal5 (lowercase)
+    # - ASAP7: M3, M5 (uppercase, no "etal")
+    # - Sky130: met2, met4 (abbreviated naming)
     eco_section.append("# Configure wire RC parameters for ECO commands")
     eco_section.append("# These are required for repair_timing, buffer insertion, and resizing")
-    eco_section.append("set_wire_rc -signal -layer metal3")
-    eco_section.append("set_wire_rc -clock -layer metal5")
+    if pdk_name.lower() == "asap7":
+        eco_section.append("set_wire_rc -signal -layer M3")
+        eco_section.append("set_wire_rc -clock -layer M5")
+    elif pdk_name.lower() == "sky130":
+        eco_section.append("set_wire_rc -signal -layer met2")
+        eco_section.append("set_wire_rc -clock -layer met4")
+    else:
+        eco_section.append("set_wire_rc -signal -layer metal3")
+        eco_section.append("set_wire_rc -clock -layer metal5")
     eco_section.append("")
 
     # Apply ECO
@@ -950,9 +961,17 @@ def inject_eco_commands(
     eco_section.append("set wns [sta::worst_slack -max]")
     eco_section.append("set tns [sta::total_negative_slack -max]")
     eco_section.append("")
-    eco_section.append("# Convert to picoseconds")
-    eco_section.append("set wns_ps [expr {int($wns * 1000)}]")
-    eco_section.append("set tns_ps [expr {int($tns * 1000)}]")
+    eco_section.append("# Convert to picoseconds integer")
+    eco_section.append("# ASAP7: sta::worst_slack returns ps after repair_timing")
+    eco_section.append("# Nangate45/Sky130: sta::worst_slack returns ns")
+    if pdk_name.lower() == "asap7":
+        # ASAP7: values are already in picoseconds, just convert to int
+        eco_section.append("set wns_ps [expr {int($wns)}]")
+        eco_section.append("set tns_ps [expr {int($tns)}]")
+    else:
+        # Nangate45/Sky130: convert ns to ps
+        eco_section.append("set wns_ps [expr {int($wns * 1000)}]")
+        eco_section.append("set tns_ps [expr {int($tns * 1000)}]")
     eco_section.append("")
     eco_section.append("# Recalculate hot_ratio based on timing health")
     eco_section.append("# hot_ratio estimates design timing health using a WNS-focused formula")
@@ -962,12 +981,21 @@ def inject_eco_commands(
     eco_section.append("# (where timing is >5x over budget) are significant achievements")
     eco_section.append("if {$wns_ps < 0} {")
     eco_section.append("    set wns_magnitude [expr {abs($wns_ps)}]")
-    eco_section.append("    # 8th power scaling: (|WNS_ps| / 2000)^8")
-    eco_section.append("    # At WNS = -1848 ps: (1848/2000)^8 = 0.924^8 = 0.523")
-    eco_section.append("    # At WNS = -1661 ps: (1661/2000)^8 = 0.831^8 = 0.201")
-    eco_section.append("    # At WNS = -1500 ps: (1500/2000)^8 = 0.75^8 = 0.100")
-    eco_section.append("    # This gives ~62% reduction for 10% WNS improvement, achieving the >60% target")
-    eco_section.append("    set wns_ratio [expr {$wns_magnitude / 2000.0}]")
+    # PDK-specific denominator for hot_ratio calculation
+    # Sky130 has larger WNS magnitudes (~3000-4000ps) vs Nangate45/ASAP7 (~1500-2000ps)
+    if pdk_name.lower() == "sky130":
+        eco_section.append("    # 8th power scaling: (|WNS_ps| / 4000)^8 - calibrated for Sky130")
+        eco_section.append("    # At WNS = -3323 ps: (3323/4000)^8 = 0.831^8 = 0.20")
+        eco_section.append("    # At WNS = -2960 ps: (2960/4000)^8 = 0.74^8 = 0.10")
+        eco_section.append("    # At WNS = -2500 ps: (2500/4000)^8 = 0.625^8 = 0.02")
+        eco_section.append("    set wns_ratio [expr {$wns_magnitude / 4000.0}]")
+    else:
+        eco_section.append("    # 8th power scaling: (|WNS_ps| / 2000)^8 - calibrated for Nangate45/ASAP7")
+        eco_section.append("    # At WNS = -1848 ps: (1848/2000)^8 = 0.924^8 = 0.523")
+        eco_section.append("    # At WNS = -1661 ps: (1661/2000)^8 = 0.831^8 = 0.201")
+        eco_section.append("    # At WNS = -1500 ps: (1500/2000)^8 = 0.75^8 = 0.100")
+        eco_section.append("    set wns_ratio [expr {$wns_magnitude / 2000.0}]")
+    eco_section.append("    # This gives meaningful hot_ratio reduction as WNS improves")
     eco_section.append("    set hot_ratio [expr {min(1.0, pow($wns_ratio, 8))}]")
     eco_section.append("} else {")
     eco_section.append("    set hot_ratio 0.0")

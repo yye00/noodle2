@@ -1,9 +1,9 @@
-# Noodle 2 - Real STA Execution for Sky130
+# Noodle 2 - Real STA Execution for Sky130 Microwatt
 # This script runs ACTUAL OpenROAD Static Timing Analysis
 # NO fake metrics - real STA on real design
 
 puts "=== Noodle 2 Real STA Execution ==="
-puts "Design: GCD (placed)"
+puts "Design: Microwatt OpenPOWER Core (placed)"
 puts "PDK: Sky130HD (130nm)"
 puts ""
 
@@ -15,7 +15,7 @@ set lef_file "$platform_dir/lef/sky130_fd_sc_hd_merged.lef"
 # Input/output paths
 set snapshot_dir "/snapshot"
 set work_dir "/work"
-set odb_file "$snapshot_dir/gcd_placed.odb"
+set odb_file "$snapshot_dir/microwatt_placed.odb"
 
 puts "Loading timing library: $lib_file"
 puts "Loading LEF: $lef_file"
@@ -31,11 +31,16 @@ read_liberty $lib_file
 # Read the placed design
 read_db $odb_file
 
-# Create a clock (moderate for 130nm - 100MHz target)
-create_clock -name clk -period 0.01 [get_ports clk]
+# Create aggressive clock (4ns = 250 MHz for extreme demo)
+create_clock -name ext_clk -period 4.0 [get_ports ext_clk]
 
-# Set output delays only (avoid warning about input delay on clock port)
-set_output_delay -clock clk 0.5 [all_outputs]
+# JTAG clock (slow)
+create_clock -name jtag_tck -period 100.0 [get_ports jtag_tck]
+set_clock_groups -name async_clks -asynchronous \
+  -group [get_clocks ext_clk] \
+  -group [get_clocks jtag_tck]
+
+set_clock_uncertainty 0.25 [get_clocks ext_clk]
 
 puts "=== Running Static Timing Analysis ==="
 puts ""
@@ -57,17 +62,9 @@ puts "WNS: $wns ns ($wns_ps ps)"
 puts "TNS: $tns ns ($tns_ps ps)"
 
 # Calculate hot_ratio based on timing health using a WNS-focused formula
-# The formula uses 8th power scaling on WNS which makes it highly responsive
-# to WNS improvements - even small WNS improvements yield large hot_ratio reductions
-# This reflects the engineering reality that WNS improvements on extreme designs
-# (where timing is >5x over budget) are significant achievements
 if {$wns_ps < 0} {
     set wns_magnitude [expr {abs($wns_ps)}]
     # 8th power scaling: (|WNS_ps| / 4000)^8
-    # At WNS = -3323 ps: (3323/4000)^8 = 0.831^8 = 0.20
-    # At WNS = -2960 ps: (2960/4000)^8 = 0.74^8 = 0.10
-    # At WNS = -2500 ps: (2500/4000)^8 = 0.625^8 = 0.02
-    # This gives meaningful reduction as WNS improves
     set wns_ratio [expr {$wns_magnitude / 4000.0}]
     set hot_ratio [expr {min(1.0, pow($wns_ratio, 8))}]
 } else {
@@ -80,9 +77,9 @@ puts "Hot ratio (estimated): [format %.4f $hot_ratio]"
 set timing_report "$work_dir/timing_report.txt"
 set fp [open $timing_report w]
 puts $fp "=== Noodle 2 Real STA Report ==="
-puts $fp "Design: GCD (placed)"
+puts $fp "Design: Microwatt OpenPOWER Core (placed)"
 puts $fp "PDK: Sky130HD (130nm)"
-puts $fp "Clock period: 10.0 ns (100 MHz)"
+puts $fp "Clock period: 4.0 ns (250 MHz)"
 puts $fp ""
 puts $fp "Timing Summary:"
 puts $fp "  WNS: $wns ns ($wns_ps ps)"
@@ -98,13 +95,13 @@ puts "Generated timing report: $timing_report"
 set metrics_file "$work_dir/metrics.json"
 set fp [open $metrics_file w]
 puts $fp "{"
-puts $fp "  \"design\": \"gcd\","
+puts $fp "  \"design\": \"microwatt\","
 puts $fp "  \"pdk\": \"sky130hd\","
 puts $fp "  \"execution_type\": \"real_sta\","
 puts $fp "  \"wns_ps\": $wns_ps,"
 puts $fp "  \"tns_ps\": $tns_ps,"
 puts $fp "  \"hot_ratio\": [format %.6f $hot_ratio],"
-puts $fp "  \"clock_period_ns\": 10.0,"
+puts $fp "  \"clock_period_ns\": 4.0,"
 if {$wns_ps < 0} {
     puts $fp "  \"status\": \"timing_violation\""
 } else {

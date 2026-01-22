@@ -16,6 +16,31 @@ from typing import Any, Callable
 from .types import ECOClass
 
 
+def get_pdk_layer_names(pdk: str = "nangate45") -> tuple[str, str]:
+    """Get PDK-specific layer names for wire RC settings.
+
+    Different PDKs use different layer naming conventions:
+    - Nangate45: metal3, metal5 (lowercase)
+    - ASAP7: M3, M5 (uppercase, no "etal")
+    - Sky130: met2, met4 (abbreviated naming)
+
+    Args:
+        pdk: PDK name (nangate45, asap7, sky130)
+
+    Returns:
+        Tuple of (signal_layer, clock_layer) names
+    """
+    pdk_lower = pdk.lower()
+    if pdk_lower == "asap7":
+        return ("M3", "M5")
+    elif pdk_lower == "sky130":
+        # Sky130 uses abbreviated layer names: li1, met1, met2, met3, met4, met5
+        return ("met2", "met4")
+    else:
+        # Nangate45 and others use metal3/metal5
+        return ("metal3", "metal5")
+
+
 class ECOPrior(str, Enum):
     """Prior confidence level for ECO effectiveness based on historical evidence."""
 
@@ -496,15 +521,17 @@ class BufferInsertionECO(ECO):
         """Generate Tcl script for buffer insertion."""
         max_cap = self.metadata.parameters["max_capacitance"]
         buffer_cell = self.metadata.parameters["buffer_cell"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Buffer Insertion ECO
 # TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
 # For extreme violations, repair_design's DRV fixes often make timing worse
 # This approach prioritizes timing recovery over DRV compliance
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
@@ -632,6 +659,8 @@ class CellResizeECO(ECO):
         """Generate Tcl script for cell resizing."""
         size_mult = self.metadata.parameters["size_multiplier"]
         max_paths = self.metadata.parameters["max_paths"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Cell Resize ECO
 # TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
@@ -639,9 +668,9 @@ class CellResizeECO(ECO):
 # Max paths to repair: {max_paths}
 # Strategy optimized for extreme timing violations
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
@@ -714,15 +743,17 @@ class CellSwapECO(ECO):
     def generate_tcl(self, **kwargs: Any) -> str:
         """Generate Tcl script for cell swapping."""
         path_count = self.metadata.parameters["path_count"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Cell Swap ECO
 # TIMING-FOCUSED strategy: Skip repair_design to avoid adding buffer delays
 # Number of paths to analyze: {path_count}
 # Strategy optimized for extreme timing violations
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
@@ -791,15 +822,17 @@ class GateCloningECO(ECO):
     def generate_tcl(self, **kwargs: Any) -> str:
         """Generate Tcl script for gate cloning."""
         max_fanout = self.metadata.parameters["max_fanout"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Gate Cloning ECO
 # TIMING-FOCUSED strategy: Clone high-fanout gates and repair timing
 # Max fanout threshold: {max_fanout}
 # Strategy optimized for extreme timing violations
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Estimate parasitics based on current placement
 estimate_parasitics -placement
@@ -884,15 +917,17 @@ class TimingDrivenPlacementECO(ECO):
         """Generate Tcl script for timing-driven placement."""
         density = self.metadata.parameters["target_density"]
         keep_overflow = self.metadata.parameters["keep_overflow"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Timing-Driven Placement ECO
 # Re-optimize placement with timing awareness
 # This is an aggressive ECO that re-runs global placement
 # Intended for extreme timing violations (>3x over budget)
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Remove existing buffers to allow fresh placement optimization
 remove_buffers
@@ -999,6 +1034,8 @@ class IterativeTimingDrivenECO(ECO):
         keep_overflow = self.metadata.parameters["keep_overflow"]
         max_iterations = self.metadata.parameters["max_iterations"]
         convergence_threshold = self.metadata.parameters["convergence_threshold"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
 
         tcl_script = f"""# Iterative Timing-Driven ECO
 # Ultra-aggressive approach for extreme timing violations (>5x over budget)
@@ -1009,9 +1046,9 @@ puts "Starting Iterative Timing-Driven ECO"
 puts "  Max iterations: {max_iterations}"
 puts "  Convergence threshold: {convergence_threshold * 100}%"
 
-# Set wire RC for accurate parasitic estimation
-set_wire_rc -signal -layer metal3
-set_wire_rc -clock -layer metal5
+# Set wire RC for accurate parasitic estimation (PDK-aware layers)
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
 
 # Phase 1: Timing-driven placement re-optimization
 puts "Phase 1: Timing-driven placement re-optimization"
@@ -1296,6 +1333,940 @@ puts "This line should not execute"
         return error_type in ["invalid_command", "missing_file", "syntax_error"]
 
 
+# ============================================================================
+# Additional ECO Types Based on OpenROAD Resizer Capabilities
+# ============================================================================
+
+
+class HoldRepairECO(ECO):
+    """ECO focused on fixing hold timing violations.
+
+    Uses repair_timing -hold with configurable margins and buffer limits.
+    Hold violations occur when data arrives too quickly at flip-flops.
+    """
+
+    def __init__(
+        self,
+        hold_margin: float = 0.0,
+        max_buffer_percent: int = 20,
+        allow_setup_violations: bool = False,
+    ) -> None:
+        """Initialize hold repair ECO.
+
+        Args:
+            hold_margin: Additional hold margin in ns (default: 0.0)
+            max_buffer_percent: Max buffers as % of instances (default: 20)
+            allow_setup_violations: Allow setup violations while fixing hold
+        """
+        metadata = ECOMetadata(
+            name="hold_repair",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Fix hold timing violations by inserting delay buffers",
+            parameters={
+                "hold_margin": hold_margin,
+                "max_buffer_percent": max_buffer_percent,
+                "allow_setup_violations": allow_setup_violations,
+            },
+            version="1.0",
+            tags=["timing_optimization", "hold_fixing"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for hold repair."""
+        hold_margin = self.metadata.parameters["hold_margin"]
+        max_buffer_percent = self.metadata.parameters["max_buffer_percent"]
+        allow_setup = self.metadata.parameters["allow_setup_violations"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        allow_setup_flag = "-allow_setup_violations" if allow_setup else ""
+
+        tcl_script = f"""# Hold Repair ECO
+# Fix hold timing violations by inserting delay buffers
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Repair hold violations
+# -hold_margin {hold_margin}: Additional margin for hold checks
+# -max_buffer_percent {max_buffer_percent}: Limit buffer insertion
+repair_timing -hold \\
+    -hold_margin {hold_margin} \\
+    -max_buffer_percent {max_buffer_percent} \\
+    {allow_setup_flag}
+
+puts "Hold repair ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate hold repair parameters."""
+        hold_margin = self.metadata.parameters.get("hold_margin", 0.0)
+        max_buffer = self.metadata.parameters.get("max_buffer_percent", 20)
+        return hold_margin >= 0 and 0 <= max_buffer <= 100
+
+
+class PowerRecoveryECO(ECO):
+    """ECO that recovers power on paths with positive timing slack.
+
+    Uses repair_timing -recover_power to downsize cells on non-critical paths,
+    reducing dynamic and leakage power while maintaining timing closure.
+    """
+
+    def __init__(
+        self,
+        recover_percent: int = 50,
+        slack_margin: float = 0.1,
+    ) -> None:
+        """Initialize power recovery ECO.
+
+        Args:
+            recover_percent: Percentage of positive-slack paths to optimize (0-100)
+            slack_margin: Minimum slack margin to maintain in ns
+        """
+        metadata = ECOMetadata(
+            name="power_recovery",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Recover power by downsizing cells on non-critical paths",
+            parameters={
+                "recover_percent": recover_percent,
+                "slack_margin": slack_margin,
+            },
+            version="1.0",
+            tags=["power_optimization", "cell_sizing"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for power recovery."""
+        recover_percent = self.metadata.parameters["recover_percent"]
+        slack_margin = self.metadata.parameters["slack_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Power Recovery ECO
+# Downsize cells on non-critical paths to save power
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Recover power on paths with positive slack
+# -recover_power {recover_percent}: Percentage of positive-slack paths to optimize
+# -slack_margin {slack_margin}: Minimum slack to maintain
+repair_timing -setup \\
+    -recover_power {recover_percent} \\
+    -slack_margin {slack_margin}
+
+puts "Power recovery ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate power recovery parameters."""
+        recover = self.metadata.parameters.get("recover_percent", 50)
+        margin = self.metadata.parameters.get("slack_margin", 0.1)
+        return 0 <= recover <= 100 and margin >= 0
+
+
+class RepairDesignECO(ECO):
+    """ECO that fixes design rule violations (DRVs).
+
+    Uses repair_design to fix max slew, max capacitance, and max fanout
+    violations. These DRV fixes often improve timing as a side effect.
+    """
+
+    def __init__(
+        self,
+        max_wire_length: int = 0,
+        slew_margin: int = 20,
+        cap_margin: int = 20,
+    ) -> None:
+        """Initialize repair design ECO.
+
+        Args:
+            max_wire_length: Max wire length in microns (0 = use default)
+            slew_margin: Slew violation margin percentage (0-100)
+            cap_margin: Capacitance violation margin percentage (0-100)
+        """
+        metadata = ECOMetadata(
+            name="repair_design",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Fix design rule violations (slew, capacitance, fanout)",
+            parameters={
+                "max_wire_length": max_wire_length,
+                "slew_margin": slew_margin,
+                "cap_margin": cap_margin,
+            },
+            version="1.0",
+            tags=["drv_fixing", "design_cleanup"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for design repair."""
+        max_wire = self.metadata.parameters["max_wire_length"]
+        slew_margin = self.metadata.parameters["slew_margin"]
+        cap_margin = self.metadata.parameters["cap_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        wire_length_opt = f"-max_wire_length {max_wire}" if max_wire > 0 else ""
+
+        tcl_script = f"""# Repair Design ECO
+# Fix design rule violations (slew, capacitance, fanout)
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Repair design rule violations
+# -slew_margin {slew_margin}: Margin for slew violations
+# -cap_margin {cap_margin}: Margin for capacitance violations
+repair_design \\
+    -slew_margin {slew_margin} \\
+    -cap_margin {cap_margin} \\
+    {wire_length_opt}
+
+# Re-estimate after repairs
+estimate_parasitics -placement
+
+puts "Repair design ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate repair design parameters."""
+        slew = self.metadata.parameters.get("slew_margin", 20)
+        cap = self.metadata.parameters.get("cap_margin", 20)
+        wire = self.metadata.parameters.get("max_wire_length", 0)
+        return 0 <= slew <= 100 and 0 <= cap <= 100 and wire >= 0
+
+
+class AggressiveTimingECO(ECO):
+    """ECO with aggressive timing repair using all available transforms.
+
+    Enables all optimization transforms (pin swap, gate cloning, buffering)
+    with multiple passes and high TNS repair percentage for maximum improvement.
+    """
+
+    def __init__(
+        self,
+        max_passes: int = 10,
+        tns_repair_percent: int = 100,
+        setup_margin: float = 0.1,
+    ) -> None:
+        """Initialize aggressive timing ECO.
+
+        Args:
+            max_passes: Maximum optimization passes (default: 10)
+            tns_repair_percent: Percentage of TNS endpoints to repair (0-100)
+            setup_margin: Additional setup margin in ns
+        """
+        metadata = ECOMetadata(
+            name="aggressive_timing",
+            eco_class=ECOClass.ROUTING_AFFECTING,
+            description="Aggressive timing repair with all transforms enabled",
+            parameters={
+                "max_passes": max_passes,
+                "tns_repair_percent": tns_repair_percent,
+                "setup_margin": setup_margin,
+            },
+            version="1.0",
+            tags=["timing_optimization", "aggressive"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for aggressive timing repair."""
+        max_passes = self.metadata.parameters["max_passes"]
+        tns_percent = self.metadata.parameters["tns_repair_percent"]
+        setup_margin = self.metadata.parameters["setup_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Aggressive Timing ECO
+# Maximum timing optimization with all transforms enabled
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Aggressive timing repair - all transforms enabled
+# -max_passes {max_passes}: Allow multiple optimization iterations
+# -repair_tns {tns_percent}: Repair this percentage of violating endpoints
+# -setup_margin {setup_margin}: Additional margin for setup checks
+repair_timing -setup \\
+    -max_passes {max_passes} \\
+    -repair_tns {tns_percent} \\
+    -setup_margin {setup_margin} \\
+    -verbose
+
+# Re-estimate after aggressive repair
+estimate_parasitics -placement
+
+# Second pass for any remaining violations
+repair_timing -setup \\
+    -setup_margin 0.0 \\
+    -max_passes 3
+
+puts "Aggressive timing ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate aggressive timing parameters."""
+        passes = self.metadata.parameters.get("max_passes", 10)
+        tns = self.metadata.parameters.get("tns_repair_percent", 100)
+        margin = self.metadata.parameters.get("setup_margin", 0.1)
+        return passes > 0 and 0 <= tns <= 100 and margin >= 0
+
+
+class BufferRemovalECO(ECO):
+    """ECO that removes unnecessary buffers inserted during synthesis.
+
+    Uses remove_buffers to eliminate synthesis-inserted buffers that may
+    no longer be needed after placement. Can improve timing by reducing
+    buffer chain delays.
+    """
+
+    def __init__(self) -> None:
+        """Initialize buffer removal ECO."""
+        metadata = ECOMetadata(
+            name="buffer_removal",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Remove unnecessary synthesis buffers to reduce delay",
+            parameters={},
+            version="1.0",
+            tags=["optimization", "buffer_cleanup"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for buffer removal."""
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Buffer Removal ECO
+# Remove unnecessary synthesis-inserted buffers
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics before removal
+estimate_parasitics -placement
+
+# Remove synthesis buffers (preserves dont-touch and fixed cells)
+remove_buffers
+
+# Re-estimate parasitics after buffer removal
+estimate_parasitics -placement
+
+# Light timing repair to fix any issues from buffer removal
+repair_timing -setup -setup_margin 0.0 -max_passes 2
+
+puts "Buffer removal ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Buffer removal has no parameters."""
+        return True
+
+
+class PinSwapECO(ECO):
+    """ECO focused on pin swapping for timing optimization.
+
+    Pin swapping reorders inputs on commutative gates (AND, OR, XOR, MUX)
+    to reduce critical path delay by placing late-arriving signals on
+    faster pin-to-output paths.
+    """
+
+    def __init__(
+        self,
+        setup_margin: float = 0.05,
+        max_passes: int = 5,
+    ) -> None:
+        """Initialize pin swap ECO.
+
+        Args:
+            setup_margin: Setup margin for timing checks in ns
+            max_passes: Maximum optimization passes
+        """
+        metadata = ECOMetadata(
+            name="pin_swap",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Optimize timing by swapping pins on commutative gates",
+            parameters={
+                "setup_margin": setup_margin,
+                "max_passes": max_passes,
+            },
+            version="1.0",
+            tags=["timing_optimization", "pin_swap"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for pin swap optimization."""
+        setup_margin = self.metadata.parameters["setup_margin"]
+        max_passes = self.metadata.parameters["max_passes"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Pin Swap ECO
+# Optimize timing by swapping pins on commutative gates
+
+# Set wire RC for accurate parasitic estimation
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Timing repair with focus on pin swapping
+# Disable other transforms to isolate pin swap effect
+# Note: pin_swap is enabled by default in repair_timing
+repair_timing -setup \\
+    -setup_margin {setup_margin} \\
+    -max_passes {max_passes} \\
+    -skip_gate_cloning \\
+    -skip_buffering \\
+    -skip_buffer_removal
+
+puts "Pin swap ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate pin swap parameters."""
+        margin = self.metadata.parameters.get("setup_margin", 0.05)
+        passes = self.metadata.parameters.get("max_passes", 5)
+        return margin >= 0 and passes > 0
+
+
+class TieFanoutRepairECO(ECO):
+    """ECO that repairs tie high/low cell fanout violations.
+
+    Connects each tie high/low load to a dedicated copy of the tie cell,
+    preventing fanout violations on tie cells.
+    """
+
+    def __init__(
+        self,
+        separation: float = 0.0,
+        max_fanout: int = 10,
+    ) -> None:
+        """Initialize tie fanout repair ECO.
+
+        Args:
+            separation: Distance from tie cell to load (microns)
+            max_fanout: Maximum fanout per tie cell
+        """
+        metadata = ECOMetadata(
+            name="tie_fanout_repair",
+            eco_class=ECOClass.PLACEMENT_LOCAL,
+            description="Repair tie high/low cell fanout violations",
+            parameters={
+                "separation": separation,
+                "max_fanout": max_fanout,
+            },
+            version="1.0",
+            tags=["drv_fixing", "tie_cells"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for tie fanout repair."""
+        separation = self.metadata.parameters["separation"]
+        max_fanout = self.metadata.parameters["max_fanout"]
+        pdk = kwargs.get("pdk", "nangate45").lower()
+
+        # PDK-specific tie cell names
+        if pdk == "asap7":
+            tie_high = "TIEHIx1_ASAP7_75t_R"
+            tie_low = "TIELOx1_ASAP7_75t_R"
+        elif pdk == "sky130":
+            tie_high = "sky130_fd_sc_hd__conb_1"
+            tie_low = "sky130_fd_sc_hd__conb_1"
+        else:  # nangate45
+            tie_high = "LOGIC1_X1"
+            tie_low = "LOGIC0_X1"
+
+        tcl_script = f"""# Tie Fanout Repair ECO
+# Connect tie high/low loads to dedicated tie cells
+
+# Repair tie high fanout
+catch {{
+    repair_tie_fanout -separation {separation} -max_fanout {max_fanout} {tie_high}/Z
+}}
+
+# Repair tie low fanout
+catch {{
+    repair_tie_fanout -separation {separation} -max_fanout {max_fanout} {tie_low}/Z
+}}
+
+puts "Tie fanout repair ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate tie fanout repair parameters."""
+        sep = self.metadata.parameters.get("separation", 0.0)
+        fanout = self.metadata.parameters.get("max_fanout", 10)
+        return sep >= 0 and fanout > 0
+
+
+class ClockNetRepairECO(ECO):
+    """ECO that repairs clock network issues.
+
+    Buffers the wire from clock input pin to clock root buffer and
+    splits multi-fanout clock inverters.
+    """
+
+    def __init__(
+        self,
+        max_wire_length: int = 100,
+        repair_inverters: bool = True,
+    ) -> None:
+        """Initialize clock net repair ECO.
+
+        Args:
+            max_wire_length: Maximum wire length before buffering (microns)
+            repair_inverters: Also repair clock inverter fanout
+        """
+        metadata = ECOMetadata(
+            name="clock_net_repair",
+            eco_class=ECOClass.ROUTING_AFFECTING,
+            description="Repair clock network buffering and inverter fanout",
+            parameters={
+                "max_wire_length": max_wire_length,
+                "repair_inverters": repair_inverters,
+            },
+            version="1.0",
+            tags=["clock_optimization", "cts"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for clock net repair."""
+        max_wire = self.metadata.parameters["max_wire_length"]
+        repair_inv = self.metadata.parameters["repair_inverters"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        inverter_cmd = "repair_clock_inverters" if repair_inv else "# Skipping inverter repair"
+
+        tcl_script = f"""# Clock Net Repair ECO
+# Buffer clock nets and repair inverter fanout
+
+# Set wire RC for clock layer
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Repair clock inverters (split multi-fanout inverters)
+{inverter_cmd}
+
+# Buffer long clock wires
+repair_clock_nets -max_wire_length {max_wire}
+
+puts "Clock net repair ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate clock net repair parameters."""
+        wire = self.metadata.parameters.get("max_wire_length", 100)
+        return wire > 0
+
+
+class DeadLogicEliminationECO(ECO):
+    """ECO that removes dead/unused logic from the design.
+
+    Eliminates standard cell instances that can be removed without
+    affecting functionality, reducing area and potentially improving timing.
+    """
+
+    def __init__(self) -> None:
+        """Initialize dead logic elimination ECO."""
+        metadata = ECOMetadata(
+            name="dead_logic_elimination",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Remove dead/unused logic to reduce area",
+            parameters={},
+            version="1.0",
+            tags=["optimization", "area_reduction"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for dead logic elimination."""
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Dead Logic Elimination ECO
+# Remove unused logic cells
+
+# Set wire RC
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics before
+estimate_parasitics -placement
+
+# Eliminate dead logic
+eliminate_dead_logic -verbose
+
+# Re-estimate parasitics after
+estimate_parasitics -placement
+
+puts "Dead logic elimination ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Dead logic elimination has no parameters."""
+        return True
+
+
+class VTSwapECO(ECO):
+    """ECO that performs threshold voltage (VT) swapping.
+
+    Swaps cells between different VT variants (LVT/SVT/HVT) to
+    optimize timing on critical paths while saving power elsewhere.
+    Note: Requires multi-VT library support in the PDK.
+    """
+
+    def __init__(
+        self,
+        setup_margin: float = 0.05,
+        skip_critical_vt: bool = False,
+    ) -> None:
+        """Initialize VT swap ECO.
+
+        Args:
+            setup_margin: Setup margin for timing checks (ns)
+            skip_critical_vt: Skip VT swap on critical paths
+        """
+        metadata = ECOMetadata(
+            name="vt_swap",
+            eco_class=ECOClass.TOPOLOGY_NEUTRAL,
+            description="Swap cell VT variants to optimize timing/power",
+            parameters={
+                "setup_margin": setup_margin,
+                "skip_critical_vt": skip_critical_vt,
+            },
+            version="1.0",
+            tags=["power_optimization", "timing_optimization", "vt_swap"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for VT swapping."""
+        setup_margin = self.metadata.parameters["setup_margin"]
+        skip_crit = self.metadata.parameters["skip_critical_vt"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        skip_crit_flag = "-skip_crit_vt_swap" if skip_crit else ""
+
+        tcl_script = f"""# VT Swap ECO
+# Optimize timing/power by swapping cell VT variants
+
+# Set wire RC
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Estimate parasitics
+estimate_parasitics -placement
+
+# Repair timing with VT swapping enabled
+# VT swapping swaps cells between LVT/SVT/HVT variants
+# LVT = faster but more leakage, HVT = slower but less leakage
+repair_timing -setup \\
+    -setup_margin {setup_margin} \\
+    -skip_buffering \\
+    -skip_gate_cloning \\
+    -skip_pin_swap \\
+    {skip_crit_flag}
+
+puts "VT swap ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate VT swap parameters."""
+        margin = self.metadata.parameters.get("setup_margin", 0.05)
+        return margin >= 0
+
+
+class MultiPassTimingECO(ECO):
+    """ECO that applies timing repair in multiple iterative passes.
+
+    Each pass targets a subset of violations with different strategies,
+    allowing for more thorough optimization than a single pass.
+    """
+
+    def __init__(
+        self,
+        num_passes: int = 3,
+        margin_decay: float = 0.5,
+        initial_margin: float = 0.2,
+    ) -> None:
+        """Initialize multi-pass timing ECO.
+
+        Args:
+            num_passes: Number of repair passes
+            margin_decay: Margin reduction factor per pass
+            initial_margin: Starting setup margin (ns)
+        """
+        metadata = ECOMetadata(
+            name="multi_pass_timing",
+            eco_class=ECOClass.ROUTING_AFFECTING,
+            description="Multi-pass iterative timing repair with decaying margins",
+            parameters={
+                "num_passes": num_passes,
+                "margin_decay": margin_decay,
+                "initial_margin": initial_margin,
+            },
+            version="1.0",
+            tags=["timing_optimization", "iterative"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for multi-pass timing repair."""
+        num_passes = self.metadata.parameters["num_passes"]
+        decay = self.metadata.parameters["margin_decay"]
+        initial = self.metadata.parameters["initial_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        # Generate multiple passes with decaying margins
+        passes_tcl = []
+        margin = initial
+        for i in range(num_passes):
+            passes_tcl.append(f"""
+# Pass {i+1}/{num_passes} - margin: {margin:.4f}
+puts "Starting repair pass {i+1} with margin {margin:.4f}"
+repair_timing -setup -setup_margin {margin:.4f}
+estimate_parasitics -placement
+""")
+            margin *= decay
+
+        passes_str = "\n".join(passes_tcl)
+
+        tcl_script = f"""# Multi-Pass Timing ECO
+# Iterative timing repair with decaying margins
+
+# Set wire RC
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Initial parasitic estimation
+estimate_parasitics -placement
+{passes_str}
+# Final pass with zero margin
+puts "Final cleanup pass"
+repair_timing -setup -setup_margin 0.0
+
+puts "Multi-pass timing ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate multi-pass timing parameters."""
+        passes = self.metadata.parameters.get("num_passes", 3)
+        decay = self.metadata.parameters.get("margin_decay", 0.5)
+        margin = self.metadata.parameters.get("initial_margin", 0.2)
+        return passes > 0 and 0 < decay < 1 and margin >= 0
+
+
+class SequentialRepairECO(ECO):
+    """ECO that applies repair_design followed by repair_timing.
+
+    This compound approach first fixes DRV violations, then optimizes
+    timing on the cleaned-up design.
+    """
+
+    def __init__(
+        self,
+        slew_margin: int = 20,
+        setup_margin: float = 0.1,
+    ) -> None:
+        """Initialize sequential repair ECO.
+
+        Args:
+            slew_margin: Margin for slew violations (%)
+            setup_margin: Margin for setup timing (ns)
+        """
+        metadata = ECOMetadata(
+            name="sequential_repair",
+            eco_class=ECOClass.ROUTING_AFFECTING,
+            description="Sequential DRV repair followed by timing repair",
+            parameters={
+                "slew_margin": slew_margin,
+                "setup_margin": setup_margin,
+            },
+            version="1.0",
+            tags=["compound", "drv_fixing", "timing_optimization"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for sequential repair."""
+        slew_margin = self.metadata.parameters["slew_margin"]
+        setup_margin = self.metadata.parameters["setup_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Sequential Repair ECO
+# First repair DRVs, then optimize timing
+
+# Set wire RC
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Initial parasitic estimation
+estimate_parasitics -placement
+
+# Phase 1: Repair design rule violations
+puts "Phase 1: Repairing DRV violations"
+repair_design -slew_margin {slew_margin} -cap_margin {slew_margin}
+
+# Re-estimate after DRV fixes
+estimate_parasitics -placement
+
+# Phase 2: Repair timing violations
+puts "Phase 2: Repairing timing violations"
+repair_timing -setup -setup_margin {setup_margin}
+
+# Final estimation
+estimate_parasitics -placement
+
+# Phase 3: Final cleanup
+puts "Phase 3: Final timing cleanup"
+repair_timing -setup -setup_margin 0.0
+
+puts "Sequential repair ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate sequential repair parameters."""
+        slew = self.metadata.parameters.get("slew_margin", 20)
+        setup = self.metadata.parameters.get("setup_margin", 0.1)
+        return 0 <= slew <= 100 and setup >= 0
+
+
+class FullOptimizationECO(ECO):
+    """ECO that applies the full optimization pipeline.
+
+    Combines buffer removal, DRV repair, dead logic elimination,
+    and aggressive timing repair for maximum improvement.
+    """
+
+    def __init__(
+        self,
+        max_passes: int = 5,
+        setup_margin: float = 0.1,
+    ) -> None:
+        """Initialize full optimization ECO.
+
+        Args:
+            max_passes: Maximum timing repair passes
+            setup_margin: Setup margin for timing (ns)
+        """
+        metadata = ECOMetadata(
+            name="full_optimization",
+            eco_class=ECOClass.GLOBAL_DISRUPTIVE,
+            description="Full optimization pipeline: cleanup + DRV + timing",
+            parameters={
+                "max_passes": max_passes,
+                "setup_margin": setup_margin,
+            },
+            version="1.0",
+            tags=["compound", "aggressive", "full_pipeline"],
+        )
+        super().__init__(metadata)
+
+    def generate_tcl(self, **kwargs: Any) -> str:
+        """Generate TCL script for full optimization."""
+        max_passes = self.metadata.parameters["max_passes"]
+        setup_margin = self.metadata.parameters["setup_margin"]
+        pdk = kwargs.get("pdk", "nangate45")
+        signal_layer, clock_layer = get_pdk_layer_names(pdk)
+
+        tcl_script = f"""# Full Optimization ECO
+# Complete optimization pipeline
+
+# Set wire RC
+set_wire_rc -signal -layer {signal_layer}
+set_wire_rc -clock -layer {clock_layer}
+
+# Initial parasitic estimation
+estimate_parasitics -placement
+
+# Phase 1: Remove unnecessary buffers
+puts "Phase 1: Removing synthesis buffers"
+catch {{ remove_buffers }}
+
+# Phase 2: Eliminate dead logic
+puts "Phase 2: Eliminating dead logic"
+catch {{ eliminate_dead_logic }}
+
+# Re-estimate
+estimate_parasitics -placement
+
+# Phase 3: Fix DRV violations
+puts "Phase 3: Fixing DRV violations"
+repair_design -slew_margin 20 -cap_margin 20
+
+# Re-estimate
+estimate_parasitics -placement
+
+# Phase 4: Aggressive timing repair
+puts "Phase 4: Aggressive timing repair"
+repair_timing -setup \\
+    -setup_margin {setup_margin} \\
+    -max_passes {max_passes} \\
+    -repair_tns 100 \\
+    -verbose
+
+# Final estimation
+estimate_parasitics -placement
+
+# Phase 5: Final cleanup
+puts "Phase 5: Final timing cleanup"
+repair_timing -setup -setup_margin 0.0 -max_passes 3
+
+puts "Full optimization ECO complete"
+"""
+        return tcl_script
+
+    def validate_parameters(self) -> bool:
+        """Validate full optimization parameters."""
+        passes = self.metadata.parameters.get("max_passes", 5)
+        margin = self.metadata.parameters.get("setup_margin", 0.1)
+        return passes > 0 and margin >= 0
+
+
 class CompoundECO(ECO):
     """Compound ECO that applies multiple component ECOs sequentially.
 
@@ -1575,6 +2546,7 @@ class CompoundECO(ECO):
 
 # ECO Registry
 ECO_REGISTRY: dict[str, type[ECO]] = {
+    # Core ECOs
     "noop": NoOpECO,
     "buffer_insertion": BufferInsertionECO,
     "placement_density": PlacementDensityECO,
@@ -1583,6 +2555,23 @@ ECO_REGISTRY: dict[str, type[ECO]] = {
     "gate_cloning": GateCloningECO,
     "timing_driven_placement": TimingDrivenPlacementECO,
     "iterative_timing_driven": IterativeTimingDrivenECO,
+    # Basic timing/power ECOs
+    "hold_repair": HoldRepairECO,
+    "power_recovery": PowerRecoveryECO,
+    "repair_design": RepairDesignECO,
+    "aggressive_timing": AggressiveTimingECO,
+    "buffer_removal": BufferRemovalECO,
+    "pin_swap": PinSwapECO,
+    # Advanced ECOs
+    "tie_fanout_repair": TieFanoutRepairECO,
+    "clock_net_repair": ClockNetRepairECO,
+    "dead_logic_elimination": DeadLogicEliminationECO,
+    "vt_swap": VTSwapECO,
+    # Compound/Sequential ECOs
+    "multi_pass_timing": MultiPassTimingECO,
+    "sequential_repair": SequentialRepairECO,
+    "full_optimization": FullOptimizationECO,
+    # Test ECOs
     "timing_degradation_test": TimingDegradationECO,
     "congestion_stressor_test": CongestionStressorECO,
     "tool_error_test": ToolErrorECO,

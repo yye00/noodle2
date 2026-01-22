@@ -1,0 +1,8 @@
+{
+  "design": "ibex_core",
+  "pdk": "ASAP7",
+  "clock_period_ns": 0.1,
+  "creation_method": "docker_orfs_single_container",
+  "purpose": "extreme_demo",
+  "orfs_stage": "placed"
+}

@@ -7,7 +7,7 @@ using the GUI commands in headless mode with Xvfb (X virtual framebuffer).
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 
 @dataclass
@@ -310,7 +310,12 @@ def generate_heatmap_with_png(
         )
 
 
-def convert_bbox_heatmap_to_grid(bbox_csv: Path, grid_csv: Path, grid_size: int = 50) -> None:
+def convert_bbox_heatmap_to_grid(
+    bbox_csv: Path,
+    grid_csv: Path,
+    grid_size: int | None = 50,
+    preserve_aspect_ratio: bool = False,
+) -> dict[str, Any]:
     """Convert OpenROAD bbox heatmap format to grid format.
 
     OpenROAD outputs heatmaps as: x0,y0,x1,y1,value (bounding boxes)
@@ -319,7 +324,15 @@ def convert_bbox_heatmap_to_grid(bbox_csv: Path, grid_csv: Path, grid_size: int 
     Args:
         bbox_csv: Path to bbox format CSV from OpenROAD
         grid_csv: Path where grid CSV should be saved
-        grid_size: Size of output grid (default: 50x50)
+        grid_size: Size of output grid.
+                   - int: Fixed grid size (e.g., 50 creates 50x50)
+                   - None: Auto-calculate based on aspect ratio
+                   Default: 50 for backward compatibility
+        preserve_aspect_ratio: If True, use aspect-ratio-aware grid sizing
+                               (ignored if grid_size is None, which always preserves ratio)
+
+    Returns:
+        Metadata dict with bounds, dimensions, and aspect ratio
     """
     import csv
     import numpy as np
@@ -349,23 +362,41 @@ def convert_bbox_heatmap_to_grid(bbox_csv: Path, grid_csv: Path, grid_size: int 
     min_y = min(b['y0'] for b in boxes)
     max_y = max(b['y1'] for b in boxes)
 
+    width_um = max_x - min_x
+    height_um = max_y - min_y
+    aspect_ratio = width_um / height_um if height_um > 0 else 1.0
+
+    # Determine grid dimensions
+    if grid_size is None or preserve_aspect_ratio:
+        # Auto-calculate based on aspect ratio
+        base_size = grid_size if grid_size is not None else 50
+        if aspect_ratio >= 1.0:
+            grid_x = int(base_size * aspect_ratio)
+            grid_y = base_size
+        else:
+            grid_x = base_size
+            grid_y = int(base_size / aspect_ratio)
+    else:
+        grid_x = grid_size
+        grid_y = grid_size
+
     # Create grid
-    grid = np.zeros((grid_size, grid_size), dtype=np.float64)
+    grid = np.zeros((grid_y, grid_x), dtype=np.float64)
 
     # Map boxes to grid
-    dx = (max_x - min_x) / grid_size
-    dy = (max_y - min_y) / grid_size
+    dx = width_um / grid_x if width_um > 0 else 1.0
+    dy = height_um / grid_y if height_um > 0 else 1.0
 
     for box in boxes:
         # Find grid cells overlapped by this box
         i0 = int((box['y0'] - min_y) / dy)
-        i1 = min(int((box['y1'] - min_y) / dy) + 1, grid_size)
+        i1 = min(int((box['y1'] - min_y) / dy) + 1, grid_y)
         j0 = int((box['x0'] - min_x) / dx)
-        j1 = min(int((box['x1'] - min_x) / dx) + 1, grid_size)
+        j1 = min(int((box['x1'] - min_x) / dx) + 1, grid_x)
 
         # Set value in grid
-        for i in range(max(0, i0), min(grid_size, i1)):
-            for j in range(max(0, j0), min(grid_size, j1)):
+        for i in range(max(0, i0), min(grid_y, i1)):
+            for j in range(max(0, j0), min(grid_x, j1)):
                 grid[i, j] = max(grid[i, j], box['value'])
 
     # Write grid CSV
@@ -374,6 +405,21 @@ def convert_bbox_heatmap_to_grid(bbox_csv: Path, grid_csv: Path, grid_size: int 
         writer = csv.writer(f)
         for row in grid:
             writer.writerow(row)
+
+    # Return metadata
+    return {
+        "bounds": {
+            "min_x": min_x,
+            "max_x": max_x,
+            "min_y": min_y,
+            "max_y": max_y,
+        },
+        "width_um": width_um,
+        "height_um": height_um,
+        "aspect_ratio": aspect_ratio,
+        "grid_shape": (grid_y, grid_x),
+        "box_count": len(boxes),
+    }
 
 
 def verify_heatmap_is_real(csv_path: Path) -> bool:

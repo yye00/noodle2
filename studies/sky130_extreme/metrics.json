@@ -1,0 +1,10 @@
+{
+  "design": "gcd",
+  "pdk": "sky130",
+  "execution_type": "real_sta",
+  "wns_ps": -3323,
+  "tns_ps": -172864,
+  "hot_ratio": 0.20,
+  "clock_period_ns": 0.01,
+  "status": "timing_violation"
+}

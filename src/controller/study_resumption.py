@@ -22,6 +22,7 @@ class StageCheckpoint:
     - Survivor cases that advanced to next stage
     - Stage performance metrics
     - Completion timestamp
+    - Best known state metrics for rollback support
     """
 
     stage_index: int
@@ -31,6 +32,10 @@ class StageCheckpoint:
     trials_completed: int
     trials_failed: int
     metadata: dict[str, Any] = field(default_factory=dict)
+    # Rollback support fields
+    best_wns_ps: int | None = None  # Best WNS achieved in this stage
+    best_hot_ratio: float | None = None  # Best hot_ratio achieved in this stage
+    best_survivor_odb_paths: list[str] | None = None  # ODB paths for rollback
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize to dictionary for JSON export."""
@@ -42,6 +47,9 @@ class StageCheckpoint:
             "trials_completed": self.trials_completed,
             "trials_failed": self.trials_failed,
             "metadata": self.metadata,
+            "best_wns_ps": self.best_wns_ps,
+            "best_hot_ratio": self.best_hot_ratio,
+            "best_survivor_odb_paths": self.best_survivor_odb_paths,
         }
 
     @classmethod
@@ -55,6 +63,9 @@ class StageCheckpoint:
             trials_completed=data["trials_completed"],
             trials_failed=data["trials_failed"],
             metadata=data.get("metadata", {}),
+            best_wns_ps=data.get("best_wns_ps"),
+            best_hot_ratio=data.get("best_hot_ratio"),
+            best_survivor_odb_paths=data.get("best_survivor_odb_paths"),
         )
 
 
@@ -195,6 +206,9 @@ def create_stage_checkpoint(
     trials_completed: int,
     trials_failed: int,
     metadata: dict[str, Any] | None = None,
+    best_wns_ps: int | None = None,
+    best_hot_ratio: float | None = None,
+    best_survivor_odb_paths: list[str] | None = None,
 ) -> StageCheckpoint:
     """
     Create a checkpoint for a completed Stage.
@@ -206,6 +220,9 @@ def create_stage_checkpoint(
         trials_completed: Number of successful trials
         trials_failed: Number of failed trials
         metadata: Optional additional metadata
+        best_wns_ps: Best WNS achieved in this stage (for rollback)
+        best_hot_ratio: Best hot_ratio achieved in this stage (for rollback)
+        best_survivor_odb_paths: ODB paths for best survivors (for rollback)
 
     Returns:
         StageCheckpoint object
@@ -218,6 +235,9 @@ def create_stage_checkpoint(
         trials_completed=trials_completed,
         trials_failed=trials_failed,
         metadata=metadata or {},
+        best_wns_ps=best_wns_ps,
+        best_hot_ratio=best_hot_ratio,
+        best_survivor_odb_paths=best_survivor_odb_paths,
     )
 
 

@@ -60,7 +60,6 @@ temp_scripts/
 # Demo outputs (large, regeneratable)
 output/
 demo_output/
-presentation/
 test_outputs/
 debug_report/
 harness_logs/

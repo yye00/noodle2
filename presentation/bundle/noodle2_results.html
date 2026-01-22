@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Noodle2 - Physical Design ECO Orchestration Results</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/theme/black.css">
+    <style>
+        .reveal h1 { font-size: 2.2em; }
+        .reveal h2 { font-size: 1.6em; }
+        .reveal h3 { font-size: 1.3em; }
+        .reveal table { font-size: 0.7em; margin: auto; }
+        .reveal th, .reveal td { padding: 8px 16px; }
+        .reveal .success { color: #50C878; }
+        .reveal .warning { color: #FFD700; }
+        .reveal .danger { color: #E74C3C; }
+        .reveal .highlight { color: #4A90E2; }
+        .reveal img { max-height: 500px; }
+        .reveal .two-column { display: flex; justify-content: space-around; }
+        .reveal .two-column > div { flex: 1; padding: 10px; }
+        .reveal .metrics-box {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin: 10px;
+        }
+        .reveal .small { font-size: 0.6em; }
+        .reveal .medium { font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div class="reveal">
+        <div class="slides">
+
+            <!-- Title Slide -->
+            <section>
+                <h1>Noodle2</h1>
+                <h3>Physical Design ECO Orchestration System</h3>
+                <p class="medium">Automated Timing Closure Through Intelligent ECO Selection</p>
+                <p class="small" style="margin-top: 50px;">
+                    Results from Real OpenROAD Execution<br>
+                    January 2026
+                </p>
+            </section>
+
+            <!-- What is Noodle2 -->
+            <section>
+                <h2>What is Noodle2?</h2>
+                <ul>
+                    <li><strong>ECO Orchestration System</strong> for physical design timing closure</li>
+                    <li>Automatically applies and evaluates <strong>Engineering Change Orders</strong></li>
+                    <li>Uses <strong>parallel execution</strong> with Ray for trial exploration</li>
+                    <li>Implements <strong>prior learning</strong> to avoid ineffective ECOs</li>
+                    <li>Supports <strong>checkpoint/rollback</strong> for robustness</li>
+                </ul>
+                <p class="medium" style="margin-top: 30px;">
+                    <em>All results shown are from <span class="success">REAL OpenROAD execution</span> - no mocking or simulation</em>
+                </p>
+            </section>
+
+            <!-- ECO Types -->
+            <section>
+                <h2>ECO Types Supported</h2>
+                <div class="two-column medium">
+                    <div>
+                        <h4 class="highlight">Topology Neutral</h4>
+                        <ul>
+                            <li>Cell Resize</li>
+                            <li>Buffer Insertion/Removal</li>
+                            <li>Pin Swap</li>
+                            <li>Gate Cloning</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="warning">Placement Affecting</h4>
+                        <ul>
+                            <li>Timing-Driven Placement</li>
+                            <li>Placement Density</li>
+                            <li>Iterative Optimization</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="two-column medium">
+                    <div>
+                        <h4 class="danger">Global/Aggressive</h4>
+                        <ul>
+                            <li>Full Optimization</li>
+                            <li>Multi-Pass Timing</li>
+                            <li>VT Swap</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4>Repair ECOs</h4>
+                        <ul>
+                            <li>Hold Repair</li>
+                            <li>Clock Net Repair</li>
+                            <li>Tie Fanout Repair</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Study Flow -->
+            <section>
+                <h2>Study Execution Flow</h2>
+                <ol class="medium">
+                    <li><strong>Base Case Verification</strong> - Validate initial design metrics</li>
+                    <li><strong>Stage Execution</strong> - 20 stages with 25 trials each</li>
+                    <li><strong>Survivor Selection</strong> - Keep best performing variants</li>
+                    <li><strong>Prior Learning</strong> - Track ECO effectiveness</li>
+                    <li><strong>Checkpoint/Rollback</strong> - Save state, recover from degradation</li>
+                    <li><strong>Visualization</strong> - Generate heatmaps, trajectories, summaries</li>
+                </ol>
+                <p class="small" style="margin-top: 20px;">
+                    Total: <strong>500 trials</strong> per study with parallel Ray execution
+                </p>
+            </section>
+
+            <!-- ==================== NANGATE45 SECTION ==================== -->
+
+            <section>
+                <h1 class="highlight">Nangate45</h1>
+                <h3>45nm Educational PDK</h3>
+            </section>
+
+            <!-- Nangate45 Setup -->
+            <section>
+                <h2>Nangate45 - Design Setup</h2>
+                <table>
+                    <tr><th>Property</th><th>Value</th></tr>
+                    <tr><td>PDK</td><td>Nangate45 (45nm)</td></tr>
+                    <tr><td>Design</td><td>Ibex RISC-V Core</td></tr>
+                    <tr><td>Cell Count</td><td>~10,000 cells</td></tr>
+                    <tr><td>Clock Period</td><td>Aggressive (tight constraints)</td></tr>
+                    <tr><td>ODB Size</td><td>8.3 MB</td></tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>Extreme Case Generation:</strong><br>
+                    Applied aggressive clock constraints to production-realistic Ibex RISC-V core,<br>
+                    creating severe setup timing violations requiring ECO intervention.
+                </div>
+            </section>
+
+            <!-- Nangate45 Initial State -->
+            <section>
+                <h2>Nangate45 - Initial State (Broken)</h2>
+                <div class="two-column">
+                    <div class="metrics-box">
+                        <h4 class="danger">Timing Violations</h4>
+                        <p style="font-size: 2em;">WNS: <strong>-1848 ps</strong></p>
+                        <p class="medium">Severe setup violations</p>
+                    </div>
+                    <div class="metrics-box">
+                        <h4 class="danger">Congestion</h4>
+                        <p style="font-size: 2em;">hot_ratio: <strong>0.523</strong></p>
+                        <p class="medium">52% of paths violated</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Nangate45 Stage Progression -->
+            <section>
+                <h2>Nangate45 - Stage Progression</h2>
+                <img src="../output/nangate45_extreme_demo/comparison/stage_progression.png" alt="Nangate45 Stage Progression">
+                <p class="small">20 stages, funnel survivor selection (8 → 2)</p>
+            </section>
+
+            <!-- Nangate45 WNS Trajectory -->
+            <section>
+                <h2>Nangate45 - WNS Trajectory</h2>
+                <img src="../output/nangate45_extreme_demo/comparison/wns_trajectory.png" alt="Nangate45 WNS Trajectory">
+            </section>
+
+            <!-- Nangate45 Hot Ratio Trajectory -->
+            <section>
+                <h2>Nangate45 - Hot Ratio Trajectory</h2>
+                <img src="../output/nangate45_extreme_demo/comparison/hot_ratio_trajectory.png" alt="Nangate45 Hot Ratio Trajectory">
+            </section>
+
+            <!-- Nangate45 Heatmap Diff -->
+            <section>
+                <h2>Nangate45 - Congestion Improvement</h2>
+                <img src="../output/nangate45_extreme_demo/comparison/routing_congestion_diff.png" alt="Nangate45 Congestion Diff">
+                <p class="small">Before vs After routing congestion differential</p>
+            </section>
+
+            <!-- Nangate45 Results -->
+            <section>
+                <h2>Nangate45 - Final Results</h2>
+                <table>
+                    <tr><th>Metric</th><th>Initial</th><th>Final</th><th>Improvement</th></tr>
+                    <tr>
+                        <td>WNS</td>
+                        <td class="danger">-1848 ps</td>
+                        <td class="warning">-1576 ps</td>
+                        <td class="success">+14.7%</td>
+                    </tr>
+                    <tr>
+                        <td>hot_ratio</td>
+                        <td class="danger">0.523</td>
+                        <td class="warning">0.149</td>
+                        <td class="success">-71.6%</td>
+                    </tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>Execution:</strong> 20 stages, 500 trials, 1hr 50min runtime
+                </div>
+            </section>
+
+            <!-- ==================== ASAP7 SECTION ==================== -->
+
+            <section>
+                <h1 class="highlight">ASAP7</h1>
+                <h3>7nm Predictive PDK</h3>
+            </section>
+
+            <!-- ASAP7 Setup -->
+            <section>
+                <h2>ASAP7 - Design Setup</h2>
+                <table>
+                    <tr><th>Property</th><th>Value</th></tr>
+                    <tr><td>PDK</td><td>ASAP7 (7nm predictive)</td></tr>
+                    <tr><td>Design</td><td>Ibex RISC-V Core</td></tr>
+                    <tr><td>Cell Count</td><td>~10,000 cells</td></tr>
+                    <tr><td>Clock Period</td><td>Aggressive (7nm timing)</td></tr>
+                    <tr><td>ODB Size</td><td>~10 MB</td></tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>Extreme Case Generation:</strong><br>
+                    Same Ibex core mapped to advanced 7nm node with aggressive timing.<br>
+                    Smaller feature size = tighter timing margins = harder closure.
+                </div>
+            </section>
+
+            <!-- ASAP7 Initial State -->
+            <section>
+                <h2>ASAP7 - Initial State (Broken)</h2>
+                <div class="two-column">
+                    <div class="metrics-box">
+                        <h4 class="danger">Timing Violations</h4>
+                        <p style="font-size: 2em;">WNS: <strong>-1067 ps</strong></p>
+                        <p class="medium">Setup violations at 7nm</p>
+                    </div>
+                    <div class="metrics-box">
+                        <h4 class="danger">Congestion</h4>
+                        <p style="font-size: 2em;">hot_ratio: <strong>0.55</strong></p>
+                        <p class="medium">55% of paths violated</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ASAP7 Stage Progression -->
+            <section>
+                <h2>ASAP7 - Stage Progression</h2>
+                <img src="../output/asap7_extreme_demo/comparison/stage_progression.png" alt="ASAP7 Stage Progression">
+                <p class="small">20 stages, funnel survivor selection (8 → 2)</p>
+            </section>
+
+            <!-- ASAP7 WNS Trajectory -->
+            <section>
+                <h2>ASAP7 - WNS Trajectory</h2>
+                <img src="../output/asap7_extreme_demo/comparison/wns_trajectory.png" alt="ASAP7 WNS Trajectory">
+            </section>
+
+            <!-- ASAP7 Hot Ratio Trajectory -->
+            <section>
+                <h2>ASAP7 - Hot Ratio Trajectory</h2>
+                <img src="../output/asap7_extreme_demo/comparison/hot_ratio_trajectory.png" alt="ASAP7 Hot Ratio Trajectory">
+            </section>
+
+            <!-- ASAP7 Heatmap Diff -->
+            <section>
+                <h2>ASAP7 - Congestion Improvement</h2>
+                <img src="../output/asap7_extreme_demo/comparison/routing_congestion_diff.png" alt="ASAP7 Congestion Diff">
+                <p class="small">Before vs After routing congestion differential</p>
+            </section>
+
+            <!-- ASAP7 Results -->
+            <section>
+                <h2>ASAP7 - Final Results</h2>
+                <table>
+                    <tr><th>Metric</th><th>Initial</th><th>Final</th><th>Improvement</th></tr>
+                    <tr>
+                        <td>WNS</td>
+                        <td class="danger">-1067 ps</td>
+                        <td class="warning">-1004 ps</td>
+                        <td class="success">+5.9%</td>
+                    </tr>
+                    <tr>
+                        <td>hot_ratio</td>
+                        <td class="danger">0.55</td>
+                        <td class="success">0.004</td>
+                        <td class="success">-99.3%</td>
+                    </tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>Execution:</strong> 20 stages, 500 trials, 2hr 9min runtime<br>
+                    <em>Excellent hot_ratio reduction despite modest WNS improvement</em>
+                </div>
+            </section>
+
+            <!-- ==================== SKY130 MICROWATT SECTION ==================== -->
+
+            <section>
+                <h1 class="highlight">Sky130 + Microwatt</h1>
+                <h3>130nm Open PDK + OpenPOWER Core</h3>
+                <p class="warning" style="font-size: 1.2em;">The Big One</p>
+            </section>
+
+            <!-- Sky130 Microwatt Setup -->
+            <section>
+                <h2>Sky130 Microwatt - Design Setup</h2>
+                <table>
+                    <tr><th>Property</th><th>Value</th></tr>
+                    <tr><td>PDK</td><td>Sky130HD (130nm open-source)</td></tr>
+                    <tr><td>Design</td><td><strong>Microwatt OpenPOWER Core</strong></td></tr>
+                    <tr><td>Cell Count</td><td class="success"><strong>162,637 cells</strong></td></tr>
+                    <tr><td>Clock Period</td><td>4ns (250 MHz - aggressive)</td></tr>
+                    <tr><td>ODB Size</td><td>95 MB</td></tr>
+                    <tr><td>Die Area</td><td>4.6 million um²</td></tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>16x larger than Ibex!</strong> Full OpenPOWER implementation.
+                </div>
+            </section>
+
+            <!-- Sky130 Extreme Case Generation -->
+            <section>
+                <h2>Sky130 - Extreme Case Generation</h2>
+                <ol class="medium">
+                    <li><strong>Built Microwatt</strong> using OpenROAD-flow-scripts</li>
+                    <li><strong>Ran synthesis → placement</strong> (47 min ORFS build)</li>
+                    <li><strong>Applied aggressive 4ns clock</strong> (vs 15ns nominal)</li>
+                    <li><strong>Created severe timing violations</strong> for ECO demo</li>
+                </ol>
+                <div class="metrics-box" style="margin-top: 20px;">
+                    <p class="medium">
+                        Original clock: 15ns (66 MHz) - meets timing<br>
+                        Demo clock: <span class="danger">4ns (250 MHz)</span> - severe violations
+                    </p>
+                </div>
+            </section>
+
+            <!-- Sky130 Initial State -->
+            <section>
+                <h2>Sky130 Microwatt - Initial State (Broken)</h2>
+                <div class="two-column">
+                    <div class="metrics-box">
+                        <h4 class="danger">Timing Violations</h4>
+                        <p style="font-size: 2em;">WNS: <strong>-2989 ps</strong></p>
+                        <p class="medium">Nearly 3ns negative slack!</p>
+                    </div>
+                    <div class="metrics-box">
+                        <h4 class="warning">Congestion</h4>
+                        <p style="font-size: 2em;">hot_ratio: <strong>0.097</strong></p>
+                        <p class="medium">~10% paths violated</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Sky130 Stage Progression -->
+            <section>
+                <h2>Sky130 Microwatt - Stage Progression</h2>
+                <img src="../output/sky130_microwatt_demo/comparison/stage_progression.png" alt="Sky130 Stage Progression">
+                <p class="small">20 stages, 500 trials on 162K cell design</p>
+            </section>
+
+            <!-- Sky130 WNS Trajectory -->
+            <section>
+                <h2>Sky130 Microwatt - WNS Trajectory</h2>
+                <img src="../output/sky130_microwatt_demo/comparison/wns_trajectory.png" alt="Sky130 WNS Trajectory">
+            </section>
+
+            <!-- Sky130 Hot Ratio Trajectory -->
+            <section>
+                <h2>Sky130 Microwatt - Hot Ratio Trajectory</h2>
+                <img src="../output/sky130_microwatt_demo/comparison/hot_ratio_trajectory.png" alt="Sky130 Hot Ratio Trajectory">
+            </section>
+
+            <!-- Sky130 Heatmap Diff -->
+            <section>
+                <h2>Sky130 Microwatt - Congestion Improvement</h2>
+                <img src="../output/sky130_microwatt_demo/comparison/routing_congestion_diff.png" alt="Sky130 Congestion Diff">
+                <p class="small">Before vs After routing congestion differential</p>
+            </section>
+
+            <!-- Sky130 Results -->
+            <section>
+                <h2>Sky130 Microwatt - Final Results</h2>
+                <table>
+                    <tr><th>Metric</th><th>Initial</th><th>Final</th><th>Improvement</th></tr>
+                    <tr>
+                        <td>WNS</td>
+                        <td class="danger">-2989 ps</td>
+                        <td class="warning">-1466 ps</td>
+                        <td class="success"><strong>+51.0%</strong></td>
+                    </tr>
+                    <tr>
+                        <td>hot_ratio</td>
+                        <td class="warning">0.097</td>
+                        <td class="success">0.0003</td>
+                        <td class="success"><strong>-99.7%</strong></td>
+                    </tr>
+                </table>
+                <div class="metrics-box medium" style="margin-top: 20px;">
+                    <strong>Execution:</strong> 20 stages, 500 trials, 2hr 1min runtime<br>
+                    <span class="success"><strong>BOTH SUCCESS CRITERIA MET!</strong></span>
+                </div>
+            </section>
+
+            <!-- ==================== COMPARISON SECTION ==================== -->
+
+            <section>
+                <h1>Results Comparison</h1>
+            </section>
+
+            <!-- Final Comparison Table -->
+            <section>
+                <h2>Cross-PDK Comparison</h2>
+                <table>
+                    <tr>
+                        <th>PDK</th>
+                        <th>Design</th>
+                        <th>Cells</th>
+                        <th>WNS Improvement</th>
+                        <th>hot_ratio Reduction</th>
+                        <th>Runtime</th>
+                    </tr>
+                    <tr>
+                        <td>Nangate45</td>
+                        <td>Ibex</td>
+                        <td>~10K</td>
+                        <td class="success">+14.7%</td>
+                        <td class="success">-71.6%</td>
+                        <td>1h 50m</td>
+                    </tr>
+                    <tr>
+                        <td>ASAP7</td>
+                        <td>Ibex</td>
+                        <td>~10K</td>
+                        <td class="warning">+5.9%</td>
+                        <td class="success">-99.3%</td>
+                        <td>2h 9m</td>
+                    </tr>
+                    <tr style="background: rgba(80,200,120,0.2);">
+                        <td><strong>Sky130</strong></td>
+                        <td><strong>Microwatt</strong></td>
+                        <td><strong>162K</strong></td>
+                        <td class="success"><strong>+51.0%</strong></td>
+                        <td class="success"><strong>-99.7%</strong></td>
+                        <td>2h 1m</td>
+                    </tr>
+                </table>
+            </section>
+
+            <!-- Top ECOs -->
+            <section>
+                <h2>Most Effective ECOs</h2>
+                <div class="two-column medium">
+                    <div>
+                        <h4 class="success">High Success Rate</h4>
+                        <ul>
+                            <li>Cell Resize (100%)</li>
+                            <li>Buffer Insertion (100%)</li>
+                            <li>Multi-Pass Timing (100%)</li>
+                            <li>Sequential Repair (100%)</li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h4 class="danger">Filtered by Prior Learning</h4>
+                        <ul>
+                            <li>Gate Cloning (0% - suspicious)</li>
+                            <li>Dead Logic Elimination (0%)</li>
+                        </ul>
+                        <p class="small">Prior learning automatically avoids ineffective ECOs</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Key Features -->
+            <section>
+                <h2>Key Noodle2 Features Demonstrated</h2>
+                <ul>
+                    <li><strong>Parallel Execution</strong> - Ray-based trial parallelism</li>
+                    <li><strong>Prior Learning</strong> - ECO effectiveness tracking</li>
+                    <li><strong>Checkpoint/Rollback</strong> - Recovery from degradation</li>
+                    <li><strong>Multi-PDK Support</strong> - Nangate45, ASAP7, Sky130</li>
+                    <li><strong>True-Scale Heatmaps</strong> - Accurate visualization</li>
+                    <li><strong>Safety Domains</strong> - Sandbox, guarded, locked modes</li>
+                </ul>
+            </section>
+
+            <!-- Conclusion -->
+            <section>
+                <h2>Conclusions</h2>
+                <ul>
+                    <li>Noodle2 successfully improved timing on <strong>3 different PDKs</strong></li>
+                    <li><strong>162K cell Microwatt</strong> achieved 51% WNS improvement</li>
+                    <li>All executions used <strong>real OpenROAD</strong> - no simulation</li>
+                    <li>Prior learning effectively filters ineffective ECOs</li>
+                    <li>System scales from 10K to 160K+ cells</li>
+                </ul>
+                <div class="metrics-box" style="margin-top: 30px;">
+                    <p class="success" style="font-size: 1.5em;">
+                        <strong>Total: 1,500 real ECO trials executed</strong>
+                    </p>
+                </div>
+            </section>
+
+            <!-- Thank You -->
+            <section>
+                <h1>Thank You</h1>
+                <p class="medium">
+                    Noodle2 - Physical Design ECO Orchestration<br>
+                    <a href="https://github.com/The-OpenROAD-Project" style="color: #4A90E2;">OpenROAD Project</a>
+                </p>
+                <p class="small" style="margin-top: 50px;">
+                    All visualizations generated from actual OpenROAD execution data
+                </p>
+            </section>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/reveal.js@4.5.0/dist/reveal.js"></script>
+    <script>
+        Reveal.initialize({
+            hash: true,
+            slideNumber: true,
+            transition: 'slide',
+            backgroundTransition: 'fade'
+        });
+    </script>
+</body>
+</html>

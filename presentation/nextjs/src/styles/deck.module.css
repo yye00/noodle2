@@ -1,0 +1,109 @@
+.deck {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color: #111;
+  background: #fff;
+}
+
+.stage {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 32px 24px 16px;
+  overflow: auto;
+}
+
+.slide {
+  width: 100%;
+  max-width: 1080px;
+}
+
+.slide h1 {
+  font-size: 28px;
+  margin: 0 0 12px;
+}
+
+.slide h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  font-weight: 600;
+}
+
+.slide p,
+.slide li {
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.slide ul,
+.slide ol {
+  padding-left: 24px;
+}
+
+.slide table {
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 14px;
+}
+
+.slide th,
+.slide td {
+  border: 1px solid #ccc;
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.slide th {
+  background: #f3f3f3;
+}
+
+.slide pre {
+  background: #f6f6f6;
+  border: 1px solid #ddd;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.35;
+  overflow: auto;
+}
+
+.slide code {
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 0.92em;
+}
+
+.slide img {
+  max-width: 100%;
+  max-height: 60vh;
+  display: block;
+  margin: 8px 0;
+}
+
+.lead {
+  text-align: center;
+  padding-top: 80px;
+}
+
+.lead h1 {
+  font-size: 40px;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-top: 1px solid #ddd;
+  font-size: 12px;
+  background: #fafafa;
+}
+
+.footer button {
+  font-size: 12px;
+  padding: 4px 10px;
+  margin: 0 4px;
+  cursor: pointer;
+}
